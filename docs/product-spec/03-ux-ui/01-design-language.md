@@ -1,15 +1,19 @@
 # Khonjel — Design Language & Tokens
 
-> The visual system. Built with **shadcn/ui** (Radix UI primitives) + **Tailwind CSS
-> v4** + **lucide-react** icons (the OpenWhispr stack). Merges Wispr Flow's **warm,
-> friendly light** aesthetic with OpenWhispr's **refined technical dark** aesthetic into
-> one themeable language. All values are **design tokens** (CSS variables, shadcn
-> convention); build against tokens, not raw hex.
+> The **token layer** of the visual system. The full **art direction / look & feel** —
+> modeled on **Wispr Flow** — is the hero spec in
+> [`06-ui-design-spec.md`](06-ui-design-spec.md); read that first for *how it looks*,
+> then use this doc for the machine-readable values.
 >
-> Heritage: light theme + violet/teal from wisper-flow; dark theme + settings/engine
-> patterns from OpenWhispr. Khonjel ships **both** themes — **Light / Dark / Auto** (the
-> OpenWhispr theme control), system-aware. Implementation tokens map to shadcn's
-> `--background`, `--foreground`, `--primary`, `--muted`, `--border`, etc.
+> Built with **shadcn/ui** (Radix UI primitives) + **Tailwind CSS v4** + **lucide-react**
+> icons (the OpenWhispr stack). The **primary direction is Wispr Flow's warm light**
+> aesthetic; a refined dark theme is the counterpart. All values are **design tokens**
+> (CSS variables, shadcn convention); build against tokens, not raw hex.
+>
+> Heritage: warm light theme + violet/teal from Wispr Flow (primary); dark theme +
+> settings/engine patterns from OpenWhispr. Khonjel ships **Light / Dark / Auto**
+> (the OpenWhispr theme control), Light-first. Tokens map to shadcn's `--background`,
+> `--foreground`, `--primary`, `--muted`, `--border`, etc.
 
 ---
 
