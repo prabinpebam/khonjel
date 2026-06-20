@@ -1,11 +1,15 @@
 # Khonjel — Design Language & Tokens
 
-> The visual system. Merges Wispr Flow's **warm, friendly light** aesthetic with
-> OpenWhispr's **refined technical dark** aesthetic into one themeable language.
-> All values are **design tokens**; build against tokens, not raw hex.
+> The visual system. Built with **shadcn/ui** (Radix UI primitives) + **Tailwind CSS
+> v4** + **lucide-react** icons (the OpenWhispr stack). Merges Wispr Flow's **warm,
+> friendly light** aesthetic with OpenWhispr's **refined technical dark** aesthetic into
+> one themeable language. All values are **design tokens** (CSS variables, shadcn
+> convention); build against tokens, not raw hex.
 >
-> Heritage: light theme + violet/teal from wisper-flow; dark theme + engine-card
-> patterns from open-wisper. Khonjel ships **both** themes, system-aware.
+> Heritage: light theme + violet/teal from wisper-flow; dark theme + settings/engine
+> patterns from OpenWhispr. Khonjel ships **both** themes — **Light / Dark / Auto** (the
+> OpenWhispr theme control), system-aware. Implementation tokens map to shadcn's
+> `--background`, `--foreground`, `--primary`, `--muted`, `--border`, etc.
 
 ---
 
@@ -13,8 +17,11 @@
 1. **Calm, warm, neutral.** Surfaces are quiet; color is reserved for meaning and brand.
 2. **Rounded & soft.** Generous radii, hairline borders, soft shadows — never harsh.
 3. **Content-first.** Cards group; whitespace separates; one clear primary action per view.
-4. **Two themes, one structure.** Light and dark differ only in tokens, never in layout.
+4. **Theme-flexible, one structure.** Light / Dark / Auto differ only in tokens, never in layout.
 5. **Honest data-viz.** A distinct chart ramp (teal) so analytics never masquerade as UI accent.
+6. **Built on shadcn/ui + Radix.** Use the primitives (Dialog, Popover, Select, Tabs,
+   DropdownMenu, Progress, Accordion, Label, Slot) and `lucide-react` icons; restyle via
+   tokens rather than forking components.
 
 ---
 

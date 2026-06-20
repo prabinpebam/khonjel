@@ -4,57 +4,70 @@
 > model system** for both speech and language tasks, defaulting to local/open models
 > and supporting a wide range of cloud, self-hosted, and enterprise APIs.
 >
-> Reference basis: OpenWhispr Speech-to-Text & Language Models pages
-> ([`../99-reference-analysis/01-open-wisper-screen-by-screen.md`](../99-reference-analysis/01-open-wisper-screen-by-screen.md), S1–S13).
+> Authoritative basis: the **OpenWhispr app** (Speech-to-Text & Language Models)
+> ([`../99-reference-analysis/03-openwhispr-repo-analysis.md`](../99-reference-analysis/03-openwhispr-repo-analysis.md)).
+> Implemented with **Vercel AI SDK** + whisper.cpp / sherpa-onnx (Parakeet) / llama.cpp —
+> see [`../04-architecture-and-delivery/04-technology-stack.md`](../04-architecture-and-delivery/04-technology-stack.md).
 
 ---
 
 ## 1. The one model abstraction
 
-Everywhere Khonjel needs a model, it presents the **same five engine archetypes**:
+Everywhere Khonjel needs a model, it presents the **same five inference modes**
+(OpenWhispr's `InferenceModeSelector`):
 
-| Archetype | What it is | Setup | Privacy | Cost |
+| Mode | What it is | Setup | Privacy | Cost |
 |---|---|---|---|---|
-| **Local** *(default)* | On-device model | Download once | Fully private | Free |
-| **Self-Hosted** | OpenAI-compatible server on your network | Endpoint URL (+ key) | Private to your network | Your infra |
-| **Cloud Providers** | BYO API key to a 3rd-party | API key + model | Sent to provider | Provider billing |
-| **Enterprise** | Org cloud account | Account creds | Per org policy | Org billing |
-| **Khonjel Cloud** | Managed hosted service | None | Sent to Khonjel | Managed tier |
+| **Local** *(default)* | On-device model (Whisper/Parakeet, llama.cpp) | Download once | Fully private | Free |
+| **Self-Hosted** | OpenAI-compatible server on your network | Base URL (+ key) | Private to your network | Your infra |
+| **Providers** | BYO API key to a 3rd-party | API key + model | Sent to provider | Provider billing |
+| **Enterprise** *(LLM)* | Org cloud account | Account creds | Per org policy | Org billing |
+| **Khonjel Cloud** *(optional)* | Managed/self-hostable backend | Optional sign-in | Sent to backend | **Free — no subscription** |
 
-> **Default selection is Local.** Khonjel Cloud is offered but never preselected or
-> required (this is the key reframing from the references, where managed cloud was the
-> default).
+> **Default selection is Local.** **Khonjel Cloud is optional and NOT a paid tier** —
+> the subscription/billing layer of OpenWhispr is removed. Cloud is opt-in convenience
+> (and self-hostable), never required.
 
 This abstraction appears for:
 - **Speech-to-Text** (one per capture mode: Dictation, Note Recording).
-- **Language Models**, separately for each of **four purposes**.
+- **Language Models**, separately for each of **four purposes/scopes**.
 
 ---
 
 ## 2. Speech-to-Text (STT)
 
-**Page:** Settings ▸ Speech-to-Text. **Mode pills:** `Dictation` · `Note Recording`
-(each mode has an independent engine choice). (Ref: OW S1–S3.)
+**Page:** Settings ▸ Speech-to-Text. **Tabs:** `Dictation` · `Note Recording`
+(each has an independent inference mode + model). Modes: **Khonjel Cloud · Providers ·
+Local · Self-Hosted**.
 
-### 2.1 Engine archetypes for STT
-- **Local** — on-device speech models (e.g. Whisper-family / faster-whisper / open
-  ASR). Downloaded via the local model manager (§5). Default.
-- **Self-Hosted** — an OpenAI-compatible `/audio/transcriptions` endpoint or a
-  compatible local ASR server.
-- **Cloud Providers** — BYO key to a transcription API.
-- **Enterprise** — org transcription service.
-- **Khonjel Cloud** — managed transcription.
+### 2.1 Local STT engines (the real stack)
+- **Whisper** via **whisper.cpp** — Whisper-family transcription, multilingual.
+- **NVIDIA Parakeet** via **sherpa-onnx** (onnxruntime) — fast multilingual ASR.
+- A provider toggle picks **Whisper vs Parakeet**, then a **model picker**.
+- **Silero VAD** — voice-activity detection, **tunable per mode** (threshold, min
+  speech ms, min silence ms, max speech s, speech pad ms, samples overlap).
+- **GPU device selector** when multiple GPUs are present.
+- **Transcription preview** — optional live HUD as you speak.
 
-### 2.2 Note Recording extras
-- **Identify and label speakers** (diarization) toggle. Off → "You"/"Others". (Ref: OW S3.)
+### 2.2 Cloud / Self-Hosted / Enterprise STT
+- **Providers (BYOK):** OpenAI, Groq, **Deepgram** (streaming), **xAI**, and others;
+  model + optional base URL.
+- **Self-Hosted:** OpenAI-compatible `/audio/transcriptions` or compatible ASR server
+  (`SelfHostedPanel`: base URL + key + test).
+- **Khonjel Cloud:** managed/optional transcription (no subscription).
+
+### 2.3 Note Recording extras
+- **Speaker diarization** + **voice fingerprint** (on-device); off → "You"/"Others".
+- Powers **Meeting Mode** (auto-detect Zoom/Teams/FaceTime; AEC/VAD native helper).
 
 ---
 
-## 3. Language Models — four purposes
+## 3. Language Models — four purposes/scopes
 
-**Page:** Settings ▸ Language Models. **Purpose pills:** `Dictation Cleanup` ·
-`Voice Agent` · `Note Formatting` · `Chat`. **Each purpose is configured
-independently** (its own engine archetype, model, and settings). (Ref: OW S4, S11–S13.)
+**Page:** Settings ▸ Language Models. **Tabs:** `Dictation Cleanup` · `Voice Agent`
+(`dictationAgent`) · `Note Formatting` · `Chat` (`chatIntelligence`). **Each is
+configured independently** (`InferenceConfigEditor` per scope). Local LLM runs on
+**llama.cpp/llama-server**; reasoning/**thinking mode** selectable.
 
 | Purpose | Enable control | Purpose-specific settings |
 |---|---|---|

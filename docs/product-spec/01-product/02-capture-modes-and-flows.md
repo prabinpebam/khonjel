@@ -6,27 +6,30 @@
 
 ---
 
-## 1. The four capture modes
+## 1. Capture modes
 
 | Mode | Trigger | Surface | Output |
 |---|---|---|---|
-| **Dictation** | Dictation hotkey (Tap/Hold), default `Ctrl+Win` | Khonjel Bar | Cleaned text inserted at cursor in active app |
-| **Note Recording** | From Scratchpad / Meeting Mode | Khonjel Bar or side panel | Saved note (optionally diarized) |
-| **Meeting Mode** | Meeting Mode hotkey | Side-snapped panel | Long transcript + note |
-| **Voice Agent** | Agent hotkey, or saying the agent name during dictation | Agent overlay | Action / answer (not raw transcript) |
+| **Dictation** | Dictation hotkey (Tap/Push-to-talk), default `Ctrl+Win` | Dictation Panel (Khonjel Bar) | Cleaned text **auto-pasted** at cursor |
+| **Voice Agent** | Voice Agent hotkey (dedicated) | Agent overlay | Dictation sent to AI agent as a **command** (no wake word, no cleanup) |
+| **Chat Agent** | Chat Agent hotkey | Agent overlay / Chat | Conversational turn |
+| **Note Recording** | From Notes / Meeting | Bar or panel | Saved note (optionally diarized) |
+| **Meeting Mode** | Meeting hotkey **or auto-detect** | Side/full panel | Long transcript + note (diarized) |
+| **Upload** | Control Panel ▸ Upload | Upload view | Transcribe an existing audio file |
 
-All four share one capture pipeline; they differ in **surface**, **post-processing
-purpose**, and **destination**.
+All share one capture pipeline; they differ in **surface**, **post-processing scope**,
+and **destination**. Four **global hotkeys**: Dictation · Voice Agent · Meeting · Chat
+Agent (per OpenWhispr).
 
 ---
 
 ## 2. Dictation (primary mode)
 
 ### 2.1 Activation
-- **Default hotkey:** `Ctrl + Win` (rebindable). (Ref: OW S15, WF W8.)
-- **Activation modes** (Ref: OW S15):
+- **Default hotkey:** `Ctrl + Win` (rebindable). (OpenWhispr Hotkeys.)
+- **Activation modes:**
   - **Tap** — tap to start, tap to stop (hands-free for long dictation).
-  - **Hold** — hold to talk, release to stop (push-to-talk for quick bursts).
+  - **Push-to-talk (Hold)** — hold to talk, release to stop (quick bursts).
 - Optional **voice activation** later (P2): start on wake word.
 
 ### 2.2 Runtime states (Khonjel Bar)
@@ -74,42 +77,50 @@ idle ──hotkey──▶ listening ──stop──▶ transcribing ──▶ 
 
 ## 4. Meeting Mode
 
-- Dedicated hotkey (Ref: OW S15).
-- On trigger, the capture UI **snaps to the side of the screen** as a panel for an
-  ongoing session (so it doesn't block the conversation/app).
-- **"When triggered by hotkey, open in:"** layout option (e.g. `Full width`, side
-  panel) (Ref: OW S15).
-- Produces a long transcript with diarization → saved as a note. Suited to calls,
-  interviews, and lectures.
-- v1 scope: single-device microphone/system-audio capture; large-scale multi-party
-  infrastructure is **out of scope** (see vision non-goals).
+- **Dedicated hotkey** *and* **auto-detection**: Khonjel detects active **Zoom / Teams /
+  FaceTime** calls and shows a **meeting-notification overlay** offering to record.
+- On start, the capture UI opens in the configured **layout** (`Full width` or
+  `Side panel`) so it doesn't block the call.
+- Captures mic **+ system audio** (native helpers; **AEC/VAD** via meeting-aec-helper).
+- Produces a long transcript with **live speaker diarization** + **voice fingerprint**
+  (recognise speakers across meetings, on-device) → saved as a **Note** (auto-title).
+- **Google Calendar** integration surfaces **upcoming meetings** and reminders.
+- Suited to calls, interviews, lectures. v1: single-device capture; large-scale
+  multi-party infrastructure is out of scope (see vision non-goals).
 
 ---
 
-## 5. Voice Agent
+## 4b. Upload (file transcription)
 
-- **Two entry points:**
-  1. **Agent hotkey** toggles the **agent overlay** (Ref: OW S15).
-  2. **Inline wake word** — saying the **agent name** ("Khonjel") during dictation switches that utterance from *transcribe* to *instruct* (Ref: OW S6/S11).
-- Speech is interpreted as an **instruction** and routed to the **Voice Agent LLM
-  purpose**, which can answer, rewrite, or perform an action — rather than being
-  pasted verbatim.
+- **Control Panel ▸ Upload**: drag-drop or browse an **existing audio file**.
+- Runs the selected **STT engine** (local/cloud) with progress; optional diarization.
+- Result becomes a **History** entry and/or a **Note**; copy/save actions.
+
+---
+
+## 5. Voice Agent & Chat Agent
+
+- **Voice Agent (dedicated hotkey):** dictation is sent **straight to the AI agent as a
+  command** — **no wake word needed and no cleanup pass** (per OpenWhispr). Routed to
+  the **Voice Agent** LLM scope; answers/acts in the **Agent overlay**.
+- **Chat Agent (hotkey) / Chat view:** conversational turns with the **Chat** scope
+  (reasoning/thinking mode aware).
+- **Inline wake word** (optional): saying the **agent name** ("Khonjel") during
+  dictation can switch that utterance from *transcribe* to *instruct*.
 - **Security:** the default cleanup prompt treats transcribed speech as *data, not
-  instructions* (Ref: OW S7). Only the explicit wake word / agent overlay switches to
-  instruction mode. This prevents prompt-injection via dictated content. See
+  instructions*. Only the dedicated agent hotkey / explicit wake word enters instruction
+  mode — preventing prompt-injection via dictated content. See
   [`04-text-intelligence.md`](04-text-intelligence.md#5-prompt-studio--the-unified-prompt).
-- Configurable enable toggle and wake word (Ref: OW S11).
 
 ---
 
-## 6. Scratchpad
+## 6. Notes (capture destination)
 
-- A **freeform dictated-notes workspace** (Ref: WF W7): a `Recents` list + search +
-  add + refresh, and a **record FAB**.
-- **Open behaviour** setting: e.g. **Resume last note** (Ref: WF W11).
-- Notes are full transcripts (not inserted elsewhere); editable; titled (auto or
-  manual); optionally cloud-synced (P2).
-- Empty state: `No notes found`.
+- The **Notes** workspace (TipTap, folders, **local semantic search**) is the home for
+  recorded/dictated notes and meeting transcripts (replaces the Wispr "Scratchpad").
+- Notes are full transcripts; editable; titled (auto via Note Formatting or manual);
+  support **AI actions** (summarize/rewrite/extract todos); optional **save-as-files**
+  and optional sync. Empty state: "No notes yet".
 
 ---
 
@@ -118,11 +129,12 @@ idle ──hotkey──▶ listening ──stop──▶ transcribing ──▶ 
 | Concern | Behaviour |
 |---|---|
 | **Cancel** | `Esc` cancels any in-progress capture without inserting/saving. |
-| **Sounds** | Start/stop/notification sounds (toggle); mute music while dictating (Ref: WF W10). |
-| **Language** | Uses configured Dictation Language(s) (Ref: WF W8); multi-language supported by Local STT. |
-| **Microphone** | Uses selected input device (Ref: WF W8). |
-| **Offline** | Dictation + Cleanup must work fully offline with Local engines (core principle). |
-| **Auto-add to Dictionary** | Corrected words can be auto-added (Ref: WF W12). |
+| **Auto-paste** | Final dictation text is pasted at the cursor (toggle); optionally kept in clipboard. |
+| **Sounds** | Dictation cues (toggle); pause media while dictating. |
+| **Language** | Uses configured Dictation Language; multilingual via Local STT (Whisper/Parakeet). |
+| **Microphone** | Uses selected input device; prefer-built-in option. |
+| **Offline** | Dictation + Cleanup work fully offline with Local engines (core principle). |
+| **Auto-learn Dictionary** | Corrected words can be auto-added to the dictionary. |
 
 ---
 

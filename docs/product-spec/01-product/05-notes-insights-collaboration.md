@@ -25,22 +25,30 @@
 
 ---
 
-## 2. Notes — Ref: OW + WF (Scratchpad)
+## 2. Notes — OpenWhispr `personal-notes` (TipTap)
 
-Saved transcripts and recordings (from Note Recording, Meeting Mode, Scratchpad).
+The primary note workspace (replaces the Wispr "Scratchpad"). Built on **TipTap 3**.
 
-- **List:** `Recents` with search, add, refresh; empty state `No notes found`.
-- **Note object:** title (auto/manual), body (formatted transcript), source audio
-  (optional, per retention), speakers (if diarized), created/updated, tags, sharing
-  scope.
-- **Editing:** full text edit; re-run formatting/cleanup; rename; delete.
-- **Sync (P2):** optional cloud sync for cross-device access (off by default).
-- **Sharing (P2):** per-note sharing scope (e.g. "Anyone with the link"); default set
-  in Data & Privacy (Ref: WF W18).
+- **Organization:** **Folders** (tree) + flat list; per-note tags.
+- **Local semantic search:** **Qdrant + MiniLM embeddings**, fully on-device — search
+  by meaning across note content (`?q=…`), not just keywords.
+- **Note object:** title (auto via Note Formatting / manual), rich body (TipTap JSON +
+  markdown), folderId, tags, source audio (optional, per retention), speakers (if from
+  a meeting), created/updated, optional `filePath` (save-as-files), `syncState`.
+- **Editor:** headings, bullet/ordered/**task** lists, code, links, markdown I/O;
+  **record/append** dictation into a note; **AI actions** (summarize, rewrite, extract
+  todos) using the **Note Formatting / Chat** scopes.
+- **Save notes as files (P2):** mirror notes to a chosen folder on disk; rebuild index.
+- **Sync (P2):** optional cloud backup/sync for cross-device access (**off by default**,
+  no subscription). Empty state: `No notes yet`.
 
 ---
 
-## 3. Insights — Ref: WF W2
+## 3. Insights *(merged from Wispr Flow)* — Ref: WF W2
+
+> **Home in Khonjel:** a **first-class sidebar destination** (`/insights`), computed
+> entirely from **local history**. It originates from Wispr Flow but is fully merged
+> into the unified app — not an optional add-on.
 
 A **gamified analytics dashboard**. Tabs: `Your Usage` · `Your Voice`. Shareable.
 
@@ -66,26 +74,28 @@ A **gamified analytics dashboard**. Tabs: `Your Usage` · `Your Voice`. Shareabl
 
 > Optional layer for teams/enterprises. Khonjel works fully without any account.
 
-### 4.1 Account — Ref: WF W16
-- Fields: `First name`, `Last name`, `Email` (read-only), `Profile picture`.
-- Actions: `Sign out`, `Delete account` (low-emphasis text link), `Save` (primary).
-- **Local-only mode:** account is optional; a local profile works without sign-in.
+### 4.1 Account — optional (OpenWhispr, auth-gated)
+- **Optional and skippable.** When auth is disabled (no `AUTH_URL`), the Account page
+  shows "Account features disabled" and Khonjel runs **fully local with no profile**.
+- When signed in: avatar + name + email (read-only) + **Signed In** badge; `Sign out`;
+  `Delete account` (danger). Signed-out shows an **Offline** badge.
+- Sign-in exists **only** to enable optional cross-device sync / workspaces.
 
-### 4.2 Team
-- Invite members; shared **Dictionary** and **Snippets** ("Shared with team" scope).
-- Roles/permissions (admin/member); shared vocabulary governance.
+### 4.2 Workspace / Team (optional, feature-flagged)
+- Invite members; shared **Dictionary** and **Snippets**; roles (admin/member).
+- Gated by a feature flag; entirely optional; local-first by default.
 
-### 4.3 Plans & Billing (optional)
-- Only relevant to **Khonjel Cloud** managed tier and team seats.
-- Honest, dismissible quota; **local use is unmetered and free** (no hard caps).
-- Drops the references' referral nags / social-promo upsells.
+### 4.3 ~~Plans & Billing~~ — REMOVED
+- **There is no subscription, billing, pricing, checkout, quota, referral, or upgrade
+  surface.** Local use is free and unmetered; Public API / MCP / CLI are **free**.
+- "Khonjel Cloud" (optional sync backend) is **not** a paid tier and is self-hostable.
 
 ---
 
-## 5. Notifications & milestones — Ref: WF W10–W11
-- **Categories (toggle each):** `Suggestions` (setup/usage tips), `Announcements`
-  (new features), `Milestones` (word-count milestones, streaks, referral activity).
-- Milestones tie into Insights gamification.
+## 5. Notifications — OpenWhispr (General ▸ Notifications)
+- **Categories (toggle each):** `Disable all` · `Meeting detection` (auto-detected
+  calls) · `Calendar reminders` (upcoming meetings) · `Updates` (new versions).
+- *(Additive, Wispr Flow: Suggestions / Announcements / Milestones if Insights enabled.)*
 
 ---
 

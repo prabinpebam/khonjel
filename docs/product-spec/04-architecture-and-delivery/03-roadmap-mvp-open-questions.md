@@ -8,52 +8,54 @@
 
 ## 1. Release phasing
 
-### Phase 0 — Foundations (internal)
-- App shell (chrome, sidebar, content panel, theming light/dark).
-- `ModelGateway` + **Local** and **Self-Hosted** adapters.
-- Capture pipeline (hotkey → STT → insert) with the Khonjel Bar.
-- Local store + settings.
+> Khonjel forks the OpenWhispr codebase (same stack), removes the subscription layer,
+> rebrands, and layers in additive polish. Phasing reflects "rebrand + de-monetize
+> first, then enhance."
+
+### Phase 0 — Fork & rebrand (internal)
+- Fork OpenWhispr; **strip Plans & Billing, referral, upgrade/limit, usage/quota** code.
+- Rebrand → Khonjel (name, logo, wake word, Khonjel Bar); disable telemetry.
+- Make auth/sync optional (compile-out path verified); **ungate API/MCP/CLI**.
+- Verify the multi-window shell, local engines, and capture pipeline build & run.
 
 ### Phase 1 — MVP / v1.0 (public) — the local-first core
 **Must include (P0):**
 - Onboarding (local model + hotkey, no account/cloud).
-- **Dictation** (Tap/Hold) with the Khonjel Bar; insert at cursor.
-- **Speech-to-Text** settings: Local + Self-Hosted (+ Cloud Providers, Enterprise present).
-- **Language Models** with four purposes; **Dictation Cleanup** functional.
-- Engine archetype selector everywhere; **Local default**; Self-Hosted `/models` discovery.
-- **Cloud Providers** matrix (OpenAI/Anthropic/Gemini/Groq/Custom).
-- **Dictionary** (vocab + substitutions; auto-add).
-- **Home/History** timeline; **Hotkeys**, **General**, **Appearance**, **System**,
-  **Privacy & Data** settings.
-- Privacy: everything off by default; retention + storage controls; data management/reset.
-- Local model download manager (families + sized variants + background download).
+- **Dictation** (Tap/Push-to-talk) with the Dictation Panel; **auto-paste** at cursor.
+- **Speech-to-Text:** Local (**Whisper + Parakeet**, Silero VAD, GPU) + Self-Hosted (+ Providers).
+- **Language Models** with four scopes; **Dictation Cleanup** + **Prompt Studio**.
+- Inference-mode selector everywhere; **Local default**; Self-Hosted `/models` discovery.
+- **Providers** matrix (OpenAI/Anthropic/Gemini/Groq/Custom; Deepgram/xAI for STT).
+- **Dictionary** (vocab + auto-learn) + **Snippets**.
+- **Home/History**; **Notes** (TipTap + folders + **local semantic search**); **Upload**.
+- **Control Panel** nav (Home/Chat/Notes/Upload/Dictionary/Integrations) + command palette.
+- Settings: General · Hotkeys · Speech-to-Text · Language Models · Privacy & Data · System.
+- Privacy: no telemetry; retention + storage + permissions; data management/reset.
 
-### Phase 2 — v1.x — productivity depth (P1)
-- **Transforms**, **Style**, **Snippets**, **Scratchpad**.
-- **Note Recording** + diarization, **Meeting Mode**, **Voice Agent** + **Chat**.
-- **Prompt Studio** (View/Customize/Test).
-- **Insights** dashboard (Your Usage).
-- **Enterprise** adapters (Bedrock/Azure/Vertex); **Disable thinking output**.
-- Notifications, sounds, updates, debug logging polish.
+### Phase 2 — v1.x — agent, meetings & integrations (P1)
+- **Chat** view + **Voice Agent** / **Chat Agent** hotkeys + Agent overlay; reasoning mode.
+- **Note Recording** + diarization + **voice fingerprint**; **Meeting Mode** auto-detect.
+- **Integrations:** Google Calendar, **Public API**, **MCP server**, **CLI** (all free).
+- **Enterprise** modes (Bedrock/Azure/Vertex); transcription preview; updates polish.
+- **Additive (Wispr Flow):** Insights (Your Usage), Style, Transforms.
 
-### Phase 3 — v2 — collaboration, cloud & compliance (P2)
-- **Account/Team/Plans**, shared Dictionary/Snippets.
-- **Khonjel Cloud** managed tier; **Cloud Sync**; note sharing.
-- **HIPAA BAA**, Data Controls export/delete.
-- **Vibe coding** (IDE integration); **Insights ▸ Your Voice**; **Voice Profiles**.
-- Mobile companion (deferred from references' "Download on mobile").
+### Phase 3 — v2 — optional sync, teams & compliance (P2)
+- **Optional account** + **Workspaces/Team** (shared Dictionary/Snippets), feature-flagged.
+- **Khonjel Cloud** optional/self-hostable sync (**not paid**); save-notes-as-files.
+- **HIPAA BAA**, Data Controls export/delete; Insights ▸ Your Voice; Voice Profiles.
+- Mobile companion (deferred).
 
 ---
 
 ## 2. MVP scope statement
-> **v1.0 is a complete, private, local-first dictation product**: install → pick a local
-> model → set a hotkey → dictate clean text into any app, with a searchable history, a
-> custom dictionary, and full model flexibility (local, self-hosted, BYO-key cloud) —
-> **without an account or any data leaving the device**. Productivity extras
-> (transforms/style/snippets/insights/meeting/agent) and collaboration/cloud follow.
+> **v1.0 is OpenWhispr, rebranded and de-monetized**: install → pick a local model →
+> set a hotkey → dictate clean text into any app, with searchable history, Notes with
+> local semantic search, a custom dictionary, file upload, and full model flexibility
+> (local, self-hosted, BYO-key cloud) — **without an account, subscription, telemetry,
+> or any data leaving the device**. Agent/meetings/integrations and optional sync follow.
 
-**Explicitly out of v1:** teams/billing, cloud sync, HIPAA, Vibe coding, mobile,
-large-scale meeting infrastructure, community prompt marketplace.
+**Explicitly out of v1:** the entire subscription/billing layer (**removed for good**),
+optional teams/sync, HIPAA, mobile, large-scale meeting infrastructure.
 
 ---
 
@@ -97,18 +99,23 @@ large-scale meeting infrastructure, community prompt marketplace.
 
 ## 6. Open questions / decisions to make
 
-| # | Question | Options | Lean |
-|---|---|---|---|
-| Q1 | Default local STT model | Whisper-small vs distil vs hardware-scaled | Hardware-scaled "Recommended" |
-| Q2 | Default local LLM for cleanup | Qwen 4B vs 2B vs Gemma | Smallest that hits quality bar; hardware-scaled |
-| Q3 | Desktop runtime | Electron vs Tauri vs native | Optimize for OS integration + bundle size |
-| Q4 | Local LLM engine | bundled llama.cpp vs require Ollama | Bundle a runtime; allow Self-Hosted to reuse Ollama |
-| Q5 | Style app→context mapping | curated defaults vs user-only | Curated defaults + override |
-| Q6 | Transforms sharing | files only vs marketplace | Files in v1; marketplace later |
-| Q7 | Account optionality | local profile vs required for sync | Local profile always; account only for cloud/team |
-| Q8 | Quota/monetization | none vs managed-tier metering | Local free; meter only Khonjel Cloud |
-| Q9 | Diarization engine | local vs cloud | Local where feasible; cloud optional |
-| Q10 | Mobile | companion vs full app | Companion capture/sync first |
+> Several earlier questions are now **resolved** by adopting the OpenWhispr stack.
+
+| # | Question | Decision |
+|---|---|---|
+| Q1 | Desktop runtime | **Resolved: Electron 41** (OpenWhispr stack). |
+| Q2 | Local STT | **Resolved: Whisper (whisper.cpp) + NVIDIA Parakeet (sherpa-onnx)** + Silero VAD, GPU-aware. |
+| Q3 | Local LLM engine | **Resolved: bundle llama.cpp/llama-server**; Self-Hosted reuses Ollama/LM Studio/vLLM. |
+| Q4 | Components | **Resolved: shadcn/ui + Radix + Tailwind v4 + lucide-react.** |
+| Q5 | Semantic search | **Resolved: Qdrant + MiniLM, local.** |
+| Q6 | Storage / secrets | **Resolved: better-sqlite3 + kysely; keychain via @napi-rs/keyring.** |
+| Q7 | Monetization | **Resolved: none.** No subscription/quota; API/MCP/CLI free; local unmetered. |
+| Q8 | Account/auth | **Resolved: optional/skippable** (compile-out via `AUTH_URL`); local-first. |
+| Q9 | Telemetry | **Resolved: none** (off/removed). |
+| Q10 | Default local model | Open — hardware-scaled "Recommended" Whisper + small local LLM. |
+| Q11 | Khonjel Cloud sync backend | Open — self-host vs optional managed (still free); how to host. |
+| Q12 | Additive features depth | Open — how much of Insights/Style/Transforms to ship vs defer. |
+| Q13 | Mobile | Open — companion capture/sync first (deferred). |
 
 ---
 

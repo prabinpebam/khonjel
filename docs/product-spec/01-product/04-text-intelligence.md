@@ -72,6 +72,11 @@ marketplace in v1).
 
 ## 4. Style — Ref: WF W5
 
+> **Home in Khonjel:** Style is **merged into Dictation Cleanup** — it lives as a
+> **Styles** sub-tab under **Settings ▸ Language Models ▸ Dictation Cleanup**, because
+> Style *is* the per-context tone/formatting of cleanup. (It is not a separate top-level
+> silo; this keeps the package coherent.)
+
 **Per-context writing style** (tone + formatting) applied automatically based on the
 kind of app you are dictating into.
 

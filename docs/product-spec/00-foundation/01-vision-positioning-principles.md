@@ -11,19 +11,25 @@
 
 ## 1. Product thesis
 
-Khonjel merges two proven reference experiences into one coherent product:
+Khonjel is **built on OpenWhispr** (the open-source, MIT-licensed voice-to-text app) —
+**the same technology stack**, replicating its full UI, navigation, and feature set —
+with the **subscription/billing layer removed** and the productivity polish of a second
+reference layered on top:
 
-| Reference | What it does best | What Khonjel takes |
+| Source | Role | What Khonjel takes |
 |---|---|---|
-| **OpenWhispr** (open-wisper) | Deep, honest **engine & model configuration** — local, BYO-API, self-hosted, enterprise; Prompt Studio; everything-off-by-default privacy. | The entire **model/engine backbone** and privacy posture. |
-| **Wispr Flow** (wisper-flow) | A polished **productivity surface** — history, insights, dictionary, snippets, style, transforms, scratchpad, an always-on floating bar. | The **app shell, navigation, and productivity feature set**. |
+| **OpenWhispr** (source repo, authoritative) | The **base product** | Tech stack, multi-window app, local engines (Whisper/Parakeet/llama.cpp), 5 inference modes, Prompt Studio, Notes + semantic search, meetings, integrations, **no-telemetry** privacy — **everything except subscription**. |
+| **Wispr Flow** (reference) | **Additive polish** | History timeline, Insights, Style, Transforms, the warm light theme. |
 
-> **Khonjel = Wispr Flow's productivity surface, powered by OpenWhispr's local/open
-> engine backbone.** Neither reference alone is the product. The synthesis is.
+> **Khonjel = OpenWhispr, rebranded, on the same stack, minus the subscription — plus
+> Wispr Flow's productivity polish.** Per the directive: *"we are not going to have the
+> subscription part of it and have pretty much everything else."*
 
 The defining bet: most dictation products are thin clients in front of a single
-proprietary cloud. Khonjel inverts that — the **default** experience is fully local
-and free, and the cloud is an *option you opt into*, not a dependency you start with.
+proprietary cloud. Khonjel inverts that — the **default** experience is fully local,
+free, **account-optional**, and **telemetry-free**; the cloud is an *option you opt
+into*, never a dependency. There is **no subscription, no quota, no upsell**; the Public
+API, MCP server, and CLI (Pro-gated in OpenWhispr) are **free** in Khonjel.
 
 ---
 

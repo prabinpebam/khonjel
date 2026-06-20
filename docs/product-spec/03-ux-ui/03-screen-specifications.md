@@ -205,6 +205,77 @@ rich-text region with AT support.
 
 ---
 
+## 4b. OpenWhispr Control Panel screens (authoritative)
+
+> Khonjel's primary navigation is **one unified sidebar**: **Home · Insights · Chat ·
+> Notes · Upload · Dictionary · Transforms · Integrations**. The OpenWhispr base and the
+> Wispr Flow surfaces are **merged into a single package**: **Insights** and
+> **Transforms** are first-class destinations (specs in §2 and §3); **Style** folds into
+> Settings ▸ Language Models ▸ Dictation Cleanup; **Snippets** sit under **Dictionary**;
+> **Scratchpad** is absorbed by **Notes** (richer: folders + semantic search); **Voice
+> Profiles** + stats live on **Home**. See the integration map in
+> [`../02-information-architecture/01-sitemap-and-ia.md`](../02-information-architecture/01-sitemap-and-ia.md#21-wispr-flow-integration-map-every-goodness-has-one-definite-home).
+
+### 4b.1 Chat  *(P1 — OpenWhispr `chat`)*
+**Purpose.** Conversational AI agent inside Khonjel.
+```
+Chat
+┌ message thread (user / assistant bubbles, markdown, streaming) ┐
+│  … thinking/reasoning shimmer when reasoning mode on            │
+└────────────────────────────────────────────────────────────────┘
+[ message composer  · mic · send ]                    model/provider badge
+```
+- Streaming responses; **reasoning/thinking mode** indicator; markdown (react-markdown).
+- Uses the **Chat** LLM purpose (any engine: local/providers/self-hosted/enterprise).
+- Empty state: shared illustration + short prompt suggestions.
+- Voice input via mic; or the **Chat Agent** global hotkey opens the **Agent Overlay**.
+
+### 4b.2 Notes  *(P1 — OpenWhispr `personal-notes`, replaces Scratchpad)*
+**Purpose.** Rich, searchable note workspace (TipTap).
+```
+Notes                                              [search ⌘K] [+ New]
+┌ folders (tree) ┐ ┌ note list ────────┐ ┌ Note editor (TipTap) ───────┐
+│ All            │ │ title · preview ·  │ │ Title (auto/manual)          │
+│ ▸ Folder A     │ │ updated            │ │ rich body: headings, lists,  │
+│ ▸ Folder B     │ │ …                  │ │ tasks, code, links           │
+└────────────────┘ └────────────────────┘ │ [record/append] [AI actions] │
+                                           └──────────────────────────────┘
+```
+- **Folders** + **semantic search** (Qdrant + MiniLM, **local**) over note content.
+- **Note editor:** TipTap (headings, bullet/ordered/task lists, code, links, markdown
+  I/O); record/append dictation; **AI actions** (summarize, rewrite, extract todos);
+  speakers if from a meeting; optional **save-as-files** to a folder; optional sync.
+- States: empty "No notes yet"; search no-match; loading skeletons.
+- A11y: tree is a treeview; editor is an AT-friendly rich-text region.
+
+### 4b.3 Upload  *(P1 — OpenWhispr `upload`)*
+**Purpose.** Transcribe an **existing audio file**.
+```
+Upload
+┌ drop zone:  "Drop an audio file or click to browse"  ┐
+└──────────────────────────────────────────────────────┘
+{queued file → transcribing (progress) → result → save as Note / copy}
+```
+- Drag-drop or browse; shows duration/format; runs the selected **STT engine**
+  (local/cloud); progress; result becomes a History entry / Note; diarization optional.
+- States: empty drop zone; invalid-format error; transcribing progress; done.
+
+### 4b.4 Integrations  *(P1 — OpenWhispr `integrations`; ungated/free)*
+**Purpose.** Connect external services. Sectioned list (icon tile + title + desc + action).
+```
+Integrations
+CALENDAR   Google Calendar     [Connect]  (multi-account; primary-only toggle; disconnect)
+API        Public API          [Manage]   → API keys dialog + docs        (FREE)
+MCP        MCP server          [Set up]                                   (FREE)
+CLI        CLI bridge          [Set up]                                   (FREE)
+```
+- **Google Calendar:** OAuth connect, connected-account rows, "primary calendars only",
+  add-another; powers meeting auto-detection + reminders.
+- **Public API / MCP / CLI:** **free in Khonjel** (OpenWhispr gates these behind Pro).
+- A11y: each row is a labelled group; dialogs are focus-trapped.
+
+---
+
 ## 5. Cross-screen conventions
 - **Primary action** top-right of page (`Add new` / `Create New`); **destructive**
   actions always confirm and use `--danger`.
@@ -220,7 +291,9 @@ rich-text region with AT support.
 ## 6. Per-screen acceptance checklist
 - [ ] Onboarding completes fully offline with a local model; no forced account/cloud.
 - [ ] Home renders day-grouped history with retained formatting + per-entry actions + stats rail.
-- [ ] Insights shows WPM/gauge, fixes, totals, per-app bars, streak heatmap from local data; charts have text equivalents.
-- [ ] Dictionary/Snippets/Style/Transforms follow the library template with correct tabs, promos, entries, and editors.
-- [ ] Transforms shows keycap-bound cards with defaults + create-your-own + view-changes.
-- [ ] Scratchpad lists notes, has record FAB, honors open behaviour, shows correct empty state.
+- [ ] Chat streams responses with reasoning-mode indicator; uses the Chat purpose on any engine.
+- [ ] Notes: folders + local semantic search (Qdrant+MiniLM) + TipTap editor + AI actions + optional save-as-files.
+- [ ] Upload transcribes a file via the selected STT engine with progress and save-as-Note.
+- [ ] Integrations: Google Calendar OAuth + Public API/MCP/CLI **free**; dialogs accessible.
+- [ ] Dictionary (+ Snippets) follow the library template with entries and editors.
+- [ ] Additive (WF): Insights/Style/Transforms render correctly where enabled.

@@ -1,63 +1,75 @@
 # Khonjel — System Architecture
 
-> The technical shape implied by the product spec. Optimised for **local-first**
-> operation, a **sacred hot path**, and a **single model abstraction** across many
-> providers. This is a reference architecture, not a final implementation.
+> The technical architecture, aligned to the **OpenWhispr** implementation Khonjel is
+> built on (same tech stack). Optimised for **local-first** operation, a **sacred hot
+> path**, and a **single inference abstraction** across many providers.
+> Concrete stack: [`04-technology-stack.md`](04-technology-stack.md). Source mapping:
+> [`../99-reference-analysis/03-openwhispr-repo-analysis.md`](../99-reference-analysis/03-openwhispr-repo-analysis.md).
 
 ---
 
 ## 1. Architectural principles
-1. **Local-first.** The dictate→cleanup→insert loop runs entirely on-device with open
-   models; no network call is on the critical path.
-2. **Hot path is sacred.** User interaction (hotkey→listening→insert) is in-memory and
-   never blocked by indexing, downloads, discovery, sync, or analytics. (Per the
-   benchmarking lesson: heavy work is moved *off* the interaction path, not just sped up.)
-3. **One model abstraction.** A `ModelGateway` exposes a uniform interface; archetype
-   adapters (Local/Self-Hosted/Cloud/Enterprise/Managed) implement it. Features never
-   special-case a provider.
-4. **Process isolation.** UI, capture, and model execution are separable so a slow/failed
-   model can't freeze the UI or the Bar.
-5. **Privacy by construction.** Default storage is local; egress is opt-in and auditable.
+1. **Local-first.** The dictate→cleanup→paste loop runs entirely on-device (whisper.cpp
+   / Parakeet for STT, llama.cpp for LLM); no network call is on the critical path.
+2. **Hot path is sacred.** Hotkey→listening→paste is in-memory and never blocked by
+   indexing, downloads, discovery, sync, or analytics.
+3. **One inference abstraction.** The **Vercel AI SDK** + a mode router exposes a uniform
+   interface; mode adapters (Local / Self-Hosted / Providers / Enterprise / Khonjel
+   Cloud) implement it. Features never special-case a provider.
+4. **Multi-window isolation.** UI windows (Dictation Panel, Control Panel, overlays) and
+   model execution are separable so a slow/failed model can't freeze capture.
+5. **Privacy by construction.** Default storage is local (better-sqlite3 + Qdrant);
+   secrets in the OS keychain; **no telemetry**; egress is opt-in and auditable.
 
 ---
 
-## 2. High-level components (desktop app)
+## 2. High-level components (Electron app)
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐
-│ Main Process (app core)                                           │
-│  ├─ HotkeyService        global shortcuts (dictation/meeting/agent)│
-│  ├─ CaptureService       mic/audio I/O, VAD, music-mute            │
-│  ├─ Pipeline             STT → Dictionary → Cleanup → Style → out  │
-│  ├─ ModelGateway         uniform STT/LLM interface                 │
-│  │    ├─ LocalAdapter        on-device runtime (ASR + LLM)         │
-│  │    ├─ SelfHostedAdapter   OpenAI-compatible HTTP (Ollama/LMS/…) │
-│  │    ├─ CloudAdapter        OpenAI/Anthropic/Gemini/Groq/Custom   │
-│  │    ├─ EnterpriseAdapter   Bedrock/Azure OpenAI/Vertex           │
-│  │    └─ ManagedAdapter      Khonjel Cloud (optional)              │
-│  ├─ ModelManager         download/catalog/cache (background)       │
-│  ├─ Store                 settings, history, notes, libraries      │
-│  ├─ InsightsEngine        local aggregation                        │
-│  └─ Updater / Logger      updates, debug logging                   │
+│ Main process (main.js) + preload (context bridge)                 │
+│  ├─ HotkeyService        4 global shortcuts (dictation/voice-agent/│
+│  │                        meeting/chat) + per-OS key listeners      │
+│  ├─ CaptureService       mic + system audio, Silero VAD, AEC        │
+│  ├─ Pipeline             STT → Dictionary → Cleanup → (Style) → paste│
+│  ├─ InferenceRouter      Vercel AI SDK + mode adapters:             │
+│  │    ├─ LocalAdapter        whisper.cpp / sherpa-onnx (Parakeet) / │
+│  │    │                      llama.cpp (GPU-aware)                   │
+│  │    ├─ SelfHostedAdapter   OpenAI-compatible HTTP (Ollama/LMS/vLLM)│
+│  │    ├─ ProvidersAdapter    OpenAI/Anthropic/Gemini/Groq/Deepgram/  │
+│  │    │                      xAI (@ai-sdk/*)                         │
+│  │    ├─ EnterpriseAdapter   Bedrock/Azure OpenAI/Vertex             │
+│  │    └─ KhonjelCloudAdapter optional/self-hostable                 │
+│  ├─ ModelManager         download/catalog/cache (background)        │
+│  ├─ DiarizationService   diarization-models + voice fingerprint     │
+│  ├─ MeetingDetector      Zoom/Teams/FaceTime detection + calendar   │
+│  ├─ SearchService        Qdrant + MiniLM embeddings (local)         │
+│  ├─ Store (better-sqlite3+kysely)  settings/history/notes/dict      │
+│  ├─ Keychain (@napi-rs/keyring)    API keys/tokens                  │
+│  ├─ Auth/Sync (optional)  better-auth · SyncService · NotesService  │
+│  ├─ ApiServer / McpServer / CliBridge   (free, ungated)             │
+│  └─ Updater (electron-updater) / Logger                             │
 ├───────────────────────────────────────────────────────────────────┤
-│ Surfaces (renderer windows)                                       │
-│  ├─ Main Window          shell + screens                           │
-│  ├─ Khonjel Bar          always-on capture pill                    │
-│  ├─ Overlays             agent / meeting / transform-preview       │
-│  └─ Settings (modal)     configuration                             │
+│ Renderer windows (React 19 / Vite / shadcn-ui), routed by params   │
+│  ├─ Dictation Panel       always-on capture (Khonjel Bar)           │
+│  ├─ Control Panel          Home/Chat/Notes/Upload/Dictionary/Integr.│
+│  ├─ Agent Overlay          ?agent=true                              │
+│  ├─ Overlays               meeting-notif / transcription-preview /  │
+│  │                          update-notif                            │
+│  └─ Settings (modal)        configuration                           │
 ├───────────────────────────────────────────────────────────────────┤
-│ Integrations                                                       │
-│  ├─ TextInjector         insert at cursor in active app            │
-│  ├─ ActiveAppContext     foreground app id → Style mapping         │
-│  ├─ ContextReader        optional on-screen text (opt-in)          │
-│  └─ IDEBridge            Vibe coding (VS Code/Cursor/Windsurf) P2   │
+│ OS integration (per-OS native helpers)                             │
+│  ├─ TextInjector         auto-paste at cursor (fast-paste/ydotool)  │
+│  ├─ ActiveAppContext     foreground app (for history/Style)         │
+│  ├─ SystemAudio          PipeWire (linux) / audio-tap (mac)         │
+│  └─ Calendar/IDE         Google Calendar OAuth · MCP/CLI bridges    │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-> Suggested stack (illustrative): an Electron/Tauri-class desktop shell for the UI and
-> OS integration; a native/sidecar runtime for local ASR (e.g. whisper.cpp /
-> faster-whisper) and local LLM (e.g. llama.cpp / Ollama). The spec is stack-agnostic;
-> what matters is the component boundaries and the hot path.
+> Stack is **fixed** (not stack-agnostic): **Electron 41 + React 19 + TS + Tailwind v4 +
+> shadcn/ui**, local engines **whisper.cpp / sherpa-onnx / llama.cpp**, **Qdrant +
+> MiniLM** search, **better-sqlite3 + kysely** storage. See
+> [`04-technology-stack.md`](04-technology-stack.md).
 
 ---
 

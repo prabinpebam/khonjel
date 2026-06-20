@@ -41,22 +41,43 @@
 
 | Term | Definition |
 |---|---|
-| **Engine archetype** | One of the five ways Khonjel can run a model task. The same set appears for both speech and language tasks: |
-| → **Managed Cloud** | Khonjel Cloud. Hosted, no setup, optional. (Ref: "OpenWhispr Cloud".) |
-| → **Cloud Providers** | Bring-your-own-API-key to a third-party provider (OpenAI, Anthropic, Gemini, Groq, Custom). |
-| → **Local** | On-device models, downloaded and run locally. Fully private. The **default**. |
-| → **Self-Hosted** | An OpenAI-compatible server on your network (Ollama, LM Studio, vLLM, `llama-server`) addressed by Endpoint URL. |
-| → **Enterprise** | An organization cloud account: AWS Bedrock, Azure OpenAI, or Google Vertex. |
-| **STT** | Speech-to-Text engine (the transcription model). |
-| **LLM** | Language model used for the four **purposes** below. |
-| **Purpose** | A distinct LLM use with its *own* engine + model + settings. The four purposes: **Dictation Cleanup**, **Voice Agent**, **Note Formatting**, **Chat**. |
-| **Provider** | A specific vendor under *Cloud Providers* (OpenAI, Anthropic, Google Gemini, Groq, Custom). |
-| **Model family** | A group of local models (Qwen, Mistral, Meta Llama, OpenAI/`gpt-oss`, Gemma) shown as chips in the local download manager. |
-| **Endpoint URL** | The base URL of a Self-Hosted OpenAI-compatible server; queried at `/models` for discovery. |
-| **Model discovery** | The explicit `Refresh` action that queries `{endpoint}/models` and lists available models (with inline error surfacing). |
-| **Prompt Studio** | The tool to **View / Customize / Test** the unified system prompt that powers cleanup + instruction detection. |
-| **`{{agentName}}`** | The template variable in prompts that binds to the configurable agent name/wake word. Must be preserved for agent detection. |
-| **Disable thinking output** | A toggle to suppress reasoning tokens from reasoning-capable models (cleaner output). |
+| **Inference mode** | One of the five ways Khonjel runs a model task (OpenWhispr's `InferenceModeSelector`). Same set for speech and language: |
+| → **Khonjel Cloud** | Optional managed/self-hostable backend. **Not a paid tier** (subscription removed). (Ref: "OpenWhispr Cloud".) |
+| → **Providers** | Bring-your-own-API-key (OpenAI, Anthropic, Gemini, Groq, Custom; STT adds Deepgram, xAI). |
+| → **Local** | On-device models, run locally. Fully private. The **default**. |
+| → **Self-Hosted** | An OpenAI-compatible server on your network (Ollama, LM Studio, vLLM, `llama-server`) by base URL. |
+| → **Enterprise** *(LLM)* | An organization cloud account: AWS Bedrock, Azure OpenAI, or Google Vertex. |
+| **STT** | Speech-to-Text engine. Local engines: **Whisper** (whisper.cpp) and **NVIDIA Parakeet** (sherpa-onnx). |
+| **Parakeet** | NVIDIA's fast multilingual ASR model, run locally via sherpa-onnx/ONNX. |
+| **VAD** | Voice-activity detection (**Silero**), tunable per capture mode. |
+| **LLM** | Language model (local via **llama.cpp/llama-server**) used for the four **scopes** below. |
+| **Scope / Purpose** | A distinct LLM use with its *own* mode + model + settings: **Dictation Cleanup**, **Voice Agent** (`dictationAgent`), **Note Formatting**, **Chat** (`chatIntelligence`). |
+| **Reasoning / thinking mode** | Toggle for reasoning-token output on capable models. |
+| **Provider** | A vendor under *Providers* (OpenAI, Anthropic, Google Gemini, Groq, Custom; + Deepgram/xAI for STT). |
+| **Base URL / `/models`** | Self-Hosted endpoint; `Refresh` queries `{baseUrl}/models` for discovery (inline errors). |
+| **GPU device** | Selectable inference GPU when multiple are present. |
+| **Semantic search** | Local meaning-based search over Notes (**Qdrant** vector DB + **MiniLM** embeddings). |
+| **Prompt Studio** | Tool to **View / Customize / Test** the unified system prompt (cleanup + instruction detection). |
+| **`{{agentName}}`** | Prompt template variable bound to the configurable agent name/wake word. |
+
+---
+
+## 3b. Windows, views & integrations (OpenWhispr)
+
+| Term | Definition |
+|---|---|
+| **Dictation Panel** | The small always-on capture window = the **Khonjel Bar**. |
+| **Control Panel** | The main window (sidebar + content views). |
+| **Agent Overlay** | Floating window for the Voice/Chat agent. |
+| **Control Panel views** | **Home · Chat · Notes · Upload · Dictionary · Integrations**. |
+| **Upload** | Transcribe an existing audio file. |
+| **Command palette** | `⌘K`/`Ctrl K` quick-search/jump (CommandSearch). |
+| **Integrations** | Google Calendar · Public API · MCP server · CLI bridge (**all free**). |
+| **MCP server** | Model Context Protocol endpoint to connect an AI assistant. |
+| **Meeting auto-detect** | Detect Zoom/Teams/FaceTime calls to offer recording. |
+| **Voice fingerprint** | On-device speaker recognition across meetings. |
+| **Workspace** | Optional, feature-flagged team layer. |
+| **Khonjel Cloud** | Optional sync backend (not paid). |
 
 ---
 
@@ -64,25 +85,23 @@
 
 | Term | Definition |
 |---|---|
-| **Engine card** | The single-select list of engine archetype rows (icon + title + subtitle + radio). |
-| **Purpose pills** | The segmented control selecting Dictation Cleanup / Voice Agent / Note Formatting / Chat. |
-| **Mode pills** | The segmented control selecting Dictation / Note Recording on the Speech-to-Text page. |
-| **Engine-specific config** | The block of fields that renders below the engine card, keyed to the selected archetype. |
-| **Setting row** | Title + subtitle on the left, a control (toggle/dropdown/button) right-aligned. |
-| **Library page** | The shared template for Dictionary / Snippets / Style / Transforms (title + Add new + tabs + icon cluster + promo + entries). |
-| **Keycap chip** | A small key-cap styled chip rendering a captured shortcut (e.g. `Ctrl` `Win`). |
-| **Promo/education banner** | A dismissible card (photo bg, serif headline, examples) introducing a feature. |
+| **Inference mode selector** | The single-select list of mode rows (icon + title + subtitle) that swaps the config below. (OpenWhispr `InferenceModeSelector`.) |
+| **Inference config editor** | The per-scope config block keyed to the selected mode. |
+| **Purpose / mode tabs** | `ProviderTabs` selecting STT modes or LLM purposes. |
+| **Setting row** | Title + subtitle on the left, a control (toggle/dropdown/button) right-aligned (`SettingsRow`). |
+| **Settings panel** | A rounded bordered card grouping setting rows (`SettingsPanel`). |
+| **Keycap chip** | A key-cap styled chip rendering a captured shortcut (e.g. `Ctrl` `Win`). |
+| **Library page** *(additive)* | The Wispr-Flow template for Dictionary / Snippets / Style / Transforms. |
 
 ---
 
-## 5. Engine archetype copy map (reference → Khonjel)
+## 5. Naming map (OpenWhispr → Khonjel)
 
-| Reference label | Khonjel label |
+| OpenWhispr | Khonjel |
 |---|---|
-| OpenWhispr Cloud | **Khonjel Cloud** |
-| Cloud Providers / "Bring your own key" | **Cloud Providers** (BYO key) |
-| Local | **Local** (default) |
-| Self-Hosted / Self-hosted | **Self-Hosted** |
-| Enterprise | **Enterprise** |
-| "OpenWhispr" wake word | **"Khonjel"** (configurable) |
-| "Flow bar" | **Khonjel Bar** |
+| OpenWhispr (app, wake word, logo) | **Khonjel** (app, wake word "Khonjel", logo) |
+| OpenWhispr Cloud (paid tier) | **Khonjel Cloud** (optional, **free**, self-hostable) |
+| Inference modes (cloud/providers/local/self-hosted/enterprise) | **same** |
+| Dictation Panel / Control Panel / Agent Overlay | **same** |
+| "Flow bar" (Wispr) | **Khonjel Bar** = Dictation Panel |
+| **Plans & Billing / referral / upgrade / quotas** | **removed** |

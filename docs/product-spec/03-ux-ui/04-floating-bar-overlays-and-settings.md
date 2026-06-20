@@ -6,12 +6,16 @@
 
 ---
 
-# PART A — KHONJEL BAR & OVERLAYS
+# PART A — DICTATION PANEL, OVERLAYS & WINDOWS
 
-## 1. Khonjel Bar (always-on floating pill)  *(P0 — Ref: WF "Flow bar")*
+> Khonjel is a **multi-window Electron app** (per OpenWhispr). Beyond the Control Panel
+> (main window) and Settings (modal), these floating windows exist:
 
-A small always-available window that is the live capture surface. Visibility follows
-System ▸ "Show Khonjel Bar at all times"; otherwise it appears only during capture.
+## 1. Dictation Panel / Khonjel Bar (always-on)  *(P0 — OpenWhispr Dictation Panel)*
+
+The default small window — the live capture surface (the **Khonjel Bar**). Position +
+auto-hide via **Settings ▸ General ▸ Floating Icon** (`bottom-right / center /
+bottom-left`).
 
 **Anatomy & states.**
 ```
@@ -19,37 +23,42 @@ idle:        ( ● )                      compact circular/pill, mic glyph
 listening:   ( ▮▮▮▯▮  0:04  ✕ )         waveform + timer + cancel
 transcribing:( ◌  Transcribing… )       spinner + label
 cleaning:    ( ◌  Cleaning… )           spinner + label
-inserting:   ( ✓ )                      brief success
+inserting:   ( ✓ )                      brief success → auto-paste at cursor
 error:       ( ! message  ↻ )           inline error + retry
 ```
-- **Placement:** bottom-center by default; draggable; remembers position; snaps to edges.
-- **Idle interactions:** click = start; right-click = **quick menu** (mode:
-  Dictation/Note/Agent · microphone · dictation language · open Main Window · Settings).
+- **Placement:** per Floating Icon setting; draggable; remembers position; snaps to edges; auto-hide.
+- **Idle interactions:** click = start; quick menu (mode · microphone · dictation language · open Control Panel · Settings).
 - **Listening:** live waveform (`--accent`/`--dataviz`), elapsed timer, `✕`/`Esc` cancel.
 - **Sizing:** ~`220×44` idle/processing, expands to ~`320×56` listening.
 - **Shadow** `--shadow-pop`; `--radius-pill`; theme-aware.
 - **Reduced motion:** static level meter instead of animated waveform.
 
-## 2. Agent overlay  *(P1 — Ref: OW agent hotkey)*
-- Toggled by the Agent hotkey or by saying the agent name during dictation.
-- A focused floating panel: prompt input (voice or text), streaming answer/action,
-  and "apply"/"insert" controls. Uses the **Voice Agent** purpose.
-- Clear visual distinction from dictation (accent header "Agent") to signal
-  instruction mode (security: only here/wake-word is speech treated as a command).
+## 2. Agent Overlay  *(P1 — OpenWhispr `?agent=true` / AgentOverlay)*
+- A separate floating window opened by the **Voice Agent** or **Chat Agent** hotkey.
+- Prompt input (voice/text), streaming answer/action, apply/insert controls. Uses the
+  Voice Agent / Chat purpose; reasoning/thinking-mode aware.
+- Distinct accent header ("Agent") signals **instruction mode** (security: only
+  here/the dedicated hotkey treats speech as a command, never dictated content).
 
-## 3. Meeting Mode panel  *(P1 — Ref: OW S15)*
-- Side-snapped panel (left/right per layout setting; "open in" = `Full width` option).
-- Shows live transcript with **speaker labels** (or You/Others), elapsed time,
-  pause/stop, and a save-as-note action. Auto-title on save.
+## 3. Meeting Mode + Meeting Notification  *(P1 — OpenWhispr)*
+- **Meeting notification overlay** (`?meeting-notification=true`): appears when a
+  Zoom/Teams/FaceTime call is **auto-detected**, offering to start recording.
+- **Meeting panel** (layout `Full width` / `Side panel` per hotkey setting): live
+  transcript with **speaker labels** (diarization + voice fingerprint), elapsed time,
+  pause/stop, save-as-note (auto-title). Calendar-aware (upcoming meetings).
 
-## 4. Transform preview  *(P1 — Ref: WF W6 "view changes")*
-- Triggered by the view-changes hotkey after a Transform.
-- Before/after **diff** (additions/removals highlighted); `Apply` / `Discard`.
+## 4. Transcription Preview overlay  *(P1 — OpenWhispr `?transcription-preview=true`)*
+- Optional live HUD showing transcription as you speak (toggle in Speech-to-Text).
 
-## 5. Notification toasts  *(P1 — Ref: WF W10–W11)*
-- Categories: Suggestions, Announcements, Milestones (each toggleable).
-- Elevated pill/card, icon + text + optional action; auto-dismiss; stack bottom-right;
-  never interrupt capture.
+## 5. Update Notification overlay  *(P1 — OpenWhispr `?update-notification=true`)*
+- Non-intrusive toast when an update is ready (hover-reveal dismiss). Ties to
+  Settings ▸ System ▸ Software Updates.
+
+## 6. Command palette  *(P1 — OpenWhispr CommandSearch)*
+- `⌘K` / `Ctrl K` overlay to search and jump to any view/action.
+
+*(Additive, Wispr Flow: a Transform "view-changes" diff preview overlay, if Transforms
+are enabled.)*
 
 ---
 
@@ -61,80 +70,92 @@ error:       ( ! message  ↻ )           inline error + retry
 > The **engine card** + **engine-specific config** pattern is defined once in §B2 and
 > reused by Speech-to-Text and Language Models.
 
-## B0. Settings nav rail
+## B0. Settings nav rail  *(aligned to OpenWhispr `SettingsSectionType`)*
 ```
-GENERAL        General · Hotkeys · Appearance
-AI MODELS      Speech-to-Text · Language Models
-SYSTEM         System · Vibe coding(P2)
-PRIVACY & DATA Privacy & Data
-ACCOUNT        Account(P2) · Team(P2) · Plans & Billing(P2)
+General            appearance · sound · notifications · meeting detection · clipboard ·
+                   save-notes-as-files · floating icon · language · startup · microphone · dictionary
+Hotkeys            Dictation · Voice Agent · Meeting · Chat Agent
+Speech-to-Text     tabs: Dictation | Note Recording
+Language Models    tabs: Dictation Cleanup | Voice Agent | Note Formatting | Chat
+Privacy & Data     privacy · audio retention · data retention · permissions
+System             updates · developer tools · data management
+Account            (optional — hidden/disabled when auth is off)
+Workspace          (optional — feature-flagged)
 ─────────────────────────────────────────
-footer: Khonjel v1.0 · ☁ health/sync dot
+footer: Khonjel v1.0 · (optional) ☁ sync/health dot
 ```
+> **Dropped vs OpenWhispr:** the **Plans & Billing** section is removed entirely (no
+> subscription). **Account/Workspace** are optional and local-first.
 
-## B1. General  *(P0 — Ref: WF W8)*
-Card rows:
-| Row | Subtitle/value | Control |
+## B1. General  *(P0 — OpenWhispr `SettingsPage` "general")*
+Ordered sections, each a `SectionHeader` + `SettingsPanel` of `SettingsRow`s:
+
+| Section | Rows / controls |
+|---|---|
+| **Appearance** | `Theme` segmented **Light / Dark / Auto** (Sun/Moon/Monitor) |
+| **Sound Effects** | `Dictation sounds` toggle · `Pause media while dictating` toggle |
+| **Notifications** | `Disable all` · `Meeting detection` · `Calendar reminders` · `Updates` |
+| **Meeting Detection** | `Audio detection` toggle (auto-detect calls) |
+| **Clipboard** | `Auto-paste` toggle · `Keep transcription in clipboard` toggle |
+| **Save Notes as Files** | toggle + folder `path` (Change) + `Rebuild` |
+| **Floating Icon** | `Auto-hide` toggle · `Start position` (bottom-right / center / bottom-left) |
+| **Language** | `UI language` (10 locales) · `Transcription language` |
+| **Startup** | `Launch at login` (not Linux) · `Start minimized` |
+| **Microphone** | `Prefer built-in mic` · device select |
+| **Dictionary** | `Auto-learn from corrections` toggle |
+| **Wayland Paste** *(Linux/Wayland only)* | ydotool component checks + setup guide |
+
+## B2. Hotkeys  *(P0 — 4 global hotkeys, OpenWhispr "hotkeys")*
+Each is a `HotkeyInput` (press-to-capture, live combo, conflict validation across all 4):
+- **Dictation Hotkey** + **Activation Mode** (`Tap` / `Push-to-talk`) + `reset to default`.
+- **Voice Agent Hotkey** (clearable) — routes dictation to the agent as a command.
+- **Meeting Mode Hotkey** (clearable) + **layout** select (`Full width` / `Side panel`).
+- **Chat Agent Hotkey** (clearable) — opens/sends to the chat agent.
+
+### Inference mode pattern (reused by B4 Speech-to-Text and B5 Language Models)
+Per OpenWhispr's `InferenceModeSelector` + `InferenceConfigEditor`. A single-select
+**mode** row group swaps the **config block** below it:
+```
+{InferenceModeSelector}
+  ○ Khonjel Cloud    Managed. No setup. (optional; needs free account)   [Cloud]
+  ○ Providers        Bring your own API key.                              [Key]
+  ◉ Local            On-device models. Fully private.   (default)         [Cpu]
+  ○ Self-Hosted      OpenAI-compatible server on your network.            [Network]
+  ○ Enterprise       AWS Bedrock / Azure OpenAI / Google Vertex.  (LLM only) [Building]
+{config block — keyed to the selected mode}
+```
+- **Local (LLM):** llama.cpp/llama-server; model picker; **GPU device** selector (multi-GPU). Background downloads.
+- **Local (STT):** provider toggle **Whisper** (whisper.cpp) / **NVIDIA Parakeet** (sherpa-onnx) → model picker; **Silero VAD** tuning; **GPU device**.
+- **Self-Hosted:** `Base URL` (mono) + helper (`Ollama, LM Studio, vLLM, llama-server`); `API Key (Optional)` (Bearer, keychain); `Available Models` + `Refresh` (queries `/models`, inline raw error); `Disable thinking output` / **reasoning mode**.
+- **Providers:** provider chips (OpenAI · Anthropic · Google Gemini · Groq · Custom; STT adds Deepgram/xAI/…); `API Key` + `Get your API key →`; `Select Model` (name + capability line) + optional base URL.
+- **Enterprise:** Bedrock / Azure OpenAI / Vertex + account/region/deployment + credentials (`TestConnectionButton`).
+- **Khonjel Cloud:** none (managed/optional).
+
+## B3. Appearance  *(folded into General, per OpenWhispr)*
+Theme lives under **General ▸ Appearance** (`Light / Dark / Auto`). Accent/density/
+reduce-motion are Khonjel additions (optional), kept under General.
+
+## B4. Speech-to-Text  *(P0 — OpenWhispr "speechToText")*
+- **Tabs (`ProviderTabs`):** `Dictation` (Mic) | `Note Recording` (FileAudio) — independent config per tab.
+- **`InferenceModeSelector`** (§B2 pattern): `Khonjel Cloud` (needs free account) · `Providers` (BYOK) · `Local` · `Self-Hosted`.
+- **Local config:** provider toggle **Whisper** / **NVIDIA Parakeet** → model picker; **Silero VAD** tuning (threshold, min speech ms, min silence ms, max speech s, speech pad ms, samples overlap); **GPU device** selector (multi-GPU); **Transcription preview** toggle.
+- **Providers config:** transcription provider + model + optional base URL.
+- **Self-Hosted config:** `SelfHostedPanel` (base URL + key + test).
+- **Note Recording** tab → `MeetingTranscriptionPanel` (diarization + speaker labels).
+
+## B5. Language Models  *(P0 — OpenWhispr "llms")*
+- **Tabs (`ProviderTabs`):** `Dictation Cleanup` (Wand2) | `Voice Agent` (Sparkles) | `Note Formatting` (BookOpen) | `Chat` (MessageSquare).
+- Per tab: `[enable/feature control] → [InferenceModeSelector §B2] → [InferenceConfigEditor] → [extras]`.
+
+| Purpose | Enable / control | Extras |
 |---|---|---|
-| `Shortcuts` (badge if unset) | `Hold` `Ctrl`+`Win` `and speak.` `Learn more →` | `Change` |
-| `Microphone` | current device, e.g. `(Logitech Webcam C930e)` | `Change` (device list) |
-| `Dictation Languages` | `English` (one or more) | `Change` (multi-select) |
-| `App Language` | `Select your preferred Khonjel language` | dropdown |
+| Dictation Cleanup | `Enable text cleanup` toggle | **Prompt Studio**; `Disable thinking output`; GPU selector |
+| Voice Agent | (hotkey-driven; routes dictation as a command) | reasoning/thinking mode |
+| Note Formatting | `Auto-generate note title` toggle | — |
+| Chat | *(always available)* | `ChatAgentSettings`; system prompt; reasoning mode |
 
-## B2. Hotkeys  *(P0 — Ref: OW S15)*
-- **Dictation Hotkey** section: `Hotkey` → keycap chips (`Ctrl` `Win`) + `click to
-  change`; **Activation Mode** segmented `Tap | Hold`.
-- **Meeting Mode Hotkey** section: setter button `Click to set hotkey`; row `When
-  triggered by hotkey, open in:` → dropdown (`Full width` / side panel).
-- **Agent Hotkey** section: setter `Click to set hotkey` (`toggle the agent overlay`).
-- **Transforms** (link to Transforms page): lists transform hotkeys (Polish, Prompt
-  Engineer, view-changes) for reference.
-- **Capture UX:** clicking a setter enters "press keys" mode; shows live combo; detects
-  conflicts (warns if a combo is taken by OS/another action).
-
-### Engine card pattern (reused by B4, B5)
-```
-{engine card: single-select rows}
-  ◉ Local            On-device models. Fully private.        (default)
-  ○ Self-Hosted      Your own server on your network.
-  ○ Cloud Providers  Bring your own API key.
-  ○ Enterprise       Use your org cloud account (AWS, Azure, GCP).
-  ○ Khonjel Cloud    Managed. No setup. (optional)
-{engine-specific config block — keyed to selection}
-```
-- **Local:** family chips (Qwen·Mistral·Llama·OpenAI·Gemma) → Available Models list
-  (name·size·Learn more·Recommended·Download/Use/Remove). Background downloads.
-- **Self-Hosted:** `Endpoint URL` (mono) + helper (`Ollama, LM Studio, vLLM,
-  llama-server`); `API Key (Optional)` (Bearer); `Available Models` + `Refresh`
-  (queries `/models`, inline raw error); `Disable thinking output` toggle.
-- **Cloud Providers:** provider chips (OpenAI·Anthropic·Google Gemini·Groq·Custom);
-  `API Key` + `Get your API key →`; `Select Model` (name + capability line).
-- **Enterprise:** provider (Bedrock/Azure OpenAI/Vertex) + account/region/deployment + key.
-- **Khonjel Cloud:** none (managed).
-
-## B3. Appearance  *(P1 — NEW)*
-- `Theme` → segmented `System | Light | Dark`.
-- `Accent` → swatch picker (default violet).
-- `Density` → `Comfortable | Compact`.
-- `Reduce motion` → toggle (also follows OS).
-
-## B4. Speech-to-Text  *(P0 — Ref: OW S1–S3)*
-- Subtitle `Pick an engine for dictation and note recording`.
-- **Mode pills:** `Dictation | Note Recording` (independent engine per mode).
-- **Engine card** (§B2) + **engine-specific config**.
-- **Note Recording** adds: `Identify and label speakers` toggle (off → "You"/"Others").
-
-## B5. Language Models  *(P0 — Ref: OW S4–S13)*
-- Subtitle `Configure models for cleanup, note formatting, and chat`.
-- **Purpose pills:** `Dictation Cleanup | Voice Agent | Note Formatting | Chat`.
-- Per purpose: `[enable toggle card] → [engine card §B2] → [config] → [extras]`.
-
-| Purpose | Enable toggle | Extras |
-|---|---|---|
-| Dictation Cleanup | `Enable text cleanup` — "remove fillers, fix grammar, polish punctuation" | **Prompt Studio**; `Disable thinking output` |
-| Voice Agent | `Enable voice agent` — "Activate by saying '{{agentName}}'." | wake-word field |
-| Note Formatting | `Auto-generate note titles` | — |
-| Chat | *(none)* | `System Prompt` textarea ("Custom instructions for the agent") |
+Modes here include **Enterprise** (Bedrock/Azure/Vertex) in addition to the four STT
+modes. Reasoning/**thinking mode** is selectable; self-hosted OpenAI-compatible parity.
 
 ### B5.1 Prompt Studio  *(P1 — Ref: OW S5–S7)*
 - Subtitle `View, customize, and test the unified system prompt that powers text
@@ -147,82 +168,42 @@ Card rows:
     ("Try addressing '{{agentName}}' to test instruction mode"); `Run Test`; result.
 - Default prompt verbatim in [`../01-product/04-text-intelligence.md`](../01-product/04-text-intelligence.md#54-default-prompt-carried-from-the-reference-agent-name-templated).
 
-## B6. System  *(P0 — Ref: OW S8–S9, WF W9–W13)*
-Sections (each header + card). Toggles ON = `--accent`/black.
+## B6. Privacy & Data  *(P0 — OpenWhispr "privacyData")*
+- **Privacy:** `Cloud backup` (only when signed in; shows migration progress + last-synced) · `Usage analytics` **(off; removed/optional — no telemetry by default)**.
+- **Audio Retention:** dropdown **Disabled / 7 / 14 / 30 / 60 / 90 days** + **Storage Usage** (`n files, x MB`) + `Clear All Audio`.
+- **Data Retention:** toggle + `Save discarded transcriptions` toggle.
+- **Permissions** (`PermissionCard` with grant + status): **Microphone** · **Accessibility** (macOS) · **System Audio** (macOS / where manageable). macOS troubleshooting: reset accessibility permissions.
+- *(Additive, optional: Privacy Mode "no training", HIPAA BAA, context awareness — kept as opt-in extras, not defaults.)*
 
-**App**
-- `Launch app at login` (ON) · `Show Khonjel Bar at all times` (ON) · `Dictation
-  reminder` (preview chip + `Customize`, "Not configured") · `Show app in dock` (ON).
+## B7. System  *(P0 — OpenWhispr "system")*
+- **Software Updates:** `Current version` + `Latest`/`Update` badge + `Check for Updates` → `Download` (progress) → `Install & Restart`; release-notes panel.
+- **Developer Tools** (`DeveloperSection`): diagnostics/logging.
+- **Data Management:** `Model cache` + path (mono) → `Open` + `Clear Cache` (danger). `Reset app data` → `Reset` (danger; confirm) — "Permanently delete all local settings, transcriptions, audio recordings, downloaded models, and cached data."
 
-**Sound**
-- `Dictation and notification sounds` (ON) · `Mute music while dictating` (ON).
+## B8. Integrations  *(P1 — OpenWhispr `IntegrationsView`; ungated/free)*
+Sectioned list (icon tile + title + description + action):
+- **Calendar → Google Calendar** — OAuth connect (multi-account), `primary only` toggle, connected-account rows (disconnect), `add another`.
+- **API → Public API** — `Manage` → API-keys dialog (`ApiKeysSection`) + docs link. **Free (ungated).**
+- **MCP → MCP server** (`McpIntegrationCard`) — connect an AI assistant. **Free.**
+- **CLI → CLI bridge** (`CliIntegrationCard`) — local HTTP bridge. **Free.**
 
-**Notifications**
-- `Suggestions` ("Tips about setup/usage") · `Announcements` ("New features") ·
-  `Milestones` ("Word-count milestones, streaks").
+*(Integrations is also reachable as a Control Panel destination — see screen specs.)*
 
-**Scratchpad**
-- `Scratchpad open behavior` (`Resume last note`) + `Customize`.
-
-**Extras**
-- `Auto-add to dictionary` ("Adds corrected words automatically", ON).
-- *(Dropped from references: Creator/branding mode, "Add to LinkedIn".)*
-
-**Updates**
-- `Current version` `1.0.0` + `Latest` badge + `Check for Updates`.
-
-**Debug Logging**
-- `Debug mode` (OFF) + **What gets logged** (two bulleted columns: Audio processing ·
-  FFmpeg/audio ops · Transcription pipeline | Model/API requests · System diagnostics ·
-  Error details).
-
-**Data Management**
-- `Model cache` + path (mono) → `Open` + `Clear Cache` (danger filled).
-- `Reset app data` → `Reset` (danger outline) — "Permanently delete all local settings,
-  transcriptions, audio recordings, downloaded models, and cached data." Confirm dialog.
-
-## B7. Vibe coding  *(P2 — Ref: WF W14–W15)*
-- `Variable recognition (VS Code, Cursor, Windsurf)` + `Set up` (popover: enable IDE
-  Screen Reader mode; code chips for steps).
-- `File Tagging in Chat (Cursor & Windsurf)` toggle ("Automatically tags files like
-  `index.tsx`").
-
-## B8. Privacy & Data  *(P0 — Ref: OW S14, WF W17–W18)*
-- Subtitle `Control what data leaves your device. Everything is off by default.`
-
-**Privacy**
-- `Privacy Mode` → dropdown ("none of your dictation data will be used to train or
-  improve AI models, by Khonjel or any third party").
-- `Cloud backup` (OFF) · `Usage analytics` (OFF — "anonymous metrics only; never
-  transcription content").
-- `Context awareness` (toggle) — "Allow Khonjel to use limited, relevant text from the
-  app you're dictating in to spell names correctly." (privacy/utility tradeoff).
-
-**Storage & retention**
-- `Local data storage` → dropdown `Store data locally` (default).
-- `Audio Retention` → dropdown (`30 days` …) + `Storage Usage` (`n files, x MB`) +
-  `Clear All Audio`.
-- `Data Retention` (ON) — "Store transcriptions and audio locally in history. When
-  disabled, transcriptions are pasted but not saved."
-
-**Sharing & compliance (P2)**
-- `Notes sharing` → default scope dropdown (`Anyone with the link`).
-- `Cloud Sync` (OFF) · `Hard refresh all notes` + `Sync notes`.
-- `Enable HIPAA` + `View and accept` (BAA). `Read about our Data Controls` link.
-
-## B9. Account / Team / Plans & Billing  *(P2 — Ref: WF W16)*
-- **Account:** `First name`, `Last name` (inputs), `Email` (read-only), `Profile
-  picture`; `Sign out` · `Delete account` (text link) · `Save`.
-- **Team:** members list, invite, shared Dictionary/Snippets governance, roles.
-- **Plans & Billing:** managed-tier plan, seats, invoices. Honest quota; local use free.
+## B9. Account / Workspace  *(P2 — optional, local-first)*
+- **Account:** hidden/disabled when auth is off (`AUTH_URL` unset → "Account features disabled"). When signed in: avatar + name + email + **Signed In** badge; `Sign out`; `Delete account` (danger). Signed-out shows an **Offline** badge. No name/email is required to use Khonjel.
+- **Workspace** *(feature-flagged)*: members / teams tabs; invite; shared Dictionary/Snippets.
+- **~~Plans & Billing~~ — removed.** No pricing, checkout, billing portal, or quotas.
 
 ---
 
 ## C. Settings acceptance checklist
-- [ ] Modal shell with the five nav groups + version/health footer.
-- [ ] Engine card + engine-specific config reused identically on STT and all LM purposes.
-- [ ] Local default; Self-Hosted `/models` discovery with inline errors; provider matrix complete; Enterprise providers present.
+- [ ] Modal shell with OpenWhispr nav (General · Hotkeys · Speech-to-Text · Language Models · Privacy & Data · System · Account? · Workspace?) + footer.
+- [ ] Inference-mode selector + per-scope config reused on STT and all 4 LM purposes.
+- [ ] Local default; Self-Hosted `/models` discovery with inline errors; providers (OpenAI/Anthropic/Gemini/Groq/Custom + Deepgram/xAI for STT); Enterprise (Bedrock/Azure/Vertex).
+- [ ] STT Local exposes Whisper/Parakeet toggle, Silero VAD tuning, GPU device, preview.
 - [ ] Prompt Studio View/Customize/Test with `{{agentName}}` preserved.
-- [ ] System covers app/sound/notifications/scratchpad/extras/updates/debug/data-management; destructive actions confirm.
-- [ ] Privacy everything-off-by-default; retention + storage meter + clear; data-retention semantics honored.
-- [ ] Dropped: creator/branding/LinkedIn promos and referral nags.
+- [ ] System = Updates + Developer Tools + Data Management; destructive actions confirm.
+- [ ] Privacy: audio retention 0–90d + storage meter + clear; data retention (+discarded); permissions (mic/AX/system-audio); no telemetry by default.
+- [ ] Integrations (Google Calendar/API/MCP/CLI) present and **ungated/free**.
+- [ ] **Dropped:** Plans & Billing, referral, upgrade/limit banners, quotas; Account/Workspace optional.
+- [ ] Multi-window: Dictation Panel, Control Panel, Agent overlay, meeting/transcription-preview/update overlays, command palette.

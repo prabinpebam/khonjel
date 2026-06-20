@@ -1,11 +1,18 @@
 # Khonjel — Master Feature Map
 
-> The complete, merged inventory of every feature shown across both reference designs,
-> unified for Khonjel. Each feature notes its **source** and **v1 priority**.
+> The complete, merged inventory of every feature for Khonjel. Each feature notes its
+> **source** and **v1 priority**.
 >
-> Source legend: **OW** = OpenWhispr (open-wisper) · **WF** = Wispr Flow (wisper-flow)
-> · **NEW** = Khonjel synthesis. Priority: **P0** (v1 must), **P1** (v1 should),
-> **P2** (later).
+> Source legend: **OW** = OpenWhispr (open-wisper screenshots) · **OWR** = OpenWhispr
+> **source repository** (the authoritative build,
+> [`../99-reference-analysis/03-openwhispr-repo-analysis.md`](../99-reference-analysis/03-openwhispr-repo-analysis.md))
+> · **WF** = Wispr Flow (wisper-flow) · **NEW** = Khonjel synthesis. Priority: **P0**
+> (v1 must), **P1** (v1 should), **P2** (later).
+>
+> **Khonjel is built on the OpenWhispr open-source app (same tech stack), replicating
+> its full UI/navigation/feature set, and dropping only the subscription/billing
+> layer.** Where the Wispr Flow reference adds productivity polish (Insights, Style,
+> Transforms), Khonjel keeps it as additive.
 
 ---
 
@@ -14,57 +21,77 @@
 ```
 Khonjel
 ├── Capture & Modes ............ how voice becomes text/notes
-│   ├── Dictation (Tap/Hold)            OW+WF  P0
-│   ├── Note Recording (+ diarization)  OW     P1
-│   ├── Meeting Mode (side panel)       OW     P1
-│   ├── Voice Agent (wake word)         OW     P1
-│   └── Scratchpad (dictated notes)     WF     P1
+│   ├── Dictation (Tap/Push-to-talk)    OWR    P0   global hotkey → auto-paste
+│   ├── Upload (transcribe a file)      OWR    P1   transcribe existing audio
+│   ├── Note Recording                  OWR    P1   longer capture saved as note
+│   ├── Meeting Mode (auto-detect)      OWR    P1   Zoom/Teams/FaceTime + calendar
+│   ├── Speaker diarization + fingerprint OWR  P1   on-device, voice fingerprint
+│   └── Voice Agent (dedicated hotkey)  OWR    P1   dictation → agent command
+├── AI Agent & Chat ............ converse & command
+│   ├── Chat (conversational agent)     OWR    P1   GPT/Claude/Gemini/Groq/local
+│   ├── Reasoning / thinking mode       OWR    P1   toggle reasoning output
+│   └── Agent overlay                   OWR    P1   floating command surface
 ├── AI Engines & Providers ..... the model backbone
-│   ├── Speech-to-Text engine           OW     P0
-│   ├── Language Models × 4 purposes    OW     P0
-│   ├── Engine archetypes (×5)          OW     P0
-│   ├── Cloud provider matrix           OW     P0
-│   ├── Local model download manager    OW     P0
-│   ├── Self-hosted endpoint + discovery OW    P0
-│   ├── Enterprise accounts             OW     P1
-│   └── Prompt Studio (View/Cust/Test)  OW     P1
+│   ├── Speech-to-Text (Whisper+Parakeet) OWR  P0   local engines + VAD + GPU
+│   ├── Language Models × 4 purposes    OWR    P0   cleanup/agent/format/chat
+│   ├── Inference modes (×5)            OWR    P0   cloud/providers/local/self/enterprise
+│   ├── Cloud provider matrix (BYOK)    OWR    P0   OpenAI/Anthropic/Gemini/Groq/xAI…
+│   ├── Local model manager             OWR    P0   download + GPU device select
+│   ├── Self-hosted (OpenAI-compatible) OWR    P0   Ollama/LM Studio/vLLM/llama-server
+│   ├── Enterprise (Bedrock/Azure/Vertex) OWR  P1
+│   ├── Prompt Studio (View/Cust/Test)  OWR    P1
+│   └── VAD tuning (Silero)             OWR    P1   per-mode speech detection
 ├── Text Intelligence .......... what happens to the text
-│   ├── Dictation Cleanup               OW+WF  P0
-│   ├── Transforms (hotkey rewrites)    WF     P1
-│   ├── Style (per-context tone)        WF     P1
-│   ├── Snippets (voice text-expansion) WF     P1
-│   ├── Dictionary (vocab + substitutions) WF  P0
-│   └── Auto-formatting / note titles   OW+WF  P1
-├── Notes, History & Insights .. review & analytics
-│   ├── Home history timeline           WF     P0
-│   ├── Insights dashboard              WF     P1
-│   ├── Voice Profiles                  WF     P2
-│   └── Notes (saved transcripts)       OW+WF  P1
-├── Collaboration & Account .... teams, identity, plans
-│   ├── Account                         WF     P0
-│   ├── Team & sharing (Personal/Shared) WF    P2
-│   └── Plans & Billing (optional)      OW+WF  P2
+│   ├── Dictation Cleanup               OWR    P0   fillers/grammar/punctuation
+│   ├── Dictionary (vocab + auto-learn) OWR    P0   + cross-device sync
+│   ├── Snippets (spoken trigger)       OWR    P1   text expansion
+│   ├── Auto note titles / formatting   OWR    P1
+│   ├── Transforms (hotkey rewrites)    WF     P1   additive
+│   └── Style (per-context tone)        WF     P1   additive
+├── Notes & History ............ review & knowledge
+│   ├── History timeline (incl. discarded) OWR P0
+│   ├── Notes (TipTap, folders)         OWR    P1   rich editor
+│   ├── Semantic search (Qdrant+MiniLM) OWR    P1   local vector search
+│   ├── AI actions on notes             OWR    P1
+│   ├── Save notes as files             OWR    P2
+│   ├── Insights dashboard              WF     P1   additive
+│   └── Voice Profiles                  WF     P2   additive
+├── Integrations ............... connect the outside
+│   ├── Google Calendar                 OWR    P1   meeting detection
+│   ├── Public API                      OWR    P1   ungated (free)
+│   ├── MCP server                      OWR    P1   AI-assistant access
+│   └── CLI bridge                      OWR    P2
+├── Collaboration & Account .... optional, local-first
+│   ├── Account (optional auth)         OWR    P2   skippable; local profile
+│   ├── Workspaces / Team               OWR    P2   feature-flagged
+│   └── ~~Plans & Billing~~             —      —    DROPPED (no subscription)
 ├── Privacy, Data & Security ... trust
-│   ├── Privacy Mode (no training)      WF     P0
+│   ├── No telemetry by default         OWR    P0
 │   ├── Everything-off-by-default       OW     P0
-│   ├── Audio/Data retention controls   OW     P0
-│   ├── Local vs cloud storage          OW+WF  P0
-│   ├── Context awareness (read screen) WF     P1
-│   └── HIPAA BAA                        WF     P2
+│   ├── Audio retention (0–90 days)     OWR    P0   + storage meter + clear
+│   ├── Data retention (+ discarded)    OWR    P0
+│   ├── Permissions (mic/AX/sys-audio)  OWR    P0
+│   ├── Local vs cloud storage          OWR    P0
+│   └── HIPAA BAA                        WF     P2   additive
 ├── Platform & System .......... OS integration
-│   ├── Global hotkeys (×3)             OW     P0
-│   ├── Khonjel Bar (always-on)         WF     P0
-│   ├── Launch at login / dock / sounds WF     P1
-│   ├── Notifications (categories)      WF     P1
-│   ├── Updates / version               OW     P1
-│   ├── Debug logging                   OW     P1
-│   ├── Data management / reset         OW+WF  P0
-│   └── Vibe coding (IDE integration)   WF     P2
+│   ├── Global hotkeys (×4)             OWR    P0   dictation/voice-agent/meeting/chat
+│   ├── Command palette (⌘K)            OWR    P1
+│   ├── Khonjel Bar + floating icon     OWR    P0   always-on; auto-hide; position
+│   ├── Launch at login / start min.    OWR    P1
+│   ├── Sound (cues, pause media)       OWR    P1
+│   ├── Notifications (categories)      OWR    P1
+│   ├── Clipboard (auto-paste, keep)    OWR    P0
+│   ├── Updates (check/download/install) OWR   P1
+│   ├── Developer tools / data mgmt     OWR    P1
+│   └── Multi-window (panel/control/overlays) OWR P0
 └── Input & Localization
-    ├── Microphone selection            WF     P0
-    ├── Dictation languages             WF     P0
-    └── App (UI) language               WF     P1
+    ├── Microphone selection            OWR    P0
+    ├── Dictation language              OWR    P0
+    └── UI language (10 locales)        OWR    P1
 ```
+
+> **OWR = OpenWhispr source repo** (authoritative). The subscription/billing layer is
+> the only thing removed; Public API / MCP / CLI are **ungated (free)** in Khonjel.
 
 ---
 
@@ -141,15 +168,16 @@ Khonjel
 
 | Feature | Source | Pri | Summary |
 |---|---|---|---|
-| Global hotkeys ×3 | OW S15 | P0 | Dictation, Meeting Mode, Agent overlay. |
-| Khonjel Bar | WF W9 | P0 | Always-on floating dictation surface. |
-| OS integration | WF W9 | P1 | Launch at login, show in dock, dictation reminder. |
-| Sound | WF W9–W10 | P1 | Dictation/notification sounds; mute music while dictating. |
-| Notifications | WF W10–W11 | P1 | Suggestions / Announcements / Milestones. |
-| Updates | OW S8 | P1 | Version + check for updates. |
-| Debug logging | OW S8 | P1 | Toggle + "what gets logged" transparency. |
-| Data management | OW S8–S9 | P0 | Model cache (Open/Clear) + Reset app data. |
-| Vibe coding | WF W14–W15 | P2 | Variable recognition + file tagging for IDEs. |
+| Global hotkeys ×4 | OWR | P0 | Dictation, Voice Agent, Meeting Mode, Chat Agent. |
+| Command palette (⌘K) | OWR | P1 | Quick search/jump across the app. |
+| Khonjel Bar + floating icon | OWR | P0 | Always-on dictation surface; auto-hide; start position. |
+| Multi-window | OWR | P0 | Dictation Panel, Control Panel, Agent overlay, transient overlays. |
+| OS integration | OWR | P1 | Launch at login, start minimized, clipboard auto-paste. |
+| Sound | OWR | P1 | Dictation cues; pause media while dictating. |
+| Notifications | OWR | P1 | Disable-all; meeting detection; calendar reminders; updates. |
+| Updates | OWR | P1 | Check / download / install + release notes. |
+| Developer tools | OWR | P1 | Diagnostics; "what gets logged" transparency. |
+| Data management | OWR | P0 | Model cache (Open/Clear) + Reset app data. |
 
 ### 2.8 Input & Localization → see [`../03-ux-ui/04-floating-bar-overlays-and-settings.md`](../03-ux-ui/04-floating-bar-overlays-and-settings.md)
 
@@ -159,18 +187,62 @@ Khonjel
 | Dictation languages | WF W8 | P0 | One or more recognition languages. |
 | App (UI) language | WF W8 | P1 | Interface language. |
 
+### 2.9 AI Agent & Chat → see [`04-text-intelligence.md`](04-text-intelligence.md)
+
+| Feature | Source | Pri | Summary |
+|---|---|---|---|
+| Chat view | OWR | P1 | Conversational AI agent (GPT-5/Claude/Gemini/Groq/local) as a primary nav destination. |
+| Reasoning / thinking mode | OWR | P1 | Toggle reasoning-token output; self-hosted OpenAI-compatible parity. |
+| Voice Agent (dedicated hotkey) | OWR | P1 | Dictation routed to the agent as a command — no wake word, no cleanup pass. |
+| Agent overlay | OWR | P1 | Floating command/answer surface (separate window). |
+
+### 2.10 Integrations → see [`../99-reference-analysis/03-openwhispr-repo-analysis.md`](../99-reference-analysis/03-openwhispr-repo-analysis.md)
+
+| Feature | Source | Pri | Summary |
+|---|---|---|---|
+| Google Calendar | OWR | P1 | OAuth (multi-account), primary-only toggle; powers meeting detection. |
+| Public API | OWR | P1 | API keys to manage notes/transcriptions programmatically. **Ungated/free.** |
+| MCP server | OWR | P1 | Connect an AI assistant via Model Context Protocol. **Ungated/free.** |
+| CLI bridge | OWR | P2 | Local HTTP bridge / unified CLI. **Ungated/free.** |
+
+### 2.11 Meetings → see [`02-capture-modes-and-flows.md`](02-capture-modes-and-flows.md)
+
+| Feature | Source | Pri | Summary |
+|---|---|---|---|
+| Meeting auto-detection | OWR | P1 | Detect Zoom/Teams/FaceTime calls; notification overlay to start. |
+| Live speaker diarization | OWR | P1 | On-device speaker labelling. |
+| Voice fingerprint | OWR | P2 | Recognise speakers across meetings. |
+| Calendar reminders | OWR | P2 | Upcoming meetings; reminders. |
+| AEC / VAD | OWR | P1 | Echo cancellation + voice-activity detection (native helper). |
+
 ---
 
-## 3. What Khonjel drops or reframes from the references
+## 3. What Khonjel drops or reframes from OpenWhispr
 
-| Reference element | Decision | Why |
+> Per the directive: **"we are not going to have the subscription part of it and have
+> pretty much everything else."** Everything below the line is removed; everything else
+> in the OpenWhispr app is preserved.
+
+| OpenWhispr element | Decision | Why |
 |---|---|---|
-| "OpenWhispr Cloud" as default engine | **Reframe** → *Local* is default; Khonjel Cloud is optional | Local-first principle. |
-| Word quota ("313 words remaining") | **Soften** → honest, dismissible; no hard cap on local use | No dark patterns; local is free. |
-| "Add to LinkedIn" / Creator mode branding | **Drop** | Vendor self-promo, not user value. |
-| "Get a free month" referral nags | **Drop / make optional** | Honest, no nags. |
-| Usage analytics default | **Off by default** | Privacy by default. |
-| Mobile app | **Defer to P2** | Desktop-first v1. |
+| **Plans & Billing** section (Free/Pro/Business pricing, checkout, billing portal, switch-plan) | **Drop entirely** | No subscription. |
+| **Referral** dashboard/modal, "Get a free month" | **Drop** | No referral mechanics. |
+| **Upgrade prompts / limit banners** (sidebar `UpgradePrompt`, `UsageDisplay`) | **Drop** | No quotas/upsell. |
+| **Word/usage limits & quotas** | **Drop** | Local use is free and unmetered. |
+| Paid **"OpenWhispr Cloud"** managed tier as default | **Reframe** → *Local* is default; managed/synced cloud is optional & not a paid gate | Local-first. |
+| **Public API / MCP / CLI** gated behind Pro | **Ungate (free)** | Everyone gets integrations. |
+| **Account / auth** required | **Optional** (skippable; `AUTH_URL` compile-out) | Local-first, no account needed. |
+| **Usage analytics / telemetry** | **Off / removed by default** | No data collection. |
+| Branding (OpenWhispr name, logo, wake word) | **Rebrand** → Khonjel; wake word "Khonjel"; Khonjel Bar | Product identity. |
+
+**Kept and coherently merged from Wispr Flow (one unified package):** every Wispr Flow
+"goodness" is retained and given a **single definite home** in the OpenWhispr-based app
+— not bolted on. **Insights** and **Transforms** become first-class sidebar
+destinations; **Style** folds into Language Models ▸ Dictation Cleanup; **Snippets**
+sit under Dictionary; **Scratchpad** is absorbed by **Notes**; **Voice Profiles** +
+stats live on **Home**; the **warm light theme** is the Light theme. Full mapping:
+[`../02-information-architecture/01-sitemap-and-ia.md`](../02-information-architecture/01-sitemap-and-ia.md#21-wispr-flow-integration-map-every-goodness-has-one-definite-home).
+(HIPAA BAA is an optional compliance extra.)
 
 ---
 

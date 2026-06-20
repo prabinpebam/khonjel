@@ -2,7 +2,9 @@
 
 > Khonjel's trust model. Privacy is a **product feature**, not a policy footnote:
 > local-by-default, off-by-default egress, visible retention, and honest controls.
-> Merges OpenWhispr's "everything off by default" with Wispr Flow's data controls.
+> Inherits OpenWhispr's **"no data collection, no telemetry, fully local"** posture;
+> adds Wispr Flow's data controls as opt-in extras. **No subscription/account is
+> required**, and accounts/sync can be compiled out entirely.
 
 ---
 
@@ -10,19 +12,21 @@
 
 | Setting | Default | Effect |
 |---|---|---|
-| Engine archetype | **Local** | On-device STT + LLM; no egress |
-| Local data storage | **Store locally** | History/notes stay on device |
+| Inference mode | **Local** | On-device STT (Whisper/Parakeet) + LLM (llama.cpp); no egress |
+| Storage | **Local** (better-sqlite3 + Qdrant) | History/notes/vectors stay on device |
+| Secrets | **OS keychain** (`@napi-rs/keyring`) | API keys never in plaintext/logs |
+| **Telemetry / usage analytics** | **Off / none** | No metrics collected by default |
+| Account / auth | **Optional / skippable** | Fully usable with no account; can be compiled out |
 | Data Retention | **On (local)** | Transcripts/audio saved to local history |
-| Audio Retention | **30 days** | Audio auto-deleted after the window |
-| Privacy Mode | **On (no training)** | No data used to train/improve any model |
-| Cloud backup | **Off** | Nothing backed up to any cloud |
-| Cloud Sync | **Off** | No cross-device sync |
-| Usage analytics | **Off** | No metrics sent |
-| Context awareness | **Off** (opt-in) | App text not read unless enabled |
-| HIPAA BAA | **Off** (opt-in) | Compliance mode available |
+| Audio Retention | **30 days** (0–90 selectable) | Audio auto-deleted after the window |
+| Cloud backup / sync | **Off** | No cross-device sync unless opted in |
+| Semantic search index | **Local** (Qdrant + MiniLM) | Computed on-device |
+| Permissions (mic/AX/system-audio) | **Prompted, explicit** | Granted by the user, shown with status |
+| Privacy Mode "no training" / HIPAA BAA / context awareness | **Off** (opt-in) | Additive compliance extras |
 
-> The first-run default is a fully local, no-account, no-egress configuration. Every
-> control that moves data off the device is opt-in and explained at the point of choice.
+> The first-run default is a **fully local, no-account, no-egress, no-telemetry**
+> configuration. Every control that moves data off the device is opt-in and explained at
+> the point of choice. **There is no subscription or billing data of any kind.**
 
 ---
 

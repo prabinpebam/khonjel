@@ -6,16 +6,25 @@
 > agent. It works fully on **open-source and on-device models**, and also supports a
 > **wide range of cloud, self-hosted, and enterprise APIs**.
 
-This folder is the complete, world-class product specification. It merges two
-reference designs into one coherent product:
+This folder is the complete, world-class product specification. Khonjel is **built on
+the open-source [OpenWhispr](https://github.com/OpenWhispr/openwhispr) app (MIT)** —
+**the same technology stack**, replicating its full UI, navigation, and feature set —
+with the **subscription/billing layer removed** and the productivity polish of a second
+reference layered on:
 
-- **OpenWhispr** (`open-wisper`) — the model/engine depth (local, BYO-key, self-hosted,
-  enterprise, Prompt Studio, privacy-by-default).
-- **Wispr Flow** (`wisper-flow`) — the productivity surface (history, insights,
-  dictionary, snippets, style, transforms, scratchpad, the always-on bar).
+- **OpenWhispr** (source repo + screenshots) — the **authoritative base**: multi-window
+  desktop app, local engines (Whisper/Parakeet/llama.cpp), 5 inference modes, Prompt
+  Studio, Notes with semantic search, meetings, integrations, privacy-by-default,
+  **no telemetry**.
+- **Wispr Flow** (`wisper-flow`) — additive productivity polish (history timeline,
+  insights, style, transforms, the warm light theme).
 
-> **Khonjel = Wispr Flow's productivity surface, powered by OpenWhispr's local/open
-> engine backbone.**
+> **Khonjel = OpenWhispr, rebranded, on the same stack, minus the subscription — plus
+> the productivity polish of Wispr Flow.** "We have pretty much everything else."
+
+**Tech stack (adopted verbatim):** React 19 · TypeScript · Tailwind CSS v4 · Electron 41
+· shadcn/ui · better-sqlite3 · whisper.cpp · sherpa-onnx (Parakeet) · llama.cpp · Qdrant
+· Vercel AI SDK. See [Technology Stack](04-architecture-and-delivery/04-technology-stack.md).
 
 ---
 
@@ -26,9 +35,10 @@ reference designs into one coherent product:
    intelligence, and notes/insights.
 3. **Then IA & UX/UI** → information architecture, navigation, design language, the app
    shell, and reproduction-grade screen specs.
-4. **Then architecture & delivery** → technical shape, privacy/security, and the roadmap.
-5. **Reference analysis (appendix)** → high-fidelity, screen-by-screen capture of both
-   original apps, used to verify fidelity.
+4. **Then architecture & delivery** → technical architecture, privacy/security,
+   **technology stack**, and the roadmap.
+5. **Reference analysis (appendix)** → the **OpenWhispr source-repo capture**
+   (authoritative) plus high-fidelity screenshot captures of both apps.
 
 ---
 
@@ -59,10 +69,12 @@ docs/product-spec/
 ├── 04-architecture-and-delivery/
 │   ├── 01-system-architecture.md
 │   ├── 02-privacy-data-security.md
-│   └── 03-roadmap-mvp-open-questions.md
+│   ├── 03-roadmap-mvp-open-questions.md
+│   └── 04-technology-stack.md
 └── 99-reference-analysis/
     ├── 01-open-wisper-screen-by-screen.md
-    └── 02-wisper-flow-screen-by-screen.md
+    ├── 02-wisper-flow-screen-by-screen.md
+    └── 03-openwhispr-repo-analysis.md
 ```
 
 ### Index with one-line purpose
@@ -71,22 +83,24 @@ docs/product-spec/
 |---|---|
 | [00 · Vision, Positioning & Principles](00-foundation/01-vision-positioning-principles.md) | Why Khonjel exists, the wedge, product principles |
 | [00 · Personas & Jobs](00-foundation/02-personas-and-jobs.md) | Who it's for + JTBD + journeys |
-| [00 · Glossary & Naming](00-foundation/03-glossary.md) | Canonical terms (Khonjel Bar, engine archetypes, purposes…) |
+| [00 · Glossary & Naming](00-foundation/03-glossary.md) | Canonical terms (Khonjel Bar, inference modes, purposes…) |
 | [01 · Feature Map](01-product/01-feature-map.md) | Master merged inventory with source + priority |
-| [01 · Capture Modes & Flows](01-product/02-capture-modes-and-flows.md) | Dictation, Note Recording, Meeting Mode, Voice Agent, Scratchpad |
-| [01 · AI Engines & Providers](01-product/03-ai-engines-and-providers.md) | The five engine archetypes, provider matrix, local manager |
-| [01 · Text Intelligence](01-product/04-text-intelligence.md) | Cleanup, Transforms, Style, Snippets, Dictionary, Prompt Studio |
-| [01 · Notes, Insights & Collaboration](01-product/05-notes-insights-collaboration.md) | Home/history, Insights, Notes, Account/Team |
+| [01 · Capture Modes & Flows](01-product/02-capture-modes-and-flows.md) | Dictation, Voice/Chat Agent, Note Recording, Meeting Mode, Upload |
+| [01 · AI Engines & Providers](01-product/03-ai-engines-and-providers.md) | 5 inference modes, Whisper/Parakeet/llama.cpp, provider matrix |
+| [01 · Text Intelligence](01-product/04-text-intelligence.md) | Cleanup, Dictionary, Snippets, Prompt Studio, Transforms/Style |
+| [01 · Notes, Insights & Collaboration](01-product/05-notes-insights-collaboration.md) | Notes (semantic search), history, optional account/workspace |
 | [02 · Sitemap & IA](02-information-architecture/01-sitemap-and-ia.md) | Surfaces, sitemap, settings IA, screen inventory |
 | [02 · Navigation & Content Model](02-information-architecture/02-navigation-and-content-model.md) | Nav system, routing, keyboard, data model |
 | [03 · Design Language & Tokens](03-ux-ui/01-design-language.md) | Themes, color, type, spacing, components, motion |
 | [03 · App Shell & Layout](03-ux-ui/02-app-shell-and-layout.md) | Chrome, sidebar, content layouts, responsive |
 | [03 · Screen Specifications](03-ux-ui/03-screen-specifications.md) | Reproduction-grade specs for every main screen |
-| [03 · Floating Bar, Overlays & Settings](03-ux-ui/04-floating-bar-overlays-and-settings.md) | Khonjel Bar, overlays, full settings spec |
+| [03 · Floating Bar, Overlays & Settings](03-ux-ui/04-floating-bar-overlays-and-settings.md) | Dictation Panel, overlays, full settings spec |
 | [03 · Interaction, States & Accessibility](03-ux-ui/05-interaction-states-and-accessibility.md) | States, motion, keyboard, WCAG 2.2 AA |
-| [04 · System Architecture](04-architecture-and-delivery/01-system-architecture.md) | Components, pipeline, ModelGateway, local models |
-| [04 · Privacy, Data & Security](04-architecture-and-delivery/02-privacy-data-security.md) | Defaults, data inventory, egress map, security |
+| [04 · System Architecture](04-architecture-and-delivery/01-system-architecture.md) | Multi-window Electron, pipeline, inference router, local engines |
+| [04 · Privacy, Data & Security](04-architecture-and-delivery/02-privacy-data-security.md) | Defaults, data inventory, egress map, no-telemetry |
 | [04 · Roadmap, MVP & Open Questions](04-architecture-and-delivery/03-roadmap-mvp-open-questions.md) | Phasing, NFRs, decisions |
+| [04 · Technology Stack](04-architecture-and-delivery/04-technology-stack.md) | The exact OpenWhispr stack Khonjel adopts |
+| [99 · OpenWhispr **repo** analysis](99-reference-analysis/03-openwhispr-repo-analysis.md) | **Authoritative** capture of the real app (stack, nav, features) |
 | [99 · OpenWhispr screen-by-screen](99-reference-analysis/01-open-wisper-screen-by-screen.md) | Hi-fidelity capture of all 15 OW screenshots |
 | [99 · Wispr Flow screen-by-screen](99-reference-analysis/02-wisper-flow-screen-by-screen.md) | Hi-fidelity capture of all 18 WF screenshots |
 

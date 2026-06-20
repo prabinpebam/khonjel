@@ -7,116 +7,141 @@
 
 ## 1. Surface taxonomy
 
-Khonjel has **four top-level surfaces**:
+Khonjel is a **multi-window Electron app** (per the OpenWhispr architecture), routed by
+window/URL params on one renderer bundle:
 
 | Surface | Window type | Purpose |
 |---|---|---|
-| **Main Window** | Primary app window (sidebar + content) | History, libraries, insights, review |
-| **Settings** | Modal over the main window | All configuration |
-| **Khonjel Bar** | Always-on floating pill | Live capture surface |
-| **Overlays** | Transient floating panels | Agent overlay, Meeting Mode panel, Transform preview, notifications |
+| **Dictation Panel** | Small always-available window (default route) | The compact live-dictation surface (a.k.a. **Khonjel Bar**) |
+| **Control Panel** | Main window (sidebar + content) | Home, Chat, Notes, Upload, Dictionary, Integrations |
+| **Settings** | Modal over the Control Panel | All configuration |
+| **Agent Overlay** | Floating window (`?agent=true`) | Voice-agent command/answer surface |
+| **Transient overlays** | Floating windows | Meeting-notification, transcription-preview, update-notification |
+| **Onboarding / Auth** | First-run / optional | Setup wizard; optional, skippable sign-in |
+
+> **Capture is global, not a nav destination.** Dictation / Voice Agent / Meeting / Chat
+> are invoked by **four global hotkeys** and surface on the Dictation Panel / Agent
+> Overlay — independent of the Control Panel.
 
 ---
 
-## 2. Main Window sitemap
+## 2. Control Panel sitemap (main window)
+
+Primary navigation is the **OpenWhispr spine** (`ControlPanelView`) with the **Wispr
+Flow surfaces woven in as first-class destinations** — one coherent sidebar, not a
+base app with extras bolted on:
 
 ```
-Main Window
-└── App Shell (window chrome + left sidebar + content area + optional right rail)
+Control Panel
+└── App Shell (window chrome + left sidebar + content view)
     │
-    ├── Home                         [primary]   dictation history timeline + stats rail
-    │   ├── History entry detail (inline/expand)
-    │   └── Voice Profile switcher
+    ├── ⌘K Command palette          quick search/jump (CommandSearch)
+    ├── Workspace switcher           (optional, if workspaces enabled)
     │
-    ├── Insights                     [primary]
-    │   ├── Your Usage   (tab, default)
-    │   └── Your Voice   (tab)
+    ├── Home              [primary]  dictation/transcription HISTORY (incl. discarded)
+    │   ├── History entry detail (inline)   copy/re-insert/edit/delete/re-transcribe
+    │   ├── Personal stats rail (words · wpm · streak)      ← WF
+    │   ├── Voice Profile switcher                          ← WF
+    │   └── Upcoming meetings (when calendar connected)
     │
-    ├── Dictionary                   [primary, library]
-    │   ├── All | Personal | Shared with team   (tabs)
-    │   ├── Add new (entry editor)
-    │   └── Entry detail (edit/delete)
+    ├── Insights          [primary]  analytics dashboard                    ← WF
+    │   └── Your Usage | Your Voice (tabs)
     │
-    ├── Snippets                     [primary, library]
-    │   ├── All | Personal | Shared with team   (tabs)
-    │   ├── Add new (snippet editor)
-    │   └── Snippet detail (edit/delete)
+    ├── Chat              [primary]  conversational AI agent (reasoning mode)
     │
-    ├── Style                        [primary, library]
-    │   └── Personal messages | Work messages | Email | Other | Auto Cleanup(Beta)  (tabs)
+    ├── Notes             [primary]  rich notes (TipTap)  ← OW Notes ⊕ WF Scratchpad
+    │   ├── Folders / list / semantic search
+    │   ├── Note editor (record/append, AI actions)
+    │   └── Save-as-files (optional)
     │
-    ├── Transforms                   [primary, library]
-    │   ├── Opt-in toggle + view-changes hotkey
-    │   ├── My Transforms (cards)
-    │   └── Create New / Edit Transform (editor)
+    ├── Upload            [primary]  transcribe an existing audio file
     │
-    ├── Scratchpad                   [primary]
-    │   ├── Recents (notes list)
-    │   └── Note editor (record FAB)
+    ├── Dictionary        [primary]  text customization hub
+    │   ├── Dictionary entries (auto-learn from corrections)   ← OW ⊕ WF
+    │   └── Snippets (spoken-trigger expansion)                ← OW ⊕ WF
+    │
+    ├── Transforms        [primary]  hotkey-bound AI rewrites (saved prompts)  ← WF
+    │   └── My Transforms (cards) · Create/Edit · view-changes preview
+    │
+    ├── Integrations      [primary]  Google Calendar · Public API · MCP · CLI
     │
     └── Sidebar footer
-        ├── Invite your team         (P2)
-        ├── Settings  ───────────────▶ opens Settings modal
-        └── Help
+        ├── Settings ─────────────▶ opens Settings modal
+        ├── Support (Help)
+        └── Account / profile row  (optional)
 ```
 
-> **Capture is not a nav destination.** Dictation/Meeting/Agent are invoked by global
-> hotkeys and surface on the Khonjel Bar / overlays — independent of which Main Window
-> page is open (or whether the window is even visible).
+### 2.1 Wispr Flow integration map (every "goodness" has one definite home)
+
+Khonjel keeps **all** the Wispr Flow value. Each feature is merged into a single
+coherent home — nothing is optional-vague or duplicated:
+
+| Wispr Flow feature | Coherent home in Khonjel | Status |
+|---|---|---|
+| Home history timeline | **Home** (same destination as OpenWhispr history — unified) | merged |
+| Personal stats rail (words/wpm/streak) | **Home** right rail | merged |
+| Insights dashboard (Usage/Voice, gauges, heatmap) | **Insights** primary nav item (computed from local history) | first-class |
+| Style (per-context tone/formatting) | **Settings ▸ Language Models ▸ Dictation Cleanup ▸ Styles** (Style *is* cleanup tone per app/context) | folded into cleanup |
+| Transforms (hotkey rewrites) | **Transforms** primary nav item + hotkeys in Settings ▸ Hotkeys | first-class |
+| Snippets (spoken-trigger expansion) | **Dictionary** view (Snippets tab) — OpenWhispr already groups them | merged |
+| Scratchpad (dictated notes) | **Notes** (OpenWhispr Notes absorbs it; richer: folders + semantic search) | merged |
+| Voice Profiles | **Home** switcher + a setting; tunes cleanup/style | merged |
+| Warm light theme | The **Light** theme (Settings ▸ General ▸ Appearance: Light/Dark/Auto) | merged |
+| Library page template (title+tabs+promo+entries) | Shared **UI pattern** for Dictionary/Snippets/Transforms | merged |
+| Streaks / milestones | Inside **Insights** + a notification category | merged |
+| Always-on Flow bar | **Dictation Panel / Khonjel Bar** | merged |
+
+> Result: a single, unified app. The sidebar is **Home · Insights · Chat · Notes ·
+> Upload · Dictionary · Transforms · Integrations** — the OpenWhispr base and the Wispr
+> Flow surfaces as **one navigation**, with Style folded where it belongs (cleanup) and
+> Scratchpad/history/snippets de-duplicated into their natural OpenWhispr homes.
 
 ---
+
 
 ## 3. Settings sitemap (modal)
 
-Settings is a **modal with its own two-pane IA** (nav rail + content). Grouped:
+Settings is a **modal with its own two-pane IA** (nav rail + scrolling content),
+aligned to OpenWhispr's `SettingsSectionType`:
 
 ```
 Settings (modal)
-├── GENERAL
-│   ├── General                 shortcuts, microphone, dictation languages, app language
-│   ├── Hotkeys                  dictation (Tap/Hold), meeting mode, agent overlay
-│   └── Appearance              theme (system/light/dark), density, accent   [NEW]
-│
-├── AI MODELS
-│   ├── Speech-to-Text          mode pills (Dictation | Note Recording) + engine + config
-│   └── Language Models         purpose pills (Cleanup | Voice Agent | Note Formatting | Chat)
-│                                + engine + config + Prompt Studio
-│
-├── SYSTEM
-│   ├── System                  launch/login, Khonjel Bar, dock, sound, notifications,
-│   │                            scratchpad behaviour, extras, data management, updates,
-│   │                            debug logging, reset
-│   └── Vibe coding             variable recognition, file tagging (IDE)        (P2)
-│
-├── PRIVACY & DATA
-│   └── Privacy & Data          privacy mode, off-by-default toggles, retention,
-│                                local-vs-cloud storage, context awareness, HIPAA
-│
-└── ACCOUNT
-    ├── Account                 name, email, avatar, sign out, delete           (P2)
-    ├── Team                    members, shared vocab                           (P2)
-    └── Plans & Billing         managed-tier billing (optional)                 (P2)
+├── General            appearance(theme) · sound · notifications · meeting detection ·
+│                      clipboard(auto-paste) · save-notes-as-files · floating icon ·
+│                      language(UI + dictation) · startup · microphone · dictionary(auto-learn)
+├── Hotkeys            Dictation(+activation) · Voice Agent · Meeting(+layout) · Chat Agent
+├── Speech-to-Text     tabs: Dictation | Note Recording
+│                      modes: OpenWhispr/Khonjel Cloud · Providers · Local · Self-Hosted
+│                      (Whisper / NVIDIA Parakeet) · VAD tuning · GPU device · preview
+├── Language Models    tabs: Dictation Cleanup | Voice Agent | Note Formatting | Chat
+│                      modes (×5) + Inference config + Prompt Studio + thinking mode
+├── Privacy & Data     cloud backup(opt) · usage analytics(off) · audio retention(0–90d) ·
+│                      data retention(+discarded) · permissions(mic/AX/system-audio)
+├── System             software updates · developer tools · data management (cache/reset)
+├── Account            optional (skippable; disabled when AUTH unset)           (P2)
+├── Workspace          members / teams (feature-flagged)                        (P2)
+└──  ~~Plans & Billing~~   DROPPED — no subscription
 ```
 
-### 3.1 Settings IA rationale (merging both references)
-- OpenWhispr grouped settings as **ACCOUNT / APP / AI MODELS / SYSTEM**; Wispr Flow as
-  **SETTINGS / ACCOUNT**. Khonjel merges into **GENERAL / AI MODELS / SYSTEM /
-  PRIVACY & DATA / ACCOUNT** — keeping OpenWhispr's strong model+privacy separation and
-  Wispr's general/system split.
-- **Hotkeys** is its own page (from OpenWhispr) rather than buried in General.
-- **Appearance** is added (NEW) to host theme/accent/density (both refs imply theming).
-- **Vibe coding** retained under SYSTEM as a P2 developer page (from Wispr).
+### 3.1 Settings IA rationale
+- The structure **mirrors OpenWhispr** (General / Hotkeys / Speech-to-Text / Language
+  Models / Privacy & Data / System / Account / Workspace) so the captured app is
+  reproduced faithfully.
+- **Plans & Billing is removed entirely.** **Account** and **Workspace** are optional
+  and local-first (Account features compile out when auth is disabled).
+- The earlier "Vibe coding / Appearance density" notes are folded in: **Appearance**
+  (theme Light/Dark/Auto) lives under **General**, matching the real app.
 
 ---
 
-## 4. Khonjel Bar & Overlays IA
+## 4. Dictation Panel, Agent Overlay & transient overlays
 
 ```
-Khonjel Bar (always-on floating pill)
-├── Idle (compact)            mic glyph; click = start; right-click = quick menu
+Dictation Panel (Khonjel Bar — always-on floating)
+├── Idle (compact)            mic glyph; click = start; floating-icon position/auto-hide
 ├── Listening                 waveform + timer + cancel
 ├── Processing                transcribing / cleaning
-└── Quick menu (popover)      mode (Dictation/Note/Agent), mic, language, open Main Window, settings
+└── Quick menu (popover)      mode, mic, language, open Control Panel, settings
 
 Overlays (transient)
 ├── Agent overlay             voice-agent input/answer surface
@@ -131,43 +156,42 @@ Overlays (transient)
 
 | # | Screen | Surface | Priority | Spec |
 |---|---|---|---|---|
-| 1 | Home / History | Main | P0 | screen-specs §Home |
-| 2 | History entry detail | Main | P0 | §Home |
-| 3 | Insights — Your Usage | Main | P1 | §Insights |
-| 4 | Insights — Your Voice | Main | P2 | §Insights |
-| 5 | Dictionary | Main | P0 | §Library |
-| 6 | Dictionary entry editor | Main | P0 | §Library |
-| 7 | Snippets | Main | P1 | §Library |
-| 8 | Snippet editor | Main | P1 | §Library |
-| 9 | Style | Main | P1 | §Library |
-| 10 | Transforms | Main | P1 | §Library |
-| 11 | Transform editor | Main | P1 | §Library |
-| 12 | Scratchpad | Main | P1 | §Scratchpad |
-| 13 | Note editor | Main | P1 | §Scratchpad |
-| 14 | Settings — General | Settings | P0 | settings-spec |
-| 15 | Settings — Hotkeys | Settings | P0 | settings-spec |
-| 16 | Settings — Appearance | Settings | P1 | settings-spec |
-| 17 | Settings — Speech-to-Text | Settings | P0 | settings-spec |
-| 18 | Settings — Language Models | Settings | P0 | settings-spec |
-| 19 | Prompt Studio (in LM) | Settings | P1 | settings-spec |
-| 20 | Settings — System | Settings | P0 | settings-spec |
-| 21 | Settings — Vibe coding | Settings | P2 | settings-spec |
-| 22 | Settings — Privacy & Data | Settings | P0 | settings-spec |
-| 23 | Settings — Account | Settings | P1 | settings-spec |
-| 24 | Settings — Team | Settings | P2 | settings-spec |
-| 25 | Settings — Plans & Billing | Settings | P2 | settings-spec |
-| 26 | Khonjel Bar (all states) | Bar | P0 | floating-bar |
-| 27 | Agent overlay | Overlay | P1 | floating-bar |
-| 28 | Meeting Mode panel | Overlay | P1 | floating-bar |
-| 29 | Transform preview | Overlay | P1 | floating-bar |
-| 30 | First-run onboarding | Modal | P0 | screen-specs §Onboarding |
+| 1 | Home / History | Control Panel | P0 | screen-specs §Home |
+| 2 | History entry detail | Control Panel | P0 | §Home |
+| 3 | Chat (AI agent) | Control Panel | P1 | §Chat |
+| 4 | Notes (list + folders + semantic search) | Control Panel | P1 | §Notes |
+| 5 | Note editor (TipTap, AI actions) | Control Panel | P1 | §Notes |
+| 6 | Upload (file transcription) | Control Panel | P1 | §Upload |
+| 7 | Dictionary | Control Panel | P0 | §Library |
+| 8 | Dictionary entry editor | Control Panel | P0 | §Library |
+| 9 | Snippets (within Dictionary) | Control Panel | P1 | §Library |
+| 10 | Integrations (GCal/API/MCP/CLI) | Control Panel | P1 | §Integrations |
+| 11 | Command palette (⌘K) | Overlay | P1 | screen-specs |
+| 12 | Settings — General | Settings | P0 | settings-spec |
+| 13 | Settings — Hotkeys | Settings | P0 | settings-spec |
+| 14 | Settings — Speech-to-Text | Settings | P0 | settings-spec |
+| 15 | Settings — Language Models + Prompt Studio | Settings | P0 | settings-spec |
+| 16 | Settings — Privacy & Data | Settings | P0 | settings-spec |
+| 17 | Settings — System | Settings | P0 | settings-spec |
+| 18 | Settings — Account (optional) | Settings | P2 | settings-spec |
+| 19 | Settings — Workspace (optional) | Settings | P2 | settings-spec |
+| 20 | Dictation Panel / Khonjel Bar (all states) | Panel | P0 | floating-bar |
+| 21 | Agent overlay | Overlay | P1 | floating-bar |
+| 22 | Meeting Mode panel + notification | Overlay | P1 | floating-bar |
+| 23 | Transcription preview overlay | Overlay | P1 | floating-bar |
+| 24 | Update notification overlay | Overlay | P1 | floating-bar |
+| 25 | First-run onboarding (local, no account) | Modal | P0 | screen-specs §Onboarding |
+| — | ~~Settings — Plans & Billing~~ | — | — | DROPPED (no subscription) |
+| 26 | Insights (Your Usage / Your Voice) | Control Panel | P1 | screen-specs §Insights |
+| 27 | Transforms (cards + editor) | Control Panel | P1 | screen-specs §Library |
+| 28 | Style (within LM ▸ Cleanup) | Settings | P1 | settings-spec |
 
 ---
 
 ## 6. Depth & disclosure rules
-- **L1** = sidebar destinations (Home, Insights, libraries, Scratchpad).
-- **L2** = in-page tabs (Insights tabs, library scope tabs, STT/LM pills).
-- **L3** = editors/detail (entry editor, Transform editor, Prompt Studio Test) — shown
+- **L1** = sidebar destinations (Home, Insights, Chat, Notes, Upload, Dictionary, Transforms, Integrations).
+- **L2** = in-page tabs (STT modes, LM purposes, Notes folders, Dictionary/Snippets).
+- **L3** = editors/detail (note editor, entry editor, Prompt Studio Test) — shown
   inline or as a focused sub-view with breadcrumb, never a deep modal stack.
 - Short confirmations/destructive actions → dialog. Substantial sub-workflows →
   L3 sub-view. Reference detail → inline expander. (Per progressive-disclosure rule.)

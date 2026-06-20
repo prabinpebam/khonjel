@@ -22,32 +22,44 @@
 
 ---
 
-## 2. Primary navigation (left sidebar)
+## 2. Primary navigation (Control Panel sidebar)
 
-Order and grouping (Ref: WF sidebar, adapted):
+The **OpenWhispr spine** with the **Wispr Flow surfaces merged in** as first-class
+destinations (lucide icons, `w-48` rail) — one unified sidebar:
 
 ```
 [Brand: Khonjel]  [theme-aware logo]
 ────────────────────────────────────
- Home            (grid glyph)
- Insights        (bar-chart glyph)
- Dictionary      (book glyph)
- Snippets        (scissors glyph)
- Style           (Tt glyph)
- Transforms      (shuffle glyph)
- Scratchpad      (note glyph)
+ 🔍 Search…                    ⌘K     (Command palette)
 ────────────────────────────────────
- (optional status / model card)
+ Home            (Home)          history + stats rail + Voice Profile   ← OW ⊕ WF
+ Insights        (BarChart3)     analytics dashboard                    ← WF
+ Chat            (MessageSquare) AI agent
+ Notes           (NotebookPen)   notes (absorbs WF Scratchpad)          ← OW ⊕ WF
+ Upload          (Upload)        file transcription
+ Dictionary      (BookOpen)      dictionary + snippets tabs             ← OW ⊕ WF
+ Transforms      (Wand2/Shuffle) hotkey AI rewrites                     ← WF
+ Integrations    (Blocks)        calendar · API · MCP · CLI
 ────────────────────────────────────
- Invite your team   (P2)
- Settings           (gear) ──▶ modal
- Help
+ (flex spacer)
+ (optional engine status / update action)
+────────────────────────────────────
+ Invite teammate / Create workspace   (UserPlus, optional)
+ Settings        (Settings) ──▶ modal
+ Support         (HelpCircle dropdown)
+ ──────────────
+ [avatar] Name / email  (or "Not signed in")
 ```
 
-- **Selected state:** raised pill (light theme) / subtle fill (dark) + bold label.
-- **Collapsible:** the chrome sidebar-toggle collapses to icons-only (tooltips on hover).
-- **Status card (NEW, replaces the quota nag):** shows the active **engine** (e.g.
-  "Local · Qwen3.5 4B") and a model-download/health indicator. Honest, not a sales nag.
+- **Selected state:** `bg-primary/8` fill + `text-primary` glyph + medium label (per OpenWhispr).
+- **Command palette** (`⌘K` / `Ctrl K`) opens `CommandSearch` to jump anywhere/run actions.
+- **Wispr Flow merge (definite homes):** **Insights** and **Transforms** are first-class
+  nav items; **Style** lives under Settings ▸ Language Models ▸ Dictation Cleanup;
+  **Snippets** under Dictionary; **Scratchpad** is folded into **Notes**; **Voice
+  Profiles** + **stats** live on **Home**; the **warm light theme** is the Light theme.
+  See the integration map in
+  [`01-sitemap-and-ia.md`](01-sitemap-and-ia.md#21-wispr-flow-integration-map-every-goodness-has-one-definite-home).
+- **Dropped:** the Upgrade/limit/referral banners from OpenWhispr's sidebar.
 
 ---
 
@@ -55,73 +67,94 @@ Order and grouping (Ref: WF sidebar, adapted):
 
 | Page | Tabs / pills | Style |
 |---|---|---|
+| Home | history list + stats rail + Voice Profile switcher | list + rail |
 | Insights | Your Usage · Your Voice | underline tabs |
-| Dictionary / Snippets | All · Personal · Shared with team | underline tabs |
-| Style | Personal · Work · Email · Other · Auto Cleanup | underline tabs |
-| Speech-to-Text | Dictation · Note Recording | segmented pills |
-| Language Models | Cleanup · Voice Agent · Note Formatting · Chat | segmented pills |
+| Notes | Folders / list + semantic search | tree + search |
+| Dictionary | Dictionary entries · Snippets | tabs |
+| Transforms | My Transforms (cards) · Create/Edit | cards + editor |
+| Speech-to-Text | Dictation · Note Recording | tabs (ProviderTabs) |
+| Speech-to-Text modes | OpenWhispr/Khonjel Cloud · Providers · Local · Self-Hosted | InferenceModeSelector |
+| Language Models | Dictation Cleanup · Voice Agent · Note Formatting · Chat | tabs (ProviderTabs) |
+| ↳ Dictation Cleanup | Cleanup · **Styles** (per-context tone) | sub-tabs |
+| LM modes | Cloud · Providers · Local · Self-Hosted · Enterprise | InferenceModeSelector |
 | Prompt Studio | View · Customize · Test | underline tabs |
+| Integrations | Calendar · API · MCP · CLI | sectioned list |
 
-**Pills vs tabs:** *segmented pills* for mutually-exclusive **modes/purposes that
-change the whole form below** (STT modes, LM purposes); *underline tabs* for **filtering
-peer content** (scopes, insights, prompt studio). Consistent across the app.
+**Pattern:** `ProviderTabs` for purpose/mode tabs; `InferenceModeSelector` for the
+mode choice that swaps the config form below.
 
 ---
 
 ## 4. Settings navigation
-- Opens as a **centered modal**; left nav rail groups: GENERAL · AI MODELS · SYSTEM ·
-  PRIVACY & DATA · ACCOUNT (see IA doc).
-- Selecting a rail item swaps the right content pane; the modal scrolls within the pane.
-- `×` (top-right) or `Esc` closes and restores the previous Main Window state.
-- Footer: version + cloud-sync/health indicator (Ref: WF settings footer).
-- **Deep-linking:** other surfaces can open Settings to a specific page (e.g. a "no
-  model" error links to Settings ▸ Language Models).
+- Opens as a **centered modal**; left nav rail (OpenWhispr `SettingsSectionType`):
+  **General · Hotkeys · Speech-to-Text · Language Models · Privacy & Data · System ·
+  Account (optional) · Workspace (optional)**. **No Plans & Billing.**
+- Selecting a rail item swaps the right content pane; the pane scrolls independently.
+- `×` (top-right) or `Esc` closes and restores the Control Panel state.
+- Footer: version + (optional) cloud-sync/health indicator.
+- **Deep-linking:** other surfaces open Settings to a specific page (e.g. a "no model"
+  error links to Settings ▸ Language Models; "connect calendar" → Integrations).
 
 ---
 
-## 5. Routing map (logical routes)
+## 5. Routing map (windows + logical routes)
 
+**Windows (URL-param routed, per OpenWhispr `AppRouter`):**
+```
+(default)                     Dictation Panel  (Khonjel Bar)
+?panel=true | /control        Control Panel    (main window)
+?agent=true                   Agent Overlay
+?meeting-notification=true    Meeting notification overlay
+?transcription-preview=true   Transcription preview overlay
+?update-notification=true     Update notification overlay
+```
+
+**Control Panel views & sub-routes:**
 ```
 /home
 /insights            ?tab=usage|voice
-/dictionary          ?scope=all|personal|team   /dictionary/new   /dictionary/:id
-/snippets            ?scope=all|personal|team   /snippets/new     /snippets/:id
-/style               ?context=personal|work|email|other|auto
-/transforms          /transforms/new            /transforms/:id
-/scratchpad          /scratchpad/:noteId
+/chat
+/notes               /notes/:id              ?folder=…   ?q=<semantic search>
+/upload
+/dictionary          /dictionary/new  /dictionary/:id     (tab: entries | snippets)
+/transforms          /transforms/new  /transforms/:id
+/integrations        ?section=calendar|api|mcp|cli
 /settings/general
 /settings/hotkeys
-/settings/appearance
-/settings/speech-to-text     ?mode=dictation|note
-/settings/language-models    ?purpose=cleanup|agent|format|chat   #prompt-studio
-/settings/system
-/settings/vibe-coding
+/settings/speech-to-text     ?tab=dictation|noteRecording   ?mode=cloud|providers|local|self-hosted
+/settings/language-models    ?tab=cleanup|voice-agent|note-formatting|chat   ?cleanup=cleanup|styles   #prompt-studio
 /settings/privacy
-/settings/account
-/settings/team
-/settings/billing
+/settings/system
+/settings/account            (optional)
+/settings/workspace          (optional)
 ```
 
-Overlays/bar are state, not routes (e.g. `bar.state = listening`, `overlay.agent = open`).
+Overlays/panel are window state, not routes (e.g. `bar.state = listening`,
+`overlay.agent = open`).
 
 ---
 
 ## 6. Keyboard & global model
 
-### 6.1 Global hotkeys (system-wide, Ref: OW S15)
+### 6.1 Global hotkeys (system-wide, per OpenWhispr)
 | Action | Default | Configurable |
 |---|---|---|
-| Dictation | `Ctrl + Win` (Tap/Hold) | yes |
-| Meeting Mode | unset | yes |
-| Agent overlay | unset | yes |
-| Transform: Polish | `Win + Alt + 1` | yes |
-| Transform: Prompt Engineer | `Win + Alt + 2` | yes |
-| Transform: view changes | `Win + Alt + O` | yes |
+| Dictation | `Ctrl + Win` (Tap / Push-to-talk) | yes |
+| Voice Agent | unset | yes (clearable) |
+| Meeting Mode | unset (+ layout: Full width / Side panel) | yes (clearable) |
+| Chat Agent | unset | yes (clearable) |
+| Command palette | `Ctrl/⌘ + K` | yes |
 | Cancel capture | `Esc` | — |
+| **Transform: Polish** (WF) | `Win + Alt + 1` | yes |
+| **Transform: Prompt Engineer** (WF) | `Win + Alt + 2` | yes |
+| **Transform: view changes** (WF) | `Win + Alt + O` | yes |
+
+The **Transforms** hotkeys are part of the merged package (managed on the Transforms
+page and in Settings ▸ Hotkeys). Conflicts are validated across all slots.
 
 ### 6.2 In-app keyboard
-- `Ctrl/Cmd + ,` open Settings; `Ctrl/Cmd + F` search current list; `Ctrl/Cmd + N` add
-  new (in libraries); arrow keys move list selection; `Enter` open; `Del` delete (with
+- `Ctrl/Cmd + ,` open Settings; `Ctrl/Cmd + K` command palette; `Ctrl/Cmd + F` search
+  current list; arrow keys move list selection; `Enter` open; `Del` delete (with
   confirm); `Tab`/`Shift+Tab` traverse; full focus-visible rings. (See a11y doc.)
 
 ---
@@ -136,6 +169,9 @@ Overlays/bar are state, not routes (e.g. `bar.state = listening`, `overlay.agent
 
 ## PART B — CONTENT / DATA MODEL
 
+> Persisted in **better-sqlite3** (via **kysely**); secrets in the **OS keychain**
+> (`@napi-rs/keyring`); note vectors in **Qdrant** (local). Mirrors OpenWhispr's data.
+
 ## 8. Core entities
 
 ```
@@ -143,53 +179,84 @@ HistoryEntry
   id, createdAt, app, language, voiceProfileId?
   rawTranscript, finalText, formatting(richtext)
   cleanupApplied(bool), styleContext, audioRef?(if retained)
-  wordCount, durationMs, source(mode)
+  wordCount, durationMs, source(mode), discarded(bool)   // discarded kept if enabled
 
-Note
-  id, title(auto|manual), body(richtext), createdAt, updatedAt
-  audioRef?, speakers[]?(diarized), tags[], sharingScope, syncState
+Note                    (TipTap rich content)
+  id, title(auto|manual), bodyJSON(tiptap), bodyMarkdown
+  folderId?, tags[], createdAt, updatedAt
+  audioRef?, speakers[]?(diarized), sharingScope, syncState
+  filePath?(if "save notes as files"), embeddingId?(vector)
+
+Folder                  (notes organization)
+  id, name, parentId?, createdAt
+
+NoteVector              (semantic search, local Qdrant)
+  id, noteId, embedding(MiniLM), chunkText
 
 DictionaryEntry
   id, type(term|substitution), term|trigger, replacement?, scope(personal|team)
-  source(manual|auto), createdAt
+  source(manual|auto-learn), createdAt
 
 Snippet
   id, trigger, expansion(richtext), scope(personal|team), createdAt, updatedAt
 
-Transform
-  id, name, description, prompt, hotkey, enginePurposeRef, builtin(bool), enabled
+InferenceConfig         (one per slot: STT.dictation, STT.note,
+                         LLM.dictationCleanup, LLM.voiceAgent, LLM.noteFormatting, LLM.chat)
+  mode(openwhisprCloud|providers|local|selfHosted|enterprise)
+  providerId?, model?, baseUrl?, apiKeyRef?(keychain), region?, deployment?
+  options{ disableThinking, reasoningMode, ... }
+  // STT-specific: localProvider(whisper|parakeet), whisperModel?, parakeetModel?,
+  //               vad{ enabled, threshold, minSpeechMs, minSilenceMs, maxSpeechS,
+  //                    speechPadMs, samplesOverlap }, gpuIndex
 
-StyleProfile
-  id, context(personal|work|email|other|auto), tone, formality, lengthBias,
-  formatting, examples[], appMappings[]
-
-VoiceProfile
-  id, name, cleanupOverrides, styleOverrides, active(bool)
-
-EngineConfig            (one per slot: STT.dictation, STT.note, LLM.cleanup, LLM.agent, LLM.format, LLM.chat)
-  archetype(local|self|cloud|enterprise|managed)
-  providerId?, model?, endpointUrl?, apiKeyRef?, region?, deployment?
-  options{ disableThinking, ... }
-
-ModelAsset             (local download manager)
-  id, family, name, sizeBytes, recommended(bool), state(available|downloading|installed), path?
+ModelAsset             (local model manager)
+  id, family, name, sizeBytes, recommended(bool),
+  state(available|downloading|installed), path?, kind(stt|llm), runtime(whisper|parakeet|llama)
 
 PromptConfig
   id(unified), template(with {{agentName}}), customized(bool)
 
+GcalAccount            (integration)
+  email, connectedAt, primaryOnly(bool)
+
+ApiKey                 (Public API; ungated)
+  id, label, hashedKey, createdAt, lastUsedAt
+
+Meeting                (meeting transcription)
+  id, source(zoom|teams|facetime|manual), startedAt, endedAt
+  transcript(segments[ {speakerId, text, t} ]), speakers[], calendarEventId?
+
+SpeakerProfile         (voice fingerprint)
+  id, label, fingerprint, createdAt
+
+Workspace              (optional; feature-flagged)
+  id, name, members[ {userId, role} ]
+
+Transform              (additive, Wispr Flow)
+  id, name, description, prompt, hotkey, inferenceConfigRef, builtin(bool), enabled
+
+StyleProfile           (additive, Wispr Flow)
+  id, context(personal|work|email|other|auto), tone, formality, lengthBias,
+  formatting, examples[], appMappings[]
+
+VoiceProfile           (additive, Wispr Flow)
+  id, name, cleanupOverrides, styleOverrides, active(bool)
+
 Settings
-  general{ micId, dictationLanguages[], appLanguage }
-  hotkeys{ dictation{combo,mode}, meeting{combo,openIn}, agent{combo}, transforms[] }
-  appearance{ theme, accent, density }
-  system{ launchAtLogin, showBarAlways, showInDock, sounds, muteMusic,
-          notifications{suggestions,announcements,milestones}, scratchpadOpen }
-  privacy{ privacyMode, cloudBackup, analytics, audioRetentionDays, dataRetention,
-           localStorageMode, contextAwareness, hipaaAccepted }
+  general{ micId, preferBuiltInMic, dictationLanguage, uiLanguage, theme,
+           launchAtLogin, startMinimized, audioCues, pauseMediaOnDictation,
+           autoPaste, keepInClipboard, floatingIcon{autoHide, startPosition},
+           saveNotesAsFiles{enabled, path}, autoLearnDictionary,
+           notifications{enabled, meetingDetection, calendarReminders, updates} }
+  hotkeys{ dictation{combo, activation(tap|push)}, voiceAgent{combo},
+           meeting{combo, layout(full-width|side-panel)}, chatAgent{combo} }
+  privacy{ cloudBackup(opt), usageAnalytics(off), audioRetentionDays(0..90),
+           dataRetention, saveDiscarded, permissions{mic, accessibility, systemAudio} }
 
-Account                (P2)
-  id, firstName, lastName, email(readonly), avatar, teamId?, plan
+Account                (optional; absent when AUTH disabled)
+  id, name, email(readonly), avatar, workspaceId?
 
-InsightsAggregate      (derived, local)
+InsightsAggregate      (derived, local; additive)
   wpm, wpmPercentile, fixes{wordsCorrected, dictionaryFixes}, totalWords,
   appUsage[{category,count,pct}], streak{current,longest, heatmap[]}
 ```
