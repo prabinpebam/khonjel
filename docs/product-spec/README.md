@@ -71,7 +71,8 @@ docs/product-spec/
 │   ├── 01-system-architecture.md
 │   ├── 02-privacy-data-security.md
 │   ├── 03-roadmap-mvp-open-questions.md
-│   └── 04-technology-stack.md
+│   ├── 04-technology-stack.md
+│   └── 05-mock-frontend-plan.md
 └── 99-reference-analysis/
     ├── 01-open-wisper-screen-by-screen.md
     ├── 02-wisper-flow-screen-by-screen.md
@@ -102,6 +103,7 @@ docs/product-spec/
 | [04 · Privacy, Data & Security](04-architecture-and-delivery/02-privacy-data-security.md) | Defaults, data inventory, egress map, no-telemetry |
 | [04 · Roadmap, MVP & Open Questions](04-architecture-and-delivery/03-roadmap-mvp-open-questions.md) | Phasing, NFRs, decisions |
 | [04 · Technology Stack](04-architecture-and-delivery/04-technology-stack.md) | The exact OpenWhispr stack Khonjel adopts |
+| [04 · **Mock Frontend Plan**](04-architecture-and-delivery/05-mock-frontend-plan.md) | **Build the inspectable, backend-free frontend** — stack, architecture, phases |
 | [99 · OpenWhispr **repo** analysis](99-reference-analysis/03-openwhispr-repo-analysis.md) | **Authoritative** capture of the real app (stack, nav, features) |
 | [99 · OpenWhispr screen-by-screen](99-reference-analysis/01-open-wisper-screen-by-screen.md) | Hi-fidelity capture of all 15 OW screenshots |
 | [99 · Wispr Flow screen-by-screen](99-reference-analysis/02-wisper-flow-screen-by-screen.md) | Hi-fidelity capture of all 18 WF screenshots |
