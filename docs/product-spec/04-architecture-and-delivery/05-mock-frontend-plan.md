@@ -335,6 +335,7 @@ match); document the adapter swap (mock → IPC/AI-SDK/SQLite/Qdrant). No UI rew
 - [ ] Runs in a browser with `npm run dev`; **zero backend / zero network**.
 - [ ] UI imports **only** service ports; lint boundary forbids importing `adapters/**` — real adapters swap in with no UI changes.
 - [ ] Feature-based structure + aliases + tests in place (scales cleanly).
+- [ ] **Validated against spec via the eval loop** — see [Test & Validation Strategy](06-test-and-validation-strategy.md): `npm run verify` (static + design-system lint + unit/a11y + visual regression + spec coverage) passes, and each screen clears the agent visual review against the UI Design Spec + Wispr Flow reference.
 
 ---
 

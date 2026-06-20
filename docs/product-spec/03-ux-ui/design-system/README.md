@@ -31,7 +31,7 @@
 | `02-tokens.md` | The token scales (color, spacing, radius, type, shadow, motion, z) | to build with `/app` |
 | `03-inventory.md` | Every layer member (primitive / common / feature) + reuse justification | to build with `/app` |
 | `04-token-mapping.md` | Each component → the tokens it consumes | to build with `/app` |
-| `05-eval-and-lint.md` | The enforced lint/eval checks that reject forbidden patterns | to build with `/app` |
+| `05-eval-and-lint.md` | The enforced lint/eval checks that reject forbidden patterns | see [Test & Validation Strategy](../../04-architecture-and-delivery/06-test-and-validation-strategy.md) (L1) |
 
 Token **values** are defined in the [UI Design Spec](../06-ui-design-spec.md) and
 [Design Language & Tokens](../01-design-language.md). This folder governs the **discipline
