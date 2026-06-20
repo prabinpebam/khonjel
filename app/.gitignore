@@ -1,0 +1,18 @@
+# Build output
+dist
+dist-ssr
+
+# Dependencies
+node_modules
+
+# Test / eval artifacts
+coverage
+eval/screens
+playwright-report
+test-results
+
+# Local
+*.local
+*.log
+.DS_Store
+.tmp

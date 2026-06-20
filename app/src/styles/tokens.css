@@ -1,0 +1,79 @@
+/*
+ * Khonjel design tokens — FUNDAMENTAL layer (P1a).
+ * Values from docs/product-spec/03-ux-ui/06-ui-design-spec.md (the Khonjel design language).
+ * This is the ONLY place raw color/dimension values live. Components consume the
+ * Tailwind utilities generated from these in globals.css (@theme inline).
+ *
+ * Light is the hero; dark mirrors structure with inverted neutrals.
+ */
+
+:root {
+  /* ===== Color — Light (primary) ===== */
+  --canvas: #f2f1ee; /* warm greige window/sidebar */
+  --surface: #ffffff; /* content panel, cards */
+  --surface-2: #fbfaf8; /* insets, stat cards */
+  --border: #e6e4df; /* warm hairline */
+  --border-subtle: #f0eeeb; /* list-row dividers */
+  --foreground: #2a2a28; /* warm near-black */
+  --muted-foreground: #6e6b65; /* subtitles */
+  --tertiary-foreground: #9a968e; /* meta, captions */
+
+  --primary: #1a1a18; /* near-black CTA */
+  --primary-foreground: #ffffff;
+  --accent: #6c5ce7; /* violet UI accent */
+  --accent-foreground: #ffffff;
+  --accent-soft: #eeebfb; /* selected/badge bg */
+  --dataviz: #1f7a6b; /* teal — charts only */
+  --ring: #6c5ce7; /* focus ring */
+
+  --danger: #d2433b;
+  --danger-foreground: #ffffff;
+  --success: #1f9d57;
+  --warning: #c9821a;
+
+  --sidebar: #f2f1ee;
+  --sidebar-selected: #ffffff;
+
+  /* ===== Motion durations (P9) ===== */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+
+  /* ===== Instance-specific dimensions (P1a — not on the design scale) ===== */
+  --sidebar-width: 218px;
+  --titlebar-height: 52px;
+  --content-max-width: 1040px;
+  --rail-width: 260px;
+}
+
+/* ===== Color — Dark (counterpart) ===== */
+[data-theme="dark"] {
+  --canvas: #15161a;
+  --surface: #1c1d21;
+  --surface-2: #212226;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --foreground: #f2f3f5;
+  --muted-foreground: #a6abb2;
+  --tertiary-foreground: #73787f;
+
+  --primary: #f2f3f5;
+  --primary-foreground: #15161a;
+  --accent: #8b7cf6;
+  --accent-foreground: #15161a;
+  --accent-soft: #241f3d;
+  --dataviz: #36c2a8;
+  --ring: #8b7cf6;
+
+  --sidebar: #15161a;
+  --sidebar-selected: #24252b;
+}
+
+/* ===== Reduced motion collapses durations at the token layer (P9) ===== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}
