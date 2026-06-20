@@ -1,8 +1,11 @@
 # Khonjel — AI Engines & Providers
 
-> The model backbone. This is Khonjel's central differentiator: **one consistent
-> model system** for both speech and language tasks, defaulting to local/open models
-> and supporting a wide range of cloud, self-hosted, and enterprise APIs.
+> **The model backbone — and a headline feature.** Khonjel offers **strong, wide
+> support for all sorts of transcription (STT) and language (LLM) models**: local,
+> self-hosted, BYO-key cloud, and enterprise — through **one consistent model system**.
+> Local/open models are the **default**; the provider surface is **broad and
+> extensible** (a registry + a universal OpenAI-compatible adapter) so virtually any
+> model the user can reach is usable.
 >
 > Authoritative basis: the **OpenWhispr app** (Speech-to-Text & Language Models)
 > ([`../99-reference-analysis/03-openwhispr-repo-analysis.md`](../99-reference-analysis/03-openwhispr-repo-analysis.md)).
@@ -87,40 +90,103 @@ The page layout pattern per purpose:
 
 ---
 
-## 4. Provider & endpoint matrix
+## 4. Provider & model matrix — **wide support is a key feature**
 
-### 4.1 Cloud Providers (Bring Your Own Key) — Ref: OW S10
-Provider chips, each with API key entry (+ contextual "Get your API key →" link) and
-a model picker:
+> **Universal model support is a headline feature of Khonjel.** The goal is to run
+> *any* speech or language model the user can reach — local, self-hosted, or cloud —
+> through one consistent UI. Breadth is achieved three ways:
+> 1. **First-class providers** with curated model lists and "get your key" links.
+> 2. A **universal OpenAI-compatible / Custom adapter** (base URL + key + `/models`
+>    discovery) that reaches *everything else*, including new providers on day one.
+> 3. An **extensible provider registry** so providers/models are data, not code —
+>    new providers ship as config, not releases.
 
-| Provider | Notes |
+### 4.1 Speech-to-Text (STT) — providers
+
+**Local (on-device, default, fully private):**
+
+| Engine | Runtime | Notes |
+|---|---|---|
+| **Whisper** (tiny→large-v3, turbo) | whisper.cpp | Multilingual; all sizes; quantized |
+| **Distil-Whisper / faster-whisper** | whisper.cpp / CTranslate2 | Faster, smaller |
+| **NVIDIA Parakeet / Canary** | sherpa-onnx (ONNX) | Fast multilingual ASR |
+| **Moonshine**, **Vosk**, **NeMo** (extensible) | sherpa-onnx / ONNX | Lightweight / streaming options |
+
+**Cloud / API (BYO key) — broad, extensible:**
+
+| Provider | Example models |
 |---|---|
-| **OpenAI** | GPT family. |
-| **Anthropic** | Claude family. |
-| **Google Gemini** | Gemini family. |
-| **Groq** | Fast inference of open models. |
-| **Custom** | Any OpenAI-compatible provider (base URL + key). |
+| **OpenAI** | `whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe` |
+| **Groq** | Whisper-large-v3 (fast) |
+| **Deepgram** | Nova (streaming) |
+| **AssemblyAI** | Universal / streaming |
+| **ElevenLabs** | Scribe |
+| **Speechmatics** | Real-time / batch |
+| **Mistral** | Voxtral |
+| **xAI** | speech-to-text |
+| **Azure AI Speech** | (Enterprise) |
+| **Google Cloud Speech-to-Text** | (Enterprise) |
+| **Amazon Transcribe** | (Enterprise) |
+| **Custom (OpenAI-compatible)** | any `/audio/transcriptions` endpoint |
 
-Flow: pick provider chip → enter API key → **Select Model** (each model shows a
-one-line capability description, e.g. *"Frontier model for complex reasoning"*).
+> The list above is **seeded, not fixed** — any OpenAI-compatible transcription endpoint
+> works via **Custom**, and new first-class providers are added through the registry.
 
-### 4.2 Self-Hosted (OpenAI-compatible) — Ref: OW S4–S5
-For local/network servers: **Ollama, LM Studio, vLLM, `llama-server`**, or any
-OpenAI-compatible server.
+### 4.2 Language Models (LLM) — providers
 
-- **Endpoint URL** field (e.g. `http://localhost:11434/v1`).
-- **API Key (Optional)** — sent as a Bearer token; separate from any OpenAI key.
-- **Available Models** + **Refresh** → queries `{endpoint}/models`.
-  - Success → selectable model list.
-  - Failure → **inline raw error** (e.g. `404 {"error":…}`) + `No models available`.
-- **Disable thinking output** toggle (suppress reasoning tokens; some servers ignore).
+**Local (on-device, default):** via **llama.cpp / llama-server** (bundled) or any
+**Self-Hosted** runtime (Ollama, LM Studio, vLLM, KoboldCpp, text-generation-webui).
+Model families include **Llama, Qwen, Mistral/Mixtral, Gemma, Phi, DeepSeek, gpt-oss,
+Command-R, SmolLM** (and more — the catalog is extensible).
 
-### 4.3 Enterprise — Ref: OW S11
-Organization cloud accounts: **AWS Bedrock · Azure OpenAI · Google Vertex**.
-Configured with account/region/deployment credentials per provider.
+**Cloud / API (BYO key) — broad, extensible:**
 
-### 4.4 Khonjel Cloud (optional managed)
-Zero-config hosted STT + LLM. No API key. Opt-in only.
+| Provider | Family |
+|---|---|
+| **OpenAI** | GPT / o-series |
+| **Anthropic** | Claude |
+| **Google Gemini** | Gemini |
+| **Groq** | Llama/Qwen/Mixtral (fast) |
+| **Mistral** | Mistral / Mixtral / Magistral |
+| **DeepSeek** | DeepSeek-V/R |
+| **xAI** | Grok |
+| **Cohere** | Command |
+| **Together AI** | many open models |
+| **Fireworks AI** | many open models |
+| **OpenRouter** | aggregator (many providers/models) |
+| **Perplexity** | Sonar |
+| **Hugging Face** | Inference providers |
+| **Custom (OpenAI-compatible)** | any `/chat/completions` endpoint |
+
+**Enterprise accounts:** **AWS Bedrock · Azure OpenAI · Google Vertex** (account /
+region / deployment credentials).
+
+> Implemented on the **Vercel AI SDK** (`@ai-sdk/*`) plus a generic OpenAI-compatible
+> adapter, so the provider surface is wide and grows without core changes.
+
+### 4.3 The universal adapter (covers "everything else")
+
+For **both** STT and LLM, a **Custom / OpenAI-compatible** option is always present:
+- **Base URL** (e.g. `http://localhost:11434/v1`, a corporate gateway, or any provider).
+- **API Key (optional)** — sent as a Bearer token (stored in the OS keychain).
+- **`Refresh`** → queries `{baseURL}/models` for discovery; **inline raw errors**.
+- **Disable thinking output** (suppress reasoning tokens; some servers ignore).
+
+This guarantees Khonjel supports providers it has never heard of, including brand-new
+ones and private/internal gateways.
+
+### 4.4 Extensible provider registry
+
+Providers and models are **declarative config** (id, label, kind STT/LLM, base URL,
+auth style, model list / discovery, capability notes, "get key" link). Benefits:
+- New providers/models can be added by editing config or a bundled registry update — no
+  app release required.
+- Per-provider model lists stay current; discovery fills gaps.
+- The UI (provider chips + model picker) is generated from the registry.
+
+### 4.5 Khonjel Cloud (optional, free, self-hostable)
+Zero-config STT + LLM for users who don't want to choose. **Optional, never default,
+not a paid tier** (subscription removed); self-hostable.
 
 ---
 
@@ -168,10 +234,12 @@ instruction detection. Details and the default prompt in
 
 ## 8. Requirements & acceptance
 
-- [ ] The five engine archetypes appear, with identical semantics, on STT and on all four LLM purposes.
+- [ ] The five inference modes appear, with identical semantics, on STT and on all four LLM purposes.
 - [ ] Local is the default; Khonjel Cloud is never preselected.
-- [ ] Self-Hosted discovery hits `{endpoint}/models` and surfaces raw errors inline.
-- [ ] Provider matrix includes OpenAI, Anthropic, Gemini, Groq, Custom (+ Bedrock/Azure/Vertex for Enterprise).
-- [ ] Local manager lists families + sized variants with Recommended + background Download.
+- [ ] **Wide STT support:** local Whisper (all sizes) + Parakeet, and cloud providers incl. OpenAI, Groq, Deepgram, AssemblyAI, ElevenLabs, Speechmatics, Mistral, xAI (+ Azure/Google/Amazon enterprise) + **Custom OpenAI-compatible**.
+- [ ] **Wide LLM support:** local via llama.cpp/Ollama/LM Studio/vLLM (Llama/Qwen/Mistral/Gemma/Phi/DeepSeek/gpt-oss…), and cloud incl. OpenAI, Anthropic, Gemini, Groq, Mistral, DeepSeek, xAI, Cohere, Together, Fireworks, OpenRouter, Perplexity, HF (+ Bedrock/Azure/Vertex) + **Custom OpenAI-compatible**.
+- [ ] **Universal adapter:** any OpenAI-compatible base URL works for both STT and LLM, with `/models` discovery and inline raw errors.
+- [ ] **Extensible registry:** providers/models are declarative config; new providers add without an app release.
+- [ ] Local manager lists families + sized variants with Recommended + background Download; hardware-aware.
 - [ ] Every purpose is independently configurable and persists separately.
 - [ ] The full loop (dictate → cleanup → insert) works offline on Local engines.

@@ -127,7 +127,7 @@ Per OpenWhispr's `InferenceModeSelector` + `InferenceConfigEditor`. A single-sel
 - **Local (LLM):** llama.cpp/llama-server; model picker; **GPU device** selector (multi-GPU). Background downloads.
 - **Local (STT):** provider toggle **Whisper** (whisper.cpp) / **NVIDIA Parakeet** (sherpa-onnx) → model picker; **Silero VAD** tuning; **GPU device**.
 - **Self-Hosted:** `Base URL` (mono) + helper (`Ollama, LM Studio, vLLM, llama-server`); `API Key (Optional)` (Bearer, keychain); `Available Models` + `Refresh` (queries `/models`, inline raw error); `Disable thinking output` / **reasoning mode**.
-- **Providers:** provider chips (OpenAI · Anthropic · Google Gemini · Groq · Custom; STT adds Deepgram/xAI/…); `API Key` + `Get your API key →`; `Select Model` (name + capability line) + optional base URL.
+- **Providers (wide, extensible):** provider chips — LLM: OpenAI · Anthropic · Google Gemini · Groq · Mistral · DeepSeek · xAI · Cohere · Together · Fireworks · OpenRouter · Perplexity · Hugging Face · **Custom**; STT adds Deepgram · AssemblyAI · ElevenLabs · Speechmatics · Mistral (Voxtral) · xAI. Each: `API Key` + `Get your API key →`; `Select Model` (name + capability line) + optional base URL. The list is generated from the **provider registry** and the **Custom (OpenAI-compatible)** chip reaches anything else.
 - **Enterprise:** Bedrock / Azure OpenAI / Vertex + account/region/deployment + credentials (`TestConnectionButton`).
 - **Khonjel Cloud:** none (managed/optional).
 
@@ -190,7 +190,8 @@ Sectioned list (icon tile + title + description + action):
 *(Integrations is also reachable as a Control Panel destination — see screen specs.)*
 
 ## B9. Account / Workspace  *(P2 — optional, local-first)*
-- **Account:** hidden/disabled when auth is off (`AUTH_URL` unset → "Account features disabled"). When signed in: avatar + name + email + **Signed In** badge; `Sign out`; `Delete account` (danger). Signed-out shows an **Offline** badge. No name/email is required to use Khonjel.
+- **Local profile (default):** a name/avatar/preferences profile lives **on-device**, requires **no sign-in**, and never leaves the machine. All data is keyed to it.
+- **Account (optional cloud):** hidden/disabled when auth is off (`AUTH_URL` unset → "Account features disabled"). When signed in: avatar + name + email + **Signed In** badge; `Sign out`; `Delete account` (danger). Signed-out shows an **Offline** badge. **No account is required to use Khonjel** — sign-in only enables optional cross-device sync.
 - **Workspace** *(feature-flagged)*: members / teams tabs; invite; shared Dictionary/Snippets.
 - **~~Plans & Billing~~ — removed.** No pricing, checkout, billing portal, or quotas.
 

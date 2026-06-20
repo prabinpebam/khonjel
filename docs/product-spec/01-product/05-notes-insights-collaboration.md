@@ -70,22 +70,31 @@ A **gamified analytics dashboard**. Tabs: `Your Usage` · `Your Voice`. Shareabl
 
 ---
 
-## 4. Collaboration & Team (P2)
+## 4. Profile, Collaboration & Team
 
-> Optional layer for teams/enterprises. Khonjel works fully without any account.
+> Khonjel works fully **without any account**. There is always a **local profile**;
+> cloud sign-in is an optional extra used only for opt-in sync/teams.
 
-### 4.1 Account — optional (OpenWhispr, auth-gated)
+### 4.1 Local profile (default — on-device)
+- A **local profile** lives on the device: display name, avatar, and preferences. It is
+  **not an account**, requires **no sign-in**, and **never leaves the machine**.
+- All of a user's data (history, notes, dictionary, snippets, settings, models) is keyed
+  to this local profile and stored locally.
+
+### 4.2 Cloud account — optional
 - **Optional and skippable.** When auth is disabled (no `AUTH_URL`), the Account page
-  shows "Account features disabled" and Khonjel runs **fully local with no profile**.
+  shows "Account features disabled" and Khonjel runs **fully local with only the local
+  profile**.
 - When signed in: avatar + name + email (read-only) + **Signed In** badge; `Sign out`;
   `Delete account` (danger). Signed-out shows an **Offline** badge.
-- Sign-in exists **only** to enable optional cross-device sync / workspaces.
+- A cloud account exists **only** to enable optional cross-device **sync** / workspaces —
+  never required, never for billing.
 
-### 4.2 Workspace / Team (optional, feature-flagged)
+### 4.3 Workspace / Team (optional, feature-flagged)
 - Invite members; shared **Dictionary** and **Snippets**; roles (admin/member).
 - Gated by a feature flag; entirely optional; local-first by default.
 
-### 4.3 ~~Plans & Billing~~ — REMOVED
+### 4.4 ~~Plans & Billing~~ — REMOVED
 - **There is no subscription, billing, pricing, checkout, quota, referral, or upgrade
   surface.** Local use is free and unmetered; Public API / MCP / CLI are **free**.
 - "Khonjel Cloud" (optional sync backend) is **not** a paid tier and is self-hostable.

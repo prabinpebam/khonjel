@@ -246,8 +246,28 @@ stats live on **Home**; the **warm light theme** is the Light theme. Full mappin
 
 ---
 
-## 4. Cross-cutting requirements
-- Every model-backed feature exposes the **same engine archetype selector**.
-- Every destructive action has a confirm + an "advised only" tone (per references).
+## 4. Key cross-cutting features & requirements
+
+**Headline feature — universal model support (P0).** Strong, wide support for *all
+sorts* of transcription and language models, through one consistent UI:
+- **Local** (default): Whisper/Parakeet STT, llama.cpp LLM, GPU-aware, fully offline.
+- **Self-Hosted:** Ollama / LM Studio / vLLM / `llama-server` / any OpenAI-compatible.
+- **Cloud (BYO key):** OpenAI, Anthropic, Gemini, Groq, Mistral, DeepSeek, xAI, Cohere,
+  Deepgram, AssemblyAI, ElevenLabs, Speechmatics, Together, Fireworks, OpenRouter,
+  Perplexity, Hugging Face… (STT + LLM).
+- **Enterprise:** AWS Bedrock, Azure OpenAI, Google Vertex.
+- **Universal adapter + extensible registry:** any OpenAI-compatible base URL works;
+  new providers are config, not code. Details:
+  [`03-ai-engines-and-providers.md`](03-ai-engines-and-providers.md#4-provider--model-matrix--wide-support-is-a-key-feature).
+
+**Headline feature — everything on-device (P0).** The **local profile/identity** and
+**all storage** (history, notes, dictionary, snippets, settings, models, search index)
+live on the device. No account required; no telemetry; cloud only when explicitly
+opted in. Details:
+[`../04-architecture-and-delivery/02-privacy-data-security.md`](../04-architecture-and-delivery/02-privacy-data-security.md).
+
+**General requirements:**
+- Every model-backed feature exposes the **same inference-mode selector** (STT + LLM).
+- Every destructive action confirms with an "advised only" tone.
 - Every feature must function with **Local** engines (no feature is cloud-only).
 - Every list/library supports search; every entry supports edit/delete.

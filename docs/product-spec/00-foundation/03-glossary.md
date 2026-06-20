@@ -53,12 +53,16 @@
 | **LLM** | Language model (local via **llama.cpp/llama-server**) used for the four **scopes** below. |
 | **Scope / Purpose** | A distinct LLM use with its *own* mode + model + settings: **Dictation Cleanup**, **Voice Agent** (`dictationAgent`), **Note Formatting**, **Chat** (`chatIntelligence`). |
 | **Reasoning / thinking mode** | Toggle for reasoning-token output on capable models. |
-| **Provider** | A vendor under *Providers* (OpenAI, Anthropic, Google Gemini, Groq, Custom; + Deepgram/xAI for STT). |
-| **Base URL / `/models`** | Self-Hosted endpoint; `Refresh` queries `{baseUrl}/models` for discovery (inline errors). |
+| **Provider** | A vendor under *Providers* (OpenAI, Anthropic, Gemini, Groq, Mistral, DeepSeek, xAI, Cohere, Deepgram, AssemblyAI, ElevenLabs, Together, Fireworks, OpenRouter, Perplexity, HF, Custom…). Both STT and LLM. |
+| **Universal / OpenAI-compatible adapter** | The "Custom" option present for **both** STT and LLM: any `base URL` + key + `/models` discovery — reaches providers Khonjel doesn't ship first-class. |
+| **Provider registry** | Declarative config (id, label, kind, base URL, auth, models, "get key" link) that makes the provider/model list **extensible without an app release**. |
+| **Base URL / `/models`** | Endpoint for Self-Hosted/Custom; `Refresh` queries `{baseUrl}/models` for discovery (inline errors). |
 | **GPU device** | Selectable inference GPU when multiple are present. |
 | **Semantic search** | Local meaning-based search over Notes (**Qdrant** vector DB + **MiniLM** embeddings). |
 | **Prompt Studio** | Tool to **View / Customize / Test** the unified system prompt (cleanup + instruction detection). |
 | **`{{agentName}}`** | Prompt template variable bound to the configurable agent name/wake word. |
+| **Local profile** | The on-device identity (name/avatar/preferences). **Not an account**, requires no sign-in, never leaves the device. All user data is keyed to it. |
+| **Local storage** | All app data (history, notes, dictionary, snippets, settings, models, vectors) stored on-device by default (better-sqlite3 + Qdrant + files + OS keychain). |
 
 ---
 

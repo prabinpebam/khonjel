@@ -10,13 +10,21 @@
 
 ## 1. Privacy posture (defaults)
 
+> **Everything is on-device.** Your **profile/identity** and **all your data** (history,
+> notes, dictionary, snippets, settings, models, search index) are stored **locally**.
+> No account, no cloud, no telemetry by default. The full provider matrix (see
+> [`../01-product/03-ai-engines-and-providers.md`](../01-product/03-ai-engines-and-providers.md))
+> is supported, but choosing a cloud model is the *only* thing that sends data off-device
+> — and it's always an explicit choice.
+
 | Setting | Default | Effect |
 |---|---|---|
 | Inference mode | **Local** | On-device STT (Whisper/Parakeet) + LLM (llama.cpp); no egress |
-| Storage | **Local** (better-sqlite3 + Qdrant) | History/notes/vectors stay on device |
+| **User profile / identity** | **Local only** | Name/avatar/preferences live on-device; **no account required** |
+| **Storage** | **Local** (better-sqlite3 + Qdrant + files) | History/notes/dictionary/settings/models/vectors stay on device |
 | Secrets | **OS keychain** (`@napi-rs/keyring`) | API keys never in plaintext/logs |
 | **Telemetry / usage analytics** | **Off / none** | No metrics collected by default |
-| Account / auth | **Optional / skippable** | Fully usable with no account; can be compiled out |
+| Account / cloud auth | **Optional / skippable** | Only for opt-in sync; can be compiled out (`AUTH_URL`) |
 | Data Retention | **On (local)** | Transcripts/audio saved to local history |
 | Audio Retention | **30 days** (0–90 selectable) | Audio auto-deleted after the window |
 | Cloud backup / sync | **Off** | No cross-device sync unless opted in |
@@ -25,8 +33,9 @@
 | Privacy Mode "no training" / HIPAA BAA / context awareness | **Off** (opt-in) | Additive compliance extras |
 
 > The first-run default is a **fully local, no-account, no-egress, no-telemetry**
-> configuration. Every control that moves data off the device is opt-in and explained at
-> the point of choice. **There is no subscription or billing data of any kind.**
+> configuration. **Account details and storage stay on the device** unless the user
+> explicitly turns on optional cloud sync. There is **no subscription or billing data of
+> any kind.**
 
 ---
 
@@ -34,19 +43,21 @@
 
 | Data | Contains | Location (default) | Retention |
 |---|---|---|---|
-| Settings | Preferences, engine configs | Local store | Until changed/reset |
+| **User profile / identity** | Name, avatar, preferences | **Local store (on-device)** | Until changed; **never required** |
+| Settings | Preferences, engine/provider configs | Local store | Until changed/reset |
 | API keys / creds | Provider keys, endpoint tokens | **OS keychain/credential store** (encrypted) | Until removed |
 | History entries | Transcripts, formatting, metadata | Local store | Until deleted; none if Data Retention off |
 | Audio recordings | Captured audio | Local files | `Audio Retention` window |
-| Notes | Saved transcripts/recordings | Local store | Until deleted; optional sync (P2) |
+| Notes (+ vectors) | Saved transcripts/recordings; semantic index | Local store + **Qdrant (local)** | Until deleted; optional sync (P2) |
 | Dictionary/Snippets/Styles/Transforms | User content | Local store (team scope syncs, P2) | Until deleted |
 | Insights aggregates | Counts/derived stats | Local store | Recomputed from history |
-| Model cache | Downloaded models | Model cache dir | Until cleared |
+| Model cache | Downloaded STT/LLM models | Model cache dir | Until cleared |
 | Debug logs | Diagnostic logs | Local files | Until cleared/rotated |
 
+- **All rows default to on-device.** Only optional, explicitly-enabled cloud sync moves
+  any of this off the machine.
 - **Encryption at rest** for credentials (keychain) and sensitive store data.
-- **No transcription content** is ever included in analytics, even when analytics is on
-  (only timing/error metrics) — carried from the reference promise.
+- **No telemetry; no transcription content leaves the device** by default.
 
 ---
 

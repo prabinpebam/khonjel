@@ -108,17 +108,23 @@ docs/product-spec/
 
 ## What makes Khonjel different (the wedge)
 
-1. **Local & open by default** — usable with $0 cloud spend and no account.
-2. **Bring *any* model** — one consistent engine selector everywhere:
-   *Local · Self-Hosted · Cloud Providers · Enterprise · Khonjel Cloud*.
-3. **Wide provider support** — OpenAI, Anthropic, Google Gemini, Groq, Custom;
-   Ollama / LM Studio / vLLM / `llama-server`; AWS Bedrock / Azure OpenAI / Google Vertex.
+1. **Universal model support (key feature)** — strong, wide support for **all sorts of
+   transcription and language models**: local (Whisper/Parakeet, llama.cpp) · self-hosted
+   (Ollama/LM Studio/vLLM) · BYO-key cloud (OpenAI, Anthropic, Gemini, Groq, Mistral,
+   DeepSeek, xAI, Cohere, Deepgram, AssemblyAI, ElevenLabs, Together, Fireworks,
+   OpenRouter, Perplexity…) · enterprise (Bedrock/Azure/Vertex) — plus a **universal
+   OpenAI-compatible adapter + extensible registry** so even new/unknown providers work.
+2. **Everything on-device** — local & open by default; **your profile and all storage
+   (history, notes, dictionary, settings, models) stay on your device**. No account
+   required, no telemetry. Cloud is opt-in only.
+3. **One consistent selector everywhere** — *Local · Self-Hosted · Providers · Enterprise
+   · Khonjel Cloud* — for both speech and language, on every surface.
 4. **Purpose-scoped intelligence** — independent models for Cleanup, Voice Agent,
    Note Formatting, and Chat.
 5. **A real productivity surface** — history, insights, dictionary, snippets, style,
-   transforms, scratchpad — not just a settings window.
-6. **Transparent privacy** — everything off by default, time-boxed retention, no-training
-   Privacy Mode.
+   transforms, notes — not just a settings window.
+6. **No subscription, transparent privacy** — no billing/quotas; everything that could
+   leave the device is off by default.
 
 ---
 
