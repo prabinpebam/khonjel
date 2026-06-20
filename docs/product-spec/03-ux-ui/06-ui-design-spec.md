@@ -11,6 +11,11 @@
 > layout grids in [`02-app-shell-and-layout.md`](02-app-shell-and-layout.md); component
 > behaviour/states in [`05-interaction-states-and-accessibility.md`](05-interaction-states-and-accessibility.md).
 > Source fidelity: [`../99-reference-analysis/02-wisper-flow-screen-by-screen.md`](../99-reference-analysis/02-wisper-flow-screen-by-screen.md).
+>
+> **How these tokens & components must be used is governed by the strict**
+> **[Design System discipline](design-system/01-intent.md) (P1–P13).** Read it before
+> writing any UI: values live in tokens, variants are CVA props (never forks), reuse
+> before creation, and theme/density are token overrides — so the system never drifts.
 
 ---
 

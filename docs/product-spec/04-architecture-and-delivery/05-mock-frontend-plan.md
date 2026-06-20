@@ -1,36 +1,47 @@
-# Khonjel — Mock Frontend Implementation Plan
+# Khonjel — Frontend Implementation Plan (mock-data, no backend)
 
-> **Goal:** build a **complete, inspectable frontend with zero backend** so the product
-> direction, features, screens, and options can be reviewed before any real engine/IPC
-> work begins. Everything is **mocked** behind a clean seam.
+> **Goal:** build the **complete, final Khonjel frontend** — the production UI — driven
+> entirely by **mock data with zero backend**, so the product can be reviewed and shipped
+> as a UI first. This is **not a throwaway prototype**: it is the real renderer.
 >
-> **Key idea — not throwaway.** We build the **real renderer** (same stack as the spec)
-> with a **mock service layer** behind port/adapter interfaces. When the backend is
-> ready, we swap mock adapters for real ones (Electron IPC, AI SDK, SQLite) — the UI
-> code stays. The mock *is* the frontend.
+> ### Two hard contracts (non-negotiable)
+> 1. **No backend — at all.** No server, no Electron IPC implementation, no database, no
+>    network calls. The *only* implementations that exist are **mock adapters** in
+>    `src/services/adapters/mock/` using in-memory state + `localStorage`. (A mock
+>    `window.electronAPI` shim stands in for the preload bridge.)
+> 2. **Final UI — not throwaway.** Views/components depend **only on service ports**
+>    (TypeScript interfaces), never on any adapter directly. When a real backend is built
+>    *later* (separate effort), it is added as `adapters/real/` and selected by config —
+>    **zero changes to UI code**. The seam is enforced by lint boundaries.
 >
 > Companion docs: [`04-technology-stack.md`](04-technology-stack.md),
 > [`01-system-architecture.md`](01-system-architecture.md),
 > [`../03-ux-ui/06-ui-design-spec.md`](../03-ux-ui/06-ui-design-spec.md),
 > [`../02-information-architecture/01-sitemap-and-ia.md`](../02-information-architecture/01-sitemap-and-ia.md).
+>
+> **Mandatory for all `/app` UI work:** the strict
+> [Design System discipline](../03-ux-ui/design-system/01-intent.md) (P1–P13) —
+> token-driven values, CVA variants (no forks), reuse-before-creation, Storybook as the
+> inventory. This is how the design system survives many agent sessions without drift.
 
 ---
 
-## 1. Strategy & key decisions
+## 1. Strategy & key decisions (locked)
 
 | Decision | Choice | Why |
 |---|---|---|
-| **Throwaway vs real** | **Real renderer + mock backend** | The renderer stack is fixed by the spec; mock only the backend. No rework. |
-| **Browser-first vs Electron-first** | **Browser-first**, Electron-ready | Fastest to inspect (`npm run dev` → localhost); no native build to review UX. Electron shell is a thin add-on later. |
-| **Multi-window** | **Simulated in one viewport** + param-routed previews | Browser can't open native windows; we render Dictation Panel / Agent Overlay / overlays as floating elements and expose each via a route for later Electron drop-in. |
-| **Backend** | **None.** All async faked | Canned transcription, fake model catalogs, simulated downloads/streaming, in-memory + localStorage data. |
+| **Throwaway vs final** | **Final renderer + mock data** | This UI ships. Only data/services are mocked. No rework. |
+| **Backend** | **None, ever (this phase)** | All async faked; in-memory + localStorage only. No server/IPC/DB/network. |
+| **Browser-first vs Electron-first** | **Browser-first**, Electron-ready | Fastest to inspect (`npm run dev` → localhost). Electron shell is a thin add-on later. |
+| **Multi-window** | **Simulated in one viewport** + param-routed previews | Browser can't open native windows; render Dictation Panel / Agent Overlay / overlays as floating elements; each also reachable via a route for later Electron drop-in. |
+| **Architecture** | **Feature-based modules + ports/adapters seam** | Scales to many screens; clean swap to a real backend later. |
 | **State** | **Zustand + persist (localStorage)** | Feels real across reloads; mirrors the real `src/stores/`. |
 | **Data** | **Seeded fixtures** + reset/seed dev controls | Every screen has realistic content to inspect. |
 | **Inspection** | **"Mock Studio" dev toolbar** | Toggle theme, surface/window, capture states, overlays, empty/loading/error, locale. |
 
-> **The seam:** UI → **service ports** (TypeScript interfaces) → **mock adapters** (now)
-> / **real adapters** (later). A mock `window.electronAPI` shim satisfies any code that
-> expects the preload bridge.
+> **The seam:** UI → **service ports** (interfaces) → **mock adapters** (the only impl
+> now) → **real adapters** (future). Lint rules forbid UI from importing adapters
+> directly; everything flows through a `ServicesProvider` (dependency injection).
 
 ---
 
@@ -52,12 +63,18 @@
 | Charts | **custom SVG/CSS** (no chart lib) | faithful gauge / bars / heatmap per UI spec |
 | Routing | **param/hash router** (mirrors `AppRouter`) | `?panel`, `?agent`, `?meeting-notification`, … |
 | Audio (optional) | **Web Audio API** (`getUserMedia`) | real waveform animation on the bar; transcription still faked |
-| Tooling | ESLint 10 + Prettier + typescript-eslint | matches the real repo |
-| Electron (optional, later) | **Electron 41** thin shell | drop-in; not needed to inspect |
+| Tooling | ESLint 10 + Prettier + typescript-eslint | + import-boundary rules to protect the seam |
+| Testing | **Vitest** + **React Testing Library** | co-located unit/interaction tests |
+| Component workbench (P1) | **Storybook 9** | inspect/QA the component library in isolation |
+| E2E (P1) | **Playwright** | smoke flows across screens/surfaces |
+| Git hygiene (P1) | Husky + lint-staged | format/lint on commit |
+| Electron (later) | **Electron 41** thin shell | drop-in; not needed to inspect |
 
 > This is exactly the OpenWhispr renderer stack from
 > [`04-technology-stack.md`](04-technology-stack.md), minus the native/AI/db layers
-> (which are mocked).
+> (which are mocked). **No backend dependencies are installed** (no `better-sqlite3`,
+> `whisper.cpp`, `llama.cpp`, `@ai-sdk/*`, `better-auth`, etc.) — those arrive only with
+> the future `adapters/real/`.
 
 ---
 
@@ -127,48 +144,114 @@ A collapsible dev panel (dev-only) to:
 
 ---
 
-## 4. Project structure (mock = real frontend)
+## 4. Project structure (robust, feature-based, built for scale)
 
-Proposed location: **`/app`** at repo root (sibling to `docs/`).
+**Location:** **`/app`** at repo root (sibling to `docs/`). Organized **by feature**
+(not by file type) so it scales to dozens of screens without a sprawling `components/`
+folder. Each feature is a self-contained module with a small public API (`index.ts`).
 
 ```
 app/
-  index.html  vite.config.ts  tsconfig.json  package.json  components.json
-  src/
-    main.tsx
-    AppRouter.tsx                 // param routing → surfaces
-    surfaces/
-      ControlPanel.tsx            // main window
-      DictationPanel.tsx          // Khonjel Bar (floating)
-      AgentOverlay.tsx
-      overlays/ (MeetingNotification, TranscriptionPreview, UpdateNotification)
-    shell/ (TitleBar, Sidebar, ContentPanel, CommandPalette)
-    views/
-      Home/ Insights/ Chat/ Notes/ Upload/ Dictionary/ Transforms/ Integrations/ Onboarding/
-    settings/
-      SettingsModal.tsx + sections/ (General, Hotkeys, SpeechToText, LanguageModels,
-        PrivacyData, System, Account, Workspace) + PromptStudio
-    components/
-      ui/                         // shadcn primitives
-      EngineModeSelector, ProviderChips, ModelPicker, LocalModelManager,
-      StatCard, Gauge, BarChart, Heatmap, PromoBanner, HotkeyInput, SettingRow,
-      EngineStatusCard, EmptyState, Waveform, ...
-    stores/                       // Zustand stores (persisted)
-    services/
-      ports/                      // TypeScript interfaces
-      mock/                       // mock adapters
-      electronApiShim.ts
-    mock/
-      fixtures/ (history, notes, dictionary, snippets, providers, models, insights, meetings)
-      devtools/ (MockStudio)
-    lib/ (cn, delay, stream, theme, hotkeys)
-    styles/ (tokens.css, index.css)   // Wispr Flow design tokens
-    i18n/ (index.ts, locales/en.json)
-    types/
+├─ public/                          # static assets served as-is
+├─ index.html
+├─ package.json
+├─ tsconfig.json  tsconfig.node.json
+├─ vite.config.ts                   # @vitejs/plugin-react + @tailwindcss/vite + path aliases
+├─ components.json                  # shadcn/ui config
+├─ eslint.config.js  .prettierrc    # incl. import-boundary rules (the seam)
+├─ .env.example                     # only client flags (e.g. VITE_DATA_SOURCE=mock)
+├─ .storybook/                      # (P1) component workbench
+├─ e2e/                             # (P1) Playwright specs
+└─ src/
+   ├─ main.tsx                      # mount only
+   ├─ App.tsx                       # providers + router
+   ├─ vite-env.d.ts
+   │
+   ├─ app/                          # app-level wiring (no feature logic)
+   │  ├─ providers/                 # Theme, I18n, Services(DI), StoreHydration, Tooltip/Toaster, ErrorBoundary
+   │  ├─ router/                    # AppRouter + route table + surface resolver (param routing)
+   │  └─ devtools/                  # Mock Studio (dev-only, tree-shaken in prod)
+   │
+   ├─ surfaces/                     # top-level "windows" (each a thin composition)
+   │  ├─ control-panel/             # main window: TitleBar + Sidebar + ContentPanel
+   │  ├─ dictation-panel/           # Khonjel Bar (floating)
+   │  ├─ agent-overlay/
+   │  └─ overlays/                  # meeting-notification, transcription-preview, update-notification
+   │
+   ├─ features/                     # ★ the bulk — one module per domain
+   │  ├─ home/                      # history timeline + stats rail + voice profile
+   │  ├─ insights/                  # gauge, bars, heatmap (Usage/Voice)
+   │  ├─ chat/                      # AI agent (streamed markdown)
+   │  ├─ notes/                     # TipTap editor, folders, semantic search, AI actions
+   │  ├─ upload/                    # file → transcribe
+   │  ├─ dictionary/                # dictionary + snippets
+   │  ├─ transforms/                # hotkey rewrites
+   │  ├─ integrations/              # GCal / API / MCP / CLI
+   │  ├─ onboarding/                # first-run (local model + hotkey)
+   │  ├─ command-palette/           # ⌘K
+   │  ├─ capture/                   # dictation orchestration (mock pipeline + bar states)
+   │  ├─ models/                    # inference modes, provider registry UI, model manager, prompt studio
+   │  └─ settings/                  # modal + sections (general, hotkeys, speech-to-text, language-models,
+   │     │                          #   privacy-data, system, account, workspace)
+   │     └─ (per feature) components/  hooks/  store.ts  types.ts  fixtures.ts  index.ts  __tests__/
+   │
+   ├─ components/
+   │  ├─ ui/                        # shadcn primitives (button, dialog, tabs, select, switch, popover, progress…)
+   │  └─ common/                    # app-shared, cross-feature: StatCard, Gauge, BarChart, Heatmap,
+   │                                #   PromoBanner, SettingRow/SettingsPanel, EngineStatusCard, KeycapChip,
+   │                                #   Waveform, EmptyState, PageHeader, UnderlineTabs, ProviderChip…
+   │
+   ├─ services/                     # ★ THE SEAM (dependency-injected)
+   │  ├─ ports/                     # interfaces ONLY: Transcription, Inference/Chat, ModelCatalog,
+   │  │                             #   Meeting, Integrations, Hotkey, Profile, Settings, Storage
+   │  ├─ adapters/
+   │  │  └─ mock/                   # the ONLY implementations now (in-memory + localStorage + simulators)
+   │  │     └─ (real/ added later — not in this phase)
+   │  ├─ ServicesProvider.tsx       # builds the service container, provides via context
+   │  └─ index.ts                   # useServices() hook + container type
+   │
+   ├─ stores/                       # cross-cutting Zustand (per-feature slices live in features/*/store.ts)
+   │  ├─ middleware/                # persist config, devtools
+   │  └─ hydration.ts               # seed-on-first-run + reset
+   │
+   ├─ mock/                         # NO backend — fixtures + simulators only
+   │  ├─ fixtures/                  # history, notes, dictionary, snippets, providers, models, insights, meetings
+   │  ├─ simulators/                # transcription (typewriter), streaming, download progress, /models discovery
+   │  ├─ seed.ts                    # deterministic seed
+   │  └─ electron-api-shim.ts       # mock window.electronAPI
+   │
+   ├─ config/                       # constants & DATA-as-config
+   │  ├─ provider-registry.ts       # the wide STT/LLM provider+model registry (declarative)
+   │  ├─ routes.ts  feature-flags.ts  nav.ts
+   ├─ hooks/                        # shared hooks (useTheme, useHotkey, useMediaQuery, useDebounce)
+   ├─ lib/                          # pure, dependency-free utils (cn, delay, stream, format, id, dates)
+   ├─ i18n/                         # i18next setup + locales/en.json (keys scaffolded)
+   ├─ styles/                       # tokens.css (WF design tokens), globals.css
+   ├─ types/                        # global/shared types (domain models)
+   └─ assets/                       # logos, illustrations, promo images, brand
 ```
 
-> Folder layout intentionally mirrors the real OpenWhispr `src/` so the eventual
-> backend swap and Electron shell are mechanical.
+### 4.1 Conventions (enforced)
+- **Folders** kebab-case; **components** PascalCase; **hooks/utils** camelCase.
+- Every `features/*` exposes a **public API** via `index.ts`; other modules import only that.
+- **Co-located tests** in `__tests__/` next to the code they cover.
+- **Barrel files** only at module boundaries (avoid deep barrels that hurt tree-shaking).
+
+### 4.2 Path aliases (`tsconfig` + `vite`)
+`@/* → src/*` · `@app/*` · `@surfaces/*` · `@features/*` · `@components/*` ·
+`@services/*` · `@stores/*` · `@mock/*` · `@config/*` · `@hooks/*` · `@lib/*` ·
+`@styles/*` · `@types`.
+
+### 4.3 Import boundaries (ESLint — protect the seam & scale)
+- **UI/features may not import `services/adapters/**`** — only `@services` (ports +
+  `useServices()`). This guarantees the **final-UI / swappable-backend** contract.
+- **`features/*` may not import another feature's internals** — only its `index.ts`.
+- **`lib/` is dependency-free** (no React, no stores, no services).
+- **`mock/` and `config/provider-registry` are data**, importable by adapters/devtools,
+  not by feature UI directly (UI gets data through services).
+
+> Layout mirrors the real OpenWhispr `src/` intent, so adding `adapters/real/` + a thin
+> Electron shell later is mechanical and touches **no feature code**.
 
 ---
 
@@ -243,19 +326,43 @@ match); document the adapter swap (mock → IPC/AI-SDK/SQLite/Qdrant). No UI rew
 
 ---
 
-## 7. Definition of done (mock)
+## 7. Definition of done
 - [ ] Every screen in the spec's screen inventory is reachable and inspectable.
 - [ ] Every state (empty/loading/error, capture states, overlays) is toggleable via Mock Studio.
 - [ ] The **Wispr Flow visual system** is faithfully applied (tokens, card-on-greige, serif promos, teal data-viz).
 - [ ] **Universal model support** UI is fully demonstrable (wide providers + local manager + self-hosted discovery + Prompt Studio).
 - [ ] **All-local** posture is visible (local profile, no account required, local storage, no telemetry).
 - [ ] Runs in a browser with `npm run dev`; **zero backend / zero network**.
-- [ ] Code is structured behind service ports so real adapters swap in without UI changes.
+- [ ] UI imports **only** service ports; lint boundary forbids importing `adapters/**` — real adapters swap in with no UI changes.
+- [ ] Feature-based structure + aliases + tests in place (scales cleanly).
 
 ---
 
-## 8. Open choices to confirm
-1. **App folder name/location** — proposed `/app` at repo root. OK?
-2. **Real mic waveform** (Web Audio) vs purely faked — nice-to-have; default faked, add real later.
-3. **Storybook** for component-level review — optional add-on (P2); default is the running app + Mock Studio.
-4. **Router** — tiny param router (mirrors `AppRouter`) vs React Router. Default: param router for fidelity.
+## 8. Locked defaults (decided)
+
+| # | Choice | Decision |
+|---|---|---|
+| 1 | App folder | **`/app`** at repo root (sibling to `docs/`). |
+| 2 | Mic waveform | **Faked** by default; real Web-Audio waveform optional later (no transcription either way). |
+| 3 | Storybook | **Yes, but P1** — not required for Phase 0; structure reserves `.storybook/`. |
+| 4 | Router | **Tiny param router** mirroring the real `AppRouter` (window fidelity). |
+| 5 | Backend | **None.** No server/IPC/DB/network; mock adapters + localStorage only. |
+| 6 | Real adapters | **Out of scope** for this effort; added later as `adapters/real/`. |
+
+---
+
+## 9. Readiness verdict
+
+**Ready to implement.** The stack is fixed, the architecture and the swap-seam are
+defined, the scalable feature-based folder structure and import boundaries are set, the
+mock-data rules and inspection tooling are specified, and the build is phased so each
+step is reviewable.
+
+**Phase 0 kickoff (first concrete steps):**
+1. `npm create vite@latest app -- --template react-ts`; add Tailwind v4 (`@tailwindcss/vite`), shadcn init, path aliases, ESLint/Prettier + import-boundary rules.
+2. Drop in **design tokens** (`styles/tokens.css`) from the UI Design Spec; ThemeProvider (Light/Dark/Auto).
+3. Create `services/ports/*` + `services/adapters/mock/*` + `ServicesProvider` + `useServices()`; `electron-api-shim`.
+4. Scaffold `surfaces/control-panel` shell (TitleBar + Sidebar + ContentPanel) + `app/router` + `app/devtools/MockStudio`.
+5. Seed `mock/fixtures` + `stores/hydration`.
+→ **Deliverable:** the app shell renders in the browser with the Wispr Flow look, theme
+switch, nav, and Mock Studio — ready to build features into.

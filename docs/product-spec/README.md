@@ -66,7 +66,10 @@ docs/product-spec/
 │   ├── 03-screen-specifications.md
 │   ├── 04-floating-bar-overlays-and-settings.md
 │   ├── 05-interaction-states-and-accessibility.md
-│   └── 06-ui-design-spec.md
+│   ├── 06-ui-design-spec.md
+│   └── design-system/
+│       ├── README.md
+│       └── 01-intent.md
 ├── 04-architecture-and-delivery/
 │   ├── 01-system-architecture.md
 │   ├── 02-privacy-data-security.md
@@ -95,6 +98,7 @@ docs/product-spec/
 | [02 · Navigation & Content Model](02-information-architecture/02-navigation-and-content-model.md) | Nav system, routing, keyboard, data model |
 | [03 · Design Language & Tokens](03-ux-ui/01-design-language.md) | Token layer: color, type, spacing, components, motion |
 | [03 · **UI Design Spec (Wispr Flow–style)**](03-ux-ui/06-ui-design-spec.md) | **The visual hero** — art direction, palette, signatures, component looks |
+| [03 · **Design System discipline**](03-ux-ui/design-system/01-intent.md) | **Strict token/component rules (P1–P13)** that stop design drift across agent sessions |
 | [03 · App Shell & Layout](03-ux-ui/02-app-shell-and-layout.md) | Chrome, sidebar, content layouts, responsive |
 | [03 · Screen Specifications](03-ux-ui/03-screen-specifications.md) | Reproduction-grade specs for every main screen |
 | [03 · Floating Bar, Overlays & Settings](03-ux-ui/04-floating-bar-overlays-and-settings.md) | Dictation Panel, overlays, full settings spec |
