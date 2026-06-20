@@ -2,6 +2,9 @@
 dist
 dist-ssr
 
+# Electron packaging output
+release
+
 # Dependencies
 node_modules
 

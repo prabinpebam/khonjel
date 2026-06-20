@@ -7,6 +7,7 @@ const alias = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: "./",
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

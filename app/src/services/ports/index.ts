@@ -28,8 +28,60 @@ export interface SystemService {
   getPlatform(): Promise<Platform>;
 }
 
+export type {
+  CaptureMode,
+  HistoryEntry,
+  InsightsAggregate,
+  ChatMessage,
+  Folder,
+  Note,
+  UploadState,
+  UploadJob,
+  LibraryScope,
+  DictionaryEntry,
+  Snippet,
+  Transform,
+  IntegrationStatus,
+  Integration,
+  ModelInfo,
+} from "./types";
+
+import type {
+  HistoryEntry,
+  InsightsAggregate,
+  ChatMessage,
+  Folder,
+  Note,
+  UploadJob,
+  DictionaryEntry,
+  Snippet,
+  Transform,
+  Integration,
+  ModelInfo,
+} from "./types";
+
+/**
+ * Read-only content the views render. Mock adapter returns seed data synchronously;
+ * a real adapter can return async and we revisit the call sites then.
+ */
+export interface ContentService {
+  history(): HistoryEntry[];
+  insights(): InsightsAggregate;
+  chat(): ChatMessage[];
+  folders(): Folder[];
+  notes(): Note[];
+  uploads(): UploadJob[];
+  dictionary(): DictionaryEntry[];
+  snippets(): Snippet[];
+  transforms(): Transform[];
+  integrations(): Integration[];
+  sttModels(): ModelInfo[];
+  llmModels(): ModelInfo[];
+}
+
 /** The full set of ports available to the app at runtime. */
 export interface Services {
   profile: ProfileService;
   system: SystemService;
+  content: ContentService;
 }

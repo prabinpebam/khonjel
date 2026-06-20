@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/main.cjs",
+  "author": "Khonjel",
   "description": "Khonjel — local-first voice productivity app (mock-data frontend, no backend).",
   "scripts": {
     "dev": "vite",
@@ -15,7 +17,10 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,md}\"",
     "verify:quick": "npm run typecheck && npm run lint && npm run lint:ds",
     "verify": "npm run verify:quick && npm run build",
-    "eval:shots": "node scripts/eval-shots.mjs"
+    "eval:shots": "node scripts/eval-shots.mjs",
+    "electron": "electron .",
+    "package": "npm run build && electron-builder --win portable",
+    "package:dir": "npm run build && electron-builder --dir"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -33,6 +38,8 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^10.5.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -43,5 +50,23 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.1",
     "vite": "^8.0.16"
+  },
+  "build": {
+    "appId": "com.khonjel.app",
+    "productName": "Khonjel",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "Khonjel-${version}-portable.exe"
+    }
   }
 }

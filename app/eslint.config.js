@@ -65,4 +65,15 @@ export default tseslint.config(
       "no-misleading-character-class": "off",
     },
   },
+  // Electron main/preload run in Node (CommonJS).
+  {
+    files: ["electron/**/*.cjs"],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: "commonjs",
+    },
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 );

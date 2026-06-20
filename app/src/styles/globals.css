@@ -70,3 +70,11 @@
     outline-offset: 2px;
   }
 }
+
+/* Electron frameless drag regions (ignored in a plain browser). */
+.app-drag {
+  -webkit-app-region: drag;
+}
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}

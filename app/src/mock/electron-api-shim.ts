@@ -11,11 +11,17 @@ export interface ElectronAPIShim {
   getPlatform: () => "win32" | "darwin" | "linux";
   /** Hide the floating window (no-op in the mock). */
   hideWindow: () => void;
+  minimize?: () => void;
+  toggleMaximize?: () => void;
+  close?: () => void;
 }
 
 export const electronAPI: ElectronAPIShim = {
   getPlatform: () => "win32",
   hideWindow: () => {},
+  minimize: () => {},
+  toggleMaximize: () => {},
+  close: () => {},
 };
 
 declare global {
@@ -24,6 +30,8 @@ declare global {
   }
 }
 
-if (typeof window !== "undefined") {
+// In Electron a real preload bridge already exists on window.electronAPI; never
+// clobber it. Only install the mock in a plain browser (Vite dev/preview).
+if (typeof window !== "undefined" && !window.electronAPI) {
   window.electronAPI = electronAPI;
 }

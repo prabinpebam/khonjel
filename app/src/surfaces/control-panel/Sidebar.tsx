@@ -10,6 +10,8 @@ import { cn } from "@lib/utils";
 export function Sidebar() {
   const activeView = useUiStore((s) => s.activeView);
   const setActiveView = useUiStore((s) => s.setActiveView);
+  const openSettings = useUiStore((s) => s.openSettings);
+  const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const { profile } = useServices();
   const [name, setName] = useState("You");
 
@@ -30,15 +32,15 @@ export function Sidebar() {
         <span className="text-sm font-semibold text-foreground">Khonjel</span>
       </div>
 
-      <div className="relative mb-2">
-        <Search className="pointer-events-none absolute top-1/2 size-4 -translate-y-1/2 text-tertiary-foreground start-2" />
-        <input
-          type="search"
-          aria-label="Search"
-          placeholder="Search"
-          className="h-9 w-full rounded-md border border-border bg-surface ps-8 pe-3 text-sm text-foreground placeholder:text-tertiary-foreground"
-        />
-      </div>
+      <button
+        type="button"
+        onClick={() => setPaletteOpen(true)}
+        className="mb-2 flex h-9 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-sm text-tertiary-foreground transition-colors hover:text-foreground"
+      >
+        <Search className="size-4" />
+        <span className="flex-1 text-left">Search</span>
+        <kbd className="rounded-sm bg-surface-2 px-1.5 py-0.5 font-mono text-xs">Ctrl K</kbd>
+      </button>
 
       <nav className="flex flex-col gap-0.5">
         {NAV_ITEMS.map((item) => {
@@ -75,7 +77,7 @@ export function Sidebar() {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" aria-label="Settings">
+            <Button variant="ghost" size="icon" aria-label="Settings" onClick={() => openSettings()}>
               <Settings />
             </Button>
             <Button variant="ghost" size="icon" aria-label="Help">
