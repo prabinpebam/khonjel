@@ -1,5 +1,9 @@
 # Khonjel — Product Specification
 
+> ▶ **Building/resuming? Read [`00-execution-playbook.md`](00-execution-playbook.md) first**
+> — the single source of truth for *how* we code and execute this project (the doc to
+> revisit whenever you lose context).
+>
 > **Khonjel** (Manipuri for *"Voice"*) is a **local-first, privacy-first voice
 > productivity app** for the desktop. Speak, and Khonjel transcribes, cleans up,
 > formats, and places text wherever you're working — and can act on your voice as an
@@ -47,6 +51,7 @@ reference layered on:
 ```
 docs/product-spec/
 ├── README.md                        ← you are here
+├── 00-execution-playbook.md         ← READ FIRST: how we code & execute (resume here)
 ├── 00-foundation/
 │   ├── 01-vision-positioning-principles.md
 │   ├── 02-personas-and-jobs.md
@@ -87,6 +92,7 @@ docs/product-spec/
 
 | Doc | What it covers |
 |---|---|
+| [00 · **Execution Playbook**](00-execution-playbook.md) | **READ FIRST** — how we code & execute; the doc to revisit when context is lost |
 | [00 · Vision, Positioning & Principles](00-foundation/01-vision-positioning-principles.md) | Why Khonjel exists, the wedge, product principles |
 | [00 · Personas & Jobs](00-foundation/02-personas-and-jobs.md) | Who it's for + JTBD + journeys |
 | [00 · Glossary & Naming](00-foundation/03-glossary.md) | Canonical terms (Khonjel Bar, inference modes, purposes…) |
