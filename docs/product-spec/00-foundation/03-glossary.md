@@ -10,7 +10,7 @@
 
 | Term | Definition |
 |---|---|
-| **Khonjel** | The product. Manipuri for *"Voice"*. Replaces "Wispr Flow" / "OpenWhispr" from the references. |
+| **Khonjel** | The product. Manipuri for *"Voice"*. Our app name — used everywhere. |
 | **Khonjel Bar** | The always-on floating dictation surface (pill/bar) that shows listening state and quick actions. (Ref: Wispr "Flow bar".) |
 | **Agent name / Wake word** | The configurable spoken name that switches dictation into instruction/agent mode. **Default: "Khonjel"**. Bound in prompts via the `{{agentName}}` template variable. (Ref: "OpenWhispr".) |
 | **Khonjel Cloud** | The *optional* managed cloud tier (hosted STT + LLM, no setup). Equivalent to the references' "OpenWhispr Cloud" / Wispr cloud. Never required. |
@@ -95,7 +95,7 @@
 | **Setting row** | Title + subtitle on the left, a control (toggle/dropdown/button) right-aligned (`SettingsRow`). |
 | **Settings panel** | A rounded bordered card grouping setting rows (`SettingsPanel`). |
 | **Keycap chip** | A key-cap styled chip rendering a captured shortcut (e.g. `Ctrl` `Win`). |
-| **Library page** *(additive)* | The Wispr-Flow template for Dictionary / Snippets / Style / Transforms. |
+| **Library page** *(additive)* | The reference's library-page template for Dictionary / Snippets / Style / Transforms. |
 
 ---
 

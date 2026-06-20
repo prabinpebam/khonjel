@@ -1,19 +1,19 @@
 # Khonjel — Design Language & Tokens
 
 > The **token layer** of the visual system. The full **art direction / look & feel** —
-> modeled on **Wispr Flow** — is the hero spec in
+> **the Khonjel design language** — is the hero spec in
 > [`06-ui-design-spec.md`](06-ui-design-spec.md); read that first for *how it looks*,
 > then use this doc for the machine-readable values.
 >
 > Built with **shadcn/ui** (Radix UI primitives) + **Tailwind CSS v4** + **lucide-react**
-> icons (the OpenWhispr stack). The **primary direction is Wispr Flow's warm light**
-> aesthetic; a refined dark theme is the counterpart. All values are **design tokens**
-> (CSS variables, shadcn convention); build against tokens, not raw hex.
+> icons. The **primary direction is a warm, editorial light** aesthetic; a refined dark
+> theme is the counterpart. All values are **design tokens** (CSS variables, shadcn
+> convention); build against tokens, not raw hex.
 >
-> Heritage: warm light theme + violet/teal from Wispr Flow (primary); dark theme +
-> settings/engine patterns from OpenWhispr. Khonjel ships **Light / Dark / Auto**
-> (the OpenWhispr theme control), Light-first. Tokens map to shadcn's `--background`,
-> `--foreground`, `--primary`, `--muted`, `--border`, etc.
+> Heritage: a warm light theme (violet UI accent + teal data-viz) studied from a light,
+> editorial productivity reference and now Khonjel's own; a near-black dark counterpart.
+> Khonjel ships **Light / Dark / Auto**, Light-first. Tokens map to shadcn's
+> `--background`, `--foreground`, `--primary`, `--muted`, `--border`, etc.
 
 ---
 
@@ -43,7 +43,7 @@
 | `--danger` | `#D2433B` | `#F1675E` | Destructive (Clear/Reset/Delete) |
 | `--info` | `#2F6BFF` | `#5B8CFF` | Neutral info, "Get your API key" link |
 
-### 2.2 Light theme neutrals (warm greige — from wisper-flow)
+### 2.2 Light theme neutrals (warm greige)
 | Token | Value | Use |
 |---|---|---|
 | `--bg-window` | `#F2F1EE` | Window + sidebar background |
@@ -57,7 +57,7 @@
 | `--text-tertiary` | `#9A968E` | Meta, timestamps, labels |
 | `--text-on-photo` | `#FFFFFF` | Promo banner text |
 
-### 2.3 Dark theme neutrals (near-black — from open-wisper)
+### 2.3 Dark theme neutrals (near-black)
 | Token | Value | Use |
 |---|---|---|
 | `--bg-window` | `#0E0E10` | Window background |

@@ -214,7 +214,7 @@ rich-text region with AT support.
 > Settings ▸ Language Models ▸ Dictation Cleanup; **Snippets** sit under **Dictionary**;
 > **Scratchpad** is absorbed by **Notes** (richer: folders + semantic search); **Voice
 > Profiles** + stats live on **Home**. See the integration map in
-> [`../02-information-architecture/01-sitemap-and-ia.md`](../02-information-architecture/01-sitemap-and-ia.md#21-wispr-flow-integration-map-every-goodness-has-one-definite-home).
+> [`../02-information-architecture/01-sitemap-and-ia.md`](../02-information-architecture/01-sitemap-and-ia.md#21-reference-integration-map-every-goodness-has-one-definite-home).
 
 ### 4b.1 Chat  *(P1 — OpenWhispr `chat`)*
 **Purpose.** Conversational AI agent inside Khonjel.

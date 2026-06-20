@@ -25,11 +25,12 @@
 
 **Khonjel** ("Voice" in Manipuri) is a **local-first, privacy-first desktop voice
 productivity app**: press a hotkey, speak, and clean text appears at your cursor — with
-dictation, an AI agent, meeting transcription, notes, and dictionary. It is **built on the
-open-source OpenWhispr app (same tech stack), rebranded, with the subscription layer
-removed**, and the **Wispr Flow** visual polish layered on. Two headline features:
-**universal model support** (any STT/LLM — local, self-hosted, BYO-key cloud, enterprise)
-and **everything on-device** (profile + storage local; no account; no telemetry).
+dictation, an AI agent, meeting transcription, notes, and dictionary. It is **built on a
+mature open-source voice-to-text codebase (same tech stack), rebranded, with the
+subscription layer removed**, and a **warm, editorial** visual polish layered on. Two
+headline features: **universal model support** (any STT/LLM — local, self-hosted, BYO-key
+cloud, enterprise) and **everything on-device** (profile + storage local; no account; no
+telemetry).
 
 ---
 
@@ -47,9 +48,9 @@ and **everything on-device** (profile + storage local; no account; no telemetry)
    data, **no telemetry**. Cloud is strictly opt-in.
 5. **Universal model support is a key feature.** Wide STT + LLM providers + local engines +
    self-hosted + enterprise + a universal OpenAI-compatible adapter + extensible registry.
-6. **Visual direction = Wispr Flow.** Warm greige canvas, white panel floating on it,
-   generous rounding, **serif promo headlines**, **violet UI accent + teal data-viz** (never
-   crossed). Light is the hero; Dark mirrors it.
+6. **Visual direction = the Khonjel design language.** Warm greige canvas, white panel
+   floating on it, generous rounding, **serif promo headlines**, **violet UI accent + teal
+   data-viz** (never crossed). Light is the hero; Dark mirrors it.
 7. **Strict design-system discipline (P1–P13).** Values live in **tokens**; variants are
    **CVA props, never forks**; **reuse before create**; theme/density are **token overrides**;
    **Storybook is the inventory**. No hardcoded hex/px, no `!important`, no emoji.
@@ -103,10 +104,10 @@ internals; `lib/` is pure. Full detail: [Mock Frontend Plan §4](04-architecture
 ## 6. Primary navigation (what we're building, screen-wise)
 
 Control Panel sidebar = **Home · Insights · Chat · Notes · Upload · Dictionary ·
-Transforms · Integrations** (+ ⌘K palette, Settings modal). Wispr Flow features merged
-with definite homes (Insights/Transforms first-class; Style under Cleanup; Snippets under
-Dictionary; Scratchpad → Notes). Capture surfaces: Khonjel Bar, Agent Overlay, meeting/
-preview/update overlays. Full inventory: [Sitemap & IA §5](02-information-architecture/01-sitemap-and-ia.md#5-full-screen-inventory-build-checklist).
+Transforms · Integrations** (+ ⌘K palette, Settings modal). The reference's productivity
+features are merged with definite homes (Insights/Transforms first-class; Style under
+Cleanup; Snippets under Dictionary; Scratchpad → Notes). Capture surfaces: Khonjel Bar,
+Agent Overlay, meeting/preview/update overlays. Full inventory: [Sitemap & IA §5](02-information-architecture/01-sitemap-and-ia.md#5-full-screen-inventory-build-checklist).
 
 ---
 
@@ -151,7 +152,7 @@ Full rules: [Design System P1–P13](03-ux-ui/design-system/01-intent.md).
 ```
 edit  →  npm run verify:quick        (types + lint + design-system lint + unit)
       →  npm run eval:shots          (render screens/states/themes → PNGs)
-      →  AGENT VIEWS the PNGs vs the UI Design Spec rubric + the Wispr Flow reference
+      →  AGENT VIEWS the PNGs vs the UI Design Spec rubric + the design reference
       →  fix visual/structural gaps
       →  npm run verify              (full: + a11y + visual regression + spec coverage)
       →  all green  →  done
@@ -206,7 +207,7 @@ screen's **spec acceptance items asserted**.
 | Storybook | **Yes**, P1 (inventory + visual review) |
 | Subscription | **Removed** entirely |
 | Account/auth | **Optional**, local profile default |
-| Visual style | **Wispr Flow** (light hero), violet UI / teal data-viz |
+| Visual style | **Khonjel design language** (light hero), violet UI / teal data-viz |
 | Design system | **Strict P1–P13**, token-driven, CVA variants, Storybook inventory |
 | Validation | **Eval loop** (L0–L6) gates every "done" |
 

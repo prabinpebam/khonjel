@@ -19,11 +19,12 @@ reference layered on top:
 | Source | Role | What Khonjel takes |
 |---|---|---|
 | **OpenWhispr** (source repo, authoritative) | The **base product** | Tech stack, multi-window app, local engines (Whisper/Parakeet/llama.cpp), 5 inference modes, Prompt Studio, Notes + semantic search, meetings, integrations, **no-telemetry** privacy — **everything except subscription**. |
-| **Wispr Flow** (reference) | **Additive polish** | History timeline, Insights, Style, Transforms, the warm light theme. |
+| **Productivity reference** | **Additive polish** | History timeline, Insights, Style, Transforms, the warm light theme. |
 
-> **Khonjel = OpenWhispr, rebranded, on the same stack, minus the subscription — plus
-> Wispr Flow's productivity polish.** Per the directive: *"we are not going to have the
-> subscription part of it and have pretty much everything else."*
+> **Khonjel = a rebranded, de-monetized fork of the open-source base, on the same stack,
+> minus the subscription — plus the productivity reference's polish.** Per the directive:
+> *"we are not going to have the subscription part of it and have pretty much everything
+> else."*
 
 The defining bet: most dictation products are thin clients in front of a single
 proprietary cloud. Khonjel inverts that — the **default** experience is fully local,

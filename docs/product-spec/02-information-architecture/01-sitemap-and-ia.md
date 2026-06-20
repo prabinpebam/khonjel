@@ -71,12 +71,12 @@ Control Panel
         └── Account / profile row  (optional)
 ```
 
-### 2.1 Wispr Flow integration map (every "goodness" has one definite home)
+### 2.1 Reference integration map (every "goodness" has one definite home)
 
-Khonjel keeps **all** the Wispr Flow value. Each feature is merged into a single
+Khonjel keeps **all** the productivity reference's value. Each feature is merged into a single
 coherent home — nothing is optional-vague or duplicated:
 
-| Wispr Flow feature | Coherent home in Khonjel | Status |
+| Reference feature | Coherent home in Khonjel | Status |
 |---|---|---|
 | Home history timeline | **Home** (same destination as OpenWhispr history — unified) | merged |
 | Personal stats rail (words/wpm/streak) | **Home** right rail | merged |

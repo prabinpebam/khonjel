@@ -6,12 +6,12 @@
 > Source legend: **OW** = OpenWhispr (open-wisper screenshots) · **OWR** = OpenWhispr
 > **source repository** (the authoritative build,
 > [`../99-reference-analysis/03-openwhispr-repo-analysis.md`](../99-reference-analysis/03-openwhispr-repo-analysis.md))
-> · **WF** = Wispr Flow (wisper-flow) · **NEW** = Khonjel synthesis. Priority: **P0**
+> · **WF** = productivity reference · **NEW** = Khonjel synthesis. Priority: **P0**
 > (v1 must), **P1** (v1 should), **P2** (later).
 >
 > **Khonjel is built on the OpenWhispr open-source app (same tech stack), replicating
 > its full UI/navigation/feature set, and dropping only the subscription/billing
-> layer.** Where the Wispr Flow reference adds productivity polish (Insights, Style,
+> layer.** Where the productivity reference adds polish (Insights, Style,
 > Transforms), Khonjel keeps it as additive.
 
 ---
@@ -235,13 +235,13 @@ Khonjel
 | **Usage analytics / telemetry** | **Off / removed by default** | No data collection. |
 | Branding (OpenWhispr name, logo, wake word) | **Rebrand** → Khonjel; wake word "Khonjel"; Khonjel Bar | Product identity. |
 
-**Kept and coherently merged from Wispr Flow (one unified package):** every Wispr Flow
-"goodness" is retained and given a **single definite home** in the OpenWhispr-based app
+**Kept and coherently merged from the productivity reference (one unified package):** every
+reference "goodness" is retained and given a **single definite home** in the app
 — not bolted on. **Insights** and **Transforms** become first-class sidebar
 destinations; **Style** folds into Language Models ▸ Dictation Cleanup; **Snippets**
 sit under Dictionary; **Scratchpad** is absorbed by **Notes**; **Voice Profiles** +
 stats live on **Home**; the **warm light theme** is the Light theme. Full mapping:
-[`../02-information-architecture/01-sitemap-and-ia.md`](../02-information-architecture/01-sitemap-and-ia.md#21-wispr-flow-integration-map-every-goodness-has-one-definite-home).
+[`../02-information-architecture/01-sitemap-and-ia.md`](../02-information-architecture/01-sitemap-and-ia.md#21-reference-integration-map-every-goodness-has-one-definite-home).
 (HIPAA BAA is an optional compliance extra.)
 
 ---

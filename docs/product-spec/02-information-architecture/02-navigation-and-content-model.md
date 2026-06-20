@@ -58,7 +58,7 @@ destinations (lucide icons, `w-48` rail) — one unified sidebar:
   **Snippets** under Dictionary; **Scratchpad** is folded into **Notes**; **Voice
   Profiles** + **stats** live on **Home**; the **warm light theme** is the Light theme.
   See the integration map in
-  [`01-sitemap-and-ia.md`](01-sitemap-and-ia.md#21-wispr-flow-integration-map-every-goodness-has-one-definite-home).
+  [`01-sitemap-and-ia.md`](01-sitemap-and-ia.md#21-reference-integration-map-every-goodness-has-one-definite-home).
 - **Dropped:** the Upgrade/limit/referral banners from OpenWhispr's sidebar.
 
 ---

@@ -266,7 +266,7 @@ shim. **Inspect:** empty shell + theme switch.
 Window chrome; **sidebar** with brand, command-search field, white-pill nav (Home ·
 Insights · Chat · Notes · Upload · Dictionary · Transforms · Integrations), engine
 status card, footer; floating **content panel** (card-on-greige). **Inspect:** the
-shell feels like Wispr Flow; nav switches empty views.
+shell feels like Khonjel; nav switches empty views.
 
 ### Phase 2 — Core screens + fixtures
 **Home** (history timeline grouped by day + stats rail + Voice Profile); **Dictionary**
@@ -329,13 +329,13 @@ match); document the adapter swap (mock → IPC/AI-SDK/SQLite/Qdrant). No UI rew
 ## 7. Definition of done
 - [ ] Every screen in the spec's screen inventory is reachable and inspectable.
 - [ ] Every state (empty/loading/error, capture states, overlays) is toggleable via Mock Studio.
-- [ ] The **Wispr Flow visual system** is faithfully applied (tokens, card-on-greige, serif promos, teal data-viz).
+- [ ] The **Khonjel design language** is faithfully applied (tokens, card-on-greige, serif promos, teal data-viz).
 - [ ] **Universal model support** UI is fully demonstrable (wide providers + local manager + self-hosted discovery + Prompt Studio).
 - [ ] **All-local** posture is visible (local profile, no account required, local storage, no telemetry).
 - [ ] Runs in a browser with `npm run dev`; **zero backend / zero network**.
 - [ ] UI imports **only** service ports; lint boundary forbids importing `adapters/**` — real adapters swap in with no UI changes.
 - [ ] Feature-based structure + aliases + tests in place (scales cleanly).
-- [ ] **Validated against spec via the eval loop** — see [Test & Validation Strategy](06-test-and-validation-strategy.md): `npm run verify` (static + design-system lint + unit/a11y + visual regression + spec coverage) passes, and each screen clears the agent visual review against the UI Design Spec + Wispr Flow reference.
+- [ ] **Validated against spec via the eval loop** — see [Test & Validation Strategy](06-test-and-validation-strategy.md): `npm run verify` (static + design-system lint + unit/a11y + visual regression + spec coverage) passes, and each screen clears the agent visual review against the UI Design Spec + the design reference.
 
 ---
 
@@ -365,5 +365,5 @@ step is reviewable.
 3. Create `services/ports/*` + `services/adapters/mock/*` + `ServicesProvider` + `useServices()`; `electron-api-shim`.
 4. Scaffold `surfaces/control-panel` shell (TitleBar + Sidebar + ContentPanel) + `app/router` + `app/devtools/MockStudio`.
 5. Seed `mock/fixtures` + `stores/hydration`.
-→ **Deliverable:** the app shell renders in the browser with the Wispr Flow look, theme
+→ **Deliverable:** the app shell renders in the browser with the Khonjel look, theme
 switch, nav, and Mock Studio — ready to build features into.

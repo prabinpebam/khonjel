@@ -1,16 +1,17 @@
-# Khonjel — UI Design Spec (Wispr Flow–style)
+# Khonjel — UI Design Spec (the Khonjel design language)
 
-> **The definitive visual design direction for Khonjel.** Khonjel adopts the **Wispr
-> Flow** look & feel: a **warm, calm, editorial** interface — a greige canvas with a
-> white content panel floating on it, generous rounding, friendly line icons, **serif
-> display headlines** for education moments, and a **teal data-viz** accent kept separate
-> from the violet UI accent.
+> **The definitive visual design direction for Khonjel.** The **Khonjel design language**
+> is a **warm, calm, editorial** interface — a greige canvas with a white content panel
+> floating on it, generous rounding, friendly line icons, **serif display headlines** for
+> education moments, and a **teal data-viz** accent kept separate from the violet UI
+> accent.
 >
 > This document is the **art direction + visual system** (how it looks and feels).
 > Machine-readable tokens live in [`01-design-language.md`](01-design-language.md);
 > layout grids in [`02-app-shell-and-layout.md`](02-app-shell-and-layout.md); component
 > behaviour/states in [`05-interaction-states-and-accessibility.md`](05-interaction-states-and-accessibility.md).
-> Source fidelity: [`../99-reference-analysis/02-wisper-flow-screen-by-screen.md`](../99-reference-analysis/02-wisper-flow-screen-by-screen.md).
+> Visual heritage was studied from the light, editorial productivity reference in
+> [`../99-reference-analysis/`](../99-reference-analysis/) (now fully Khonjel's own).
 >
 > **How these tokens & components must be used is governed by the strict**
 > **[Design System discipline](design-system/01-intent.md) (P1–P13).** Read it before
@@ -23,13 +24,12 @@
 
 **Adjectives:** warm · calm · friendly · editorial · spacious · trustworthy.
 
-Wispr Flow does not look like a "technical AI tool." It looks like a **well-crafted
-writing app**: soft warm neutrals, lots of whitespace, big confident headings, playful
-illustrations, and the occasional **magazine-style serif headline**. Khonjel inherits
-this exactly. Color is reserved; the canvas is quiet so content and voice take the
-stage.
+Khonjel does not look like a "technical AI tool." It looks like a **well-crafted writing
+app**: soft warm neutrals, lots of whitespace, big confident headings, playful
+illustrations, and the occasional **magazine-style serif headline**. Color is reserved;
+the canvas is quiet so content and voice take the stage.
 
-**The three signatures (get these right and it reads as Wispr Flow):**
+**The three signatures (get these right and it reads as Khonjel):**
 1. **Card-on-greige.** A warm greige window with a **white content panel floating on
    it**, rounded on the top-left where it meets the sidebar.
 2. **Serif display moments.** Education/promo banners use a **serif headline with one
@@ -41,7 +41,7 @@ stage.
 
 ## 2. Color system
 
-> Light is the **primary** theme (the Wispr Flow hero). Dark is a faithful counterpart.
+> Light is the **primary** theme (the Khonjel hero). Dark is a faithful counterpart.
 > All values are starting hexes; tune to keep AA contrast.
 
 ### 2.1 Light theme (primary) — warm neutrals
@@ -114,7 +114,7 @@ Three families:
 | Small / meta | 13 / 18 | 400 | Timestamps, helper text |
 | Mono | 13 / 18 | 400 | Paths, endpoints, keycaps |
 
-**Signature treatments (do these to feel like Wispr Flow):**
+**Signature treatments (do these to feel like Khonjel):**
 - **Big confident stats:** large bold number immediately followed by a **small gray
   lowercase label** on the same line ("3,599 total words", "140 wpm").
 - **Uppercase letter-spaced captions** for stat labels and date dividers ("JUNE 18, 2026").
@@ -210,7 +210,7 @@ lift.
   inset `~8px` from sidebar edges, height `40px`; glyph tinted violet, label `#2A2A28`
   semibold. Idle rows have no background; hover = `rgba(0,0,0,.04)`.
 - **Brand** top-left, `20px` from top.
-- **Engine status card** is Khonjel's honest replacement for Wispr Flow's word-quota
+- **Engine status card** is Khonjel's honest replacement for the reference's word-quota
   card — same shape and placement, but it shows the active model + health, **never an
   upsell** (no subscription).
 
@@ -252,7 +252,7 @@ lift.
 ### 8.5 Inputs, toggles, selects
 - **Text input:** white, `1px #E6E4DF`, `radius-md`, `36–40px`; focus = violet ring
   (`2px` + `2px` offset). Mono variant for endpoints/paths.
-- **Toggle:** pill track; **ON = near-black** (Wispr Flow uses dark, not loud color) or
+- **Toggle:** pill track; **ON = near-black** (use dark, not a loud color) or
   violet for brand-forward toggles; OFF = `#D9D6CF`. Knob white.
 - **Select / dropdown:** input-like with chevron; menu = white `radius-md` popover, soft
   shadow.
@@ -347,10 +347,10 @@ Insights        Your Usage | Your Voice                  (SHARE sticker)
 
 ## 11. Light & dark
 
-- **Light is the hero** (the Wispr Flow look). **Dark** mirrors structure with inverted
+- **Light is the hero** (the Khonjel look). **Dark** mirrors structure with inverted
   neutrals and the same violet/teal accents.
 - Theme switch lives in **Settings ▸ General ▸ Appearance** (`Light / Dark / Auto`),
-  matching OpenWhispr's control. No layout changes between themes.
+  the standard color-scheme control. No layout changes between themes.
 
 ---
 

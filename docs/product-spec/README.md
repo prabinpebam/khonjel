@@ -16,15 +16,16 @@ the open-source [OpenWhispr](https://github.com/OpenWhispr/openwhispr) app (MIT)
 with the **subscription/billing layer removed** and the productivity polish of a second
 reference layered on:
 
-- **OpenWhispr** (source repo + screenshots) — the **authoritative base**: multi-window
-  desktop app, local engines (Whisper/Parakeet/llama.cpp), 5 inference modes, Prompt
-  Studio, Notes with semantic search, meetings, integrations, privacy-by-default,
-  **no telemetry**.
-- **Wispr Flow** (`wisper-flow`) — additive productivity polish (history timeline,
+- **Engine base** (source repo + screenshots) — the **authoritative technical base**:
+  multi-window desktop app, local engines (Whisper/Parakeet/llama.cpp), 5 inference
+  modes, Prompt Studio, Notes with semantic search, meetings, integrations,
+  privacy-by-default, **no telemetry**.
+- **Productivity reference** — additive productivity polish (history timeline,
   insights, style, transforms, the warm light theme).
 
-> **Khonjel = OpenWhispr, rebranded, on the same stack, minus the subscription — plus
-> the productivity polish of Wispr Flow.** "We have pretty much everything else."
+> **Khonjel = a rebranded, de-monetized fork of a mature open-source voice codebase, on
+> the same stack, minus the subscription — plus the productivity polish of the reference
+> design.** "We have pretty much everything else."
 
 **Tech stack (adopted verbatim):** React 19 · TypeScript · Tailwind CSS v4 · Electron 41
 · shadcn/ui · better-sqlite3 · whisper.cpp · sherpa-onnx (Parakeet) · llama.cpp · Qdrant
@@ -104,7 +105,7 @@ docs/product-spec/
 | [02 · Sitemap & IA](02-information-architecture/01-sitemap-and-ia.md) | Surfaces, sitemap, settings IA, screen inventory |
 | [02 · Navigation & Content Model](02-information-architecture/02-navigation-and-content-model.md) | Nav system, routing, keyboard, data model |
 | [03 · Design Language & Tokens](03-ux-ui/01-design-language.md) | Token layer: color, type, spacing, components, motion |
-| [03 · **UI Design Spec (Wispr Flow–style)**](03-ux-ui/06-ui-design-spec.md) | **The visual hero** — art direction, palette, signatures, component looks |
+| [03 · **UI Design Spec (Khonjel design language)**](03-ux-ui/06-ui-design-spec.md) | **The visual hero** — art direction, palette, signatures, component looks |
 | [03 · **Design System discipline**](03-ux-ui/design-system/01-intent.md) | **Strict token/component rules (P1–P13)** that stop design drift across agent sessions |
 | [03 · App Shell & Layout](03-ux-ui/02-app-shell-and-layout.md) | Chrome, sidebar, content layouts, responsive |
 | [03 · Screen Specifications](03-ux-ui/03-screen-specifications.md) | Reproduction-grade specs for every main screen |
@@ -118,7 +119,7 @@ docs/product-spec/
 | [04 · **Test & Validation Strategy**](04-architecture-and-delivery/06-test-and-validation-strategy.md) | **The eval loop** — how we detect "what right looks like" against the spec |
 | [99 · OpenWhispr **repo** analysis](99-reference-analysis/03-openwhispr-repo-analysis.md) | **Authoritative** capture of the real app (stack, nav, features) |
 | [99 · OpenWhispr screen-by-screen](99-reference-analysis/01-open-wisper-screen-by-screen.md) | Hi-fidelity capture of all 15 OW screenshots |
-| [99 · Wispr Flow screen-by-screen](99-reference-analysis/02-wisper-flow-screen-by-screen.md) | Hi-fidelity capture of all 18 WF screenshots |
+| [99 · Productivity reference — screen-by-screen](99-reference-analysis/02-wisper-flow-screen-by-screen.md) | Hi-fidelity capture of all 18 reference screenshots |
 
 ---
 
@@ -146,7 +147,7 @@ docs/product-spec/
 
 ## Conventions used in this spec
 - **Priorities:** P0 (v1 must), P1 (v1 should), P2 (later).
-- **Source tags:** **OW** = OpenWhispr, **WF** = Wispr Flow, **NEW** = Khonjel synthesis.
+- **Source tags:** **OW** = engine base, **WF** = productivity reference, **NEW** = Khonjel synthesis.
 - **Copy in `code font`** is UI text (often verbatim from the references).
 - **Tokens** (e.g. `--accent`) are defined in the Design Language doc; build against
   tokens, not raw values.
