@@ -32,6 +32,7 @@ Khonjel (an Electron desktop app: cross-platform, local-first, multi-purpose).
 | 11 | [Privacy, security & packaging](11-privacy-security-and-packaging.md) | Key storage, network egress rules, retention, signing, updates. |
 | 12 | [Audio capture & OS integration](12-audio-capture-and-os-integration.md) | The native per-OS layer: audio format, capture, AEC, hotkeys, text injection. |
 | 13 | [Open questions & risks](13-open-questions-and-risks.md) | Unresolved decisions and execution risks, with defaults and decision triggers. |
+| 14 | [Implementation plan](14-implementation-plan.md) | **The build order** — sequenced, task-level backlog with a strict TDD+EDD gate per task. |
 
 ---
 

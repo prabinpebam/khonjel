@@ -47,6 +47,24 @@ can't assert (proportion, warmth, hierarchy, "does it feel like Wispr Flow").
 
 ---
 
+## 2a. Eval Driven Development (EDD) — the selection layer
+
+L0–L6 protect deterministic and visual contracts. **Eval Driven Development** is the loop that
+sits *above* them and drives convergence for user-facing, temporal, and open-ended behavior —
+"did the **real running app** satisfy the user's expectation?" It is the eval equivalent of TDD.
+
+- **Framework:** [docs/frameworks/eval-driven-development/](../../frameworks/eval-driven-development/README.md) (00–02 portable; 03 the Khonjel interpretation).
+- **Harness:** [`app/eval/`](../../../app/eval/) — Playwright scenarios drive the real app, a
+  recorder captures a DOM/state/screenshot timeline, detectors judge the gap, and each run writes
+  evidence to `app/eval-results/`. Run with `npm run eval`.
+- **Relationship:** every backend **BE4 offline-E2E** row in the
+  [coverage matrix](backend/07-feature-coverage-matrix.md) is satisfied by an EDD scenario; L0–L6
+  remain the deterministic gates beneath it.
+- **Discipline:** an EDD gate must run the real product and observe the *user-visible* result of
+  real interactions — never a mock of the thing under test.
+
+---
+
 ## 3. The eval-loop commands (run in a loop)
 
 Defined in `app/package.json`:
@@ -61,6 +79,7 @@ Defined in `app/package.json`:
 | `npm run test:a11y` | axe (vitest + Playwright) | L3 |
 | `npm run test:visual` / `:update` | Playwright snapshots / refresh baselines | L4 |
 | `npm run verify:coverage` | spec-coverage manifest checks | L5 |
+| `npm run eval` | EDD scenarios drive the real app → evidence in `eval-results/` | **EDD** gate (BE4) |
 | `npm run eval:shots` | render every screen/state/theme → PNGs in `eval/screens/` | feeds **L6** |
 
 **The development loop (per change):**

@@ -76,4 +76,12 @@ export default tseslint.config(
       "@typescript-eslint/no-require-imports": "off",
     },
   },
+  // EDD eval harness: the capture fn runs in the browser (via page.evaluate); the recorder,
+  // detectors, and scenarios run in Node. Allow both global sets for eval/**.
+  {
+    files: ["eval/**/*.mjs"],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
 );

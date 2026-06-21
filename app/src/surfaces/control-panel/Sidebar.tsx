@@ -69,6 +69,8 @@ export function Sidebar() {
             <button
               key={item.id}
               type="button"
+              data-eval="nav-item"
+              data-eval-nav={item.id}
               onClick={() => setActiveView(item.id)}
               aria-current={selected ? "page" : undefined}
               aria-label={collapsed ? item.label : undefined}

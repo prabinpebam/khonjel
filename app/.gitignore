@@ -11,8 +11,10 @@ node_modules
 # Test / eval artifacts
 coverage
 eval/screens
+eval-results
 playwright-report
 test-results
+.playwright
 
 # Local
 *.local

@@ -44,11 +44,16 @@ export function ControlPanel() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col bg-canvas">
+    <div
+      className="flex h-full flex-col bg-canvas"
+      data-eval="app-shell"
+      data-eval-view={activeView}
+      data-eval-ready="true"
+    >
       <TitleBar />
       <div className="flex min-h-0 flex-1">
         <Sidebar />
-        <ContentPanel>
+        <ContentPanel view={activeView}>
           <View />
         </ContentPanel>
       </div>

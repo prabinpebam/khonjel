@@ -37,7 +37,7 @@ export function SettingsModal() {
 
   return (
     <Modal open={open} onClose={close} labelledBy="settings-title" className="max-w-4xl">
-      <div className="flex h-[80vh]">
+      <div className="flex h-[80vh]" data-eval="settings-modal">
         <nav className="flex w-48 shrink-0 flex-col overflow-y-auto border-e border-border bg-surface-2 p-3">
           {SETTINGS_GROUPS.map((group) => (
             <div key={group.label} className="mb-3">

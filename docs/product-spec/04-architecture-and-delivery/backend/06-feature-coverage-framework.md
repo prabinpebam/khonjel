@@ -65,6 +65,10 @@ four levels; a backend capability is "done" only when its required BE levels pas
 > Capability→level defaults: read methods → BE1+BE3; mutations → BE1+BE2+BE3;
 > capture/inference/inject (hot path) → BE1+BE2+BE4; provider/egress → BE2 + a contract test
 > with a stubbed endpoint. Each capability's **Tests** field names its exact set.
+>
+> **BE4 is an [Eval Driven Development](../../../frameworks/eval-driven-development/README.md)
+> scenario** — a real-app run captured and judged by the eval harness
+> ([`app/eval/`](../../../../app/eval/)), not a mock.
 
 ## 4. The process (mock → real, repeatable)
 
