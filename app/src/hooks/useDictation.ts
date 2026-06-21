@@ -18,15 +18,17 @@ export interface UseDictation {
 }
 
 export function useDictation(onResult: (text: string) => void): UseDictation {
-  const { transcription, inference } = useServices();
+  const { transcription, inference, content } = useServices();
   const [status, setStatus] = useState<DictationStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const recorderRef = useRef<Recorder | null>(null);
+  const startedAtRef = useRef(0);
 
   const start = async () => {
     setError(null);
     try {
       recorderRef.current = await startRecording();
+      startedAtRef.current = Date.now();
       setStatus("recording");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Microphone unavailable");
@@ -40,6 +42,7 @@ export function useDictation(onResult: (text: string) => void): UseDictation {
     recorderRef.current = null;
     setStatus("transcribing");
     try {
+      const durationSec = Math.max(0, Math.round((Date.now() - startedAtRef.current) / 1000));
       const audioBase64 = await recorder.stop();
       const { text } = await transcription.transcribe({ audioBase64 });
       const trimmed = text.trim();
@@ -48,6 +51,15 @@ export function useDictation(onResult: (text: string) => void): UseDictation {
         return;
       }
       const cleaned = await inference.cleanup(trimmed, {});
+      void content.addHistory({
+        finalText: cleaned.text,
+        app: "Khonjel",
+        language: "auto",
+        durationSec,
+        mode: "dictation",
+        hasAudio: false,
+        cleanupApplied: cleaned.cleaned,
+      });
       onResult(cleaned.text);
       setStatus("idle");
     } catch (e) {

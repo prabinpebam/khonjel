@@ -13,6 +13,7 @@ import type {
   ChatMessage,
   DictionaryEntry,
   Folder,
+  HistoryDraft,
   HistoryEntry,
   InsightsAggregate,
   Integration,
@@ -56,6 +57,7 @@ export interface ContentStore {
   integrations: () => Integration[];
   sttModels: () => ModelInfo[];
   llmModels: () => ModelInfo[];
+  addHistory: (draft: HistoryDraft) => HistoryEntry[];
 }
 
 /** Builtin transforms shipped on a fresh install (non-builtin ones are user-created later). */
@@ -147,6 +149,7 @@ function parse(doc: string | null): ContentDoc {
 
 export function createContentStore(io: SettingsIO, deps: ContentDeps): ContentStore {
   const read = (): ContentDoc => parse(io.read());
+  const write = (doc: ContentDoc): void => io.write(JSON.stringify(doc));
   return {
     history: () => read().history,
     insights: () => deps.computeInsights(read().history),
@@ -160,5 +163,26 @@ export function createContentStore(io: SettingsIO, deps: ContentDeps): ContentSt
     integrations: () => read().integrations,
     sttModels: () => deps.listModels("stt"),
     llmModels: () => deps.listModels("llm"),
+    addHistory: (draft) => {
+      const doc = read();
+      const words = draft.finalText.trim();
+      const entry: HistoryEntry = {
+        id:
+          globalThis.crypto?.randomUUID?.() ??
+          `h-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        createdAt: new Date().toISOString(),
+        finalText: draft.finalText,
+        app: draft.app,
+        language: draft.language,
+        wordCount: words.length > 0 ? words.split(/\s+/).length : 0,
+        durationSec: draft.durationSec,
+        mode: draft.mode,
+        hasAudio: draft.hasAudio,
+        cleanupApplied: draft.cleanupApplied,
+      };
+      doc.history = [entry, ...doc.history];
+      write(doc);
+      return doc.history;
+    },
   };
 }

@@ -5,7 +5,7 @@
   "type": "module",
   "main": "electron/main.cjs",
   "author": "Khonjel",
-  "description": "Khonjel — local-first voice productivity app (mock-data frontend, no backend).",
+  "description": "Khonjel — local-first, privacy-first desktop voice productivity app (Electron + React) with local whisper.cpp + llama.cpp engines behind a typed IPC seam.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

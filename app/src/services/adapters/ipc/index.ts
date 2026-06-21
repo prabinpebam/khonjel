@@ -73,6 +73,7 @@ export function createIpcServices(invoke: Invoke): Services {
       integrations: () => invoke(CHANNELS.contentIntegrations) as Promise<Integration[]>,
       sttModels: () => invoke(CHANNELS.contentSttModels) as Promise<ModelInfo[]>,
       llmModels: () => invoke(CHANNELS.contentLlmModels) as Promise<ModelInfo[]>,
+      addHistory: (entry) => invoke(CHANNELS.contentAddHistory, entry) as Promise<HistoryEntry[]>,
     },
   };
 }

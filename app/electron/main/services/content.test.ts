@@ -95,4 +95,24 @@ describe("createContentStore", () => {
     expect(store.history()).toEqual([]);
     expect(store.integrations()).toHaveLength(4);
   });
+
+  it("addHistory prepends an entry with derived id/createdAt/wordCount and persists it", () => {
+    const io = memIO();
+    const store = createContentStore(io, deps);
+    const list = store.addHistory({
+      finalText: "hello world there",
+      app: "Khonjel",
+      language: "en",
+      durationSec: 3,
+      mode: "dictation",
+      hasAudio: false,
+      cleanupApplied: true,
+    });
+    expect(list).toHaveLength(1);
+    expect(list[0]!.wordCount).toBe(3);
+    expect(list[0]!.id).toBeTruthy();
+    expect(list[0]!.createdAt).toBeTruthy();
+    // persisted to the document
+    expect(createContentStore(io, deps).history()).toHaveLength(1);
+  });
 });

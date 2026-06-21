@@ -52,6 +52,21 @@ test("electron seam: real system info + settings persist across restart", async 
   expect(Array.isArray(history)).toBe(true);
   expect(history.length, "fresh install: real content store starts empty (no mock seed)").toBe(0);
 
+  // Dictation persistence: add a history entry and confirm it round-trips with derived fields.
+  const added = await page.evaluate(() =>
+    window.khonjel.invoke("content:addHistory", {
+      finalText: "hello from the eval",
+      app: "eval.exe",
+      language: "auto",
+      durationSec: 2,
+      mode: "dictation",
+      hasAudio: false,
+      cleanupApplied: true,
+    }),
+  );
+  expect(added.length).toBe(1);
+  expect(added[0].wordCount, "wordCount derived by the backend").toBe(4);
+
   const transforms = await page.evaluate(() => window.khonjel.invoke("content:transforms"));
   expect(
     transforms.length > 0 && transforms.every((t) => t.builtin),
@@ -68,6 +83,10 @@ test("electron seam: real system info + settings persist across restart", async 
 
   const snapshot = await page.evaluate(() => window.khonjel.invoke("settings:get"));
   expect(snapshot.values["eval.persist"], "setting persisted across restart").toBe("yes");
+
+  const historyAfter = await page.evaluate(() => window.khonjel.invoke("content:history"));
+  expect(historyAfter.length, "dictation history persisted across restart").toBe(1);
+  expect(historyAfter[0].finalText).toBe("hello from the eval");
   await app.close();
 
   fs.rmSync(userDataDir, { recursive: true, force: true });

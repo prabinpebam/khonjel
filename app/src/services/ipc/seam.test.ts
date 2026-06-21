@@ -70,6 +70,7 @@ const dispatch = createDispatch({
     integrations: () => [],
     sttModels: () => [],
     llmModels: () => [],
+    addHistory: () => [],
   },
 });
 const ipcServices = createIpcServices((channel, ...args) => dispatch(channel, ...args));

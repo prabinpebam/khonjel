@@ -17,6 +17,7 @@ import type {
   ConnectionProfile,
   DictionaryEntry,
   Folder,
+  HistoryDraft,
   HistoryEntry,
   InjectionOutcome,
   InsightsAggregate,
@@ -63,6 +64,7 @@ export const CHANNELS = {
   contentIntegrations: "content:integrations",
   contentSttModels: "content:sttModels",
   contentLlmModels: "content:llmModels",
+  contentAddHistory: "content:addHistory",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -93,6 +95,7 @@ export interface ChannelContract {
   "content:integrations": { request: []; response: Integration[] };
   "content:sttModels": { request: []; response: ModelInfo[] };
   "content:llmModels": { request: []; response: ModelInfo[] };
+  "content:addHistory": { request: [HistoryDraft]; response: HistoryEntry[] };
 }
 
 export type RequestOf<C extends Channel> = ChannelContract[C]["request"];

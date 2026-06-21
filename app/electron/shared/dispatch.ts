@@ -18,6 +18,7 @@ import type {
   ConnectionProfile,
   DictionaryEntry,
   Folder,
+  HistoryDraft,
   HistoryEntry,
   InjectionOutcome,
   InsightsAggregate,
@@ -71,6 +72,7 @@ export interface DispatchDeps {
     integrations: () => Integration[] | Promise<Integration[]>;
     sttModels: () => ModelInfo[] | Promise<ModelInfo[]>;
     llmModels: () => ModelInfo[] | Promise<ModelInfo[]>;
+    addHistory: (draft: HistoryDraft) => HistoryEntry[] | Promise<HistoryEntry[]>;
   };
   // Grows one slice per phase (meetings, transcription, agent, ...).
 }
@@ -104,6 +106,7 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.contentIntegrations]: () => deps.content.integrations(),
     [CHANNELS.contentSttModels]: () => deps.content.sttModels(),
     [CHANNELS.contentLlmModels]: () => deps.content.llmModels(),
+    [CHANNELS.contentAddHistory]: (args) => deps.content.addHistory(args[0] as HistoryDraft),
   };
 
   return async function dispatch(channel: string, ...args: unknown[]): Promise<unknown> {

@@ -168,6 +168,7 @@ export type {
 } from "./types";
 
 import type {
+  CaptureMode,
   HistoryEntry,
   InsightsAggregate,
   ChatMessage,
@@ -198,6 +199,19 @@ export interface ContentService {
   integrations(): Promise<Integration[]>;
   sttModels(): Promise<ModelInfo[]>;
   llmModels(): Promise<ModelInfo[]>;
+  /** Append a completed dictation to history (id/createdAt/wordCount are filled by the backend). */
+  addHistory(entry: HistoryDraft): Promise<HistoryEntry[]>;
+}
+
+/** The fields a caller supplies for a new history entry; the store derives id/createdAt/wordCount. */
+export interface HistoryDraft {
+  finalText: string;
+  app: string;
+  language: string;
+  durationSec: number;
+  mode: CaptureMode;
+  hasAudio: boolean;
+  cleanupApplied: boolean;
 }
 
 /** The full set of ports available to the app at runtime. */

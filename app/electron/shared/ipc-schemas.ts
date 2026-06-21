@@ -178,6 +178,16 @@ const ModelInfoSchema = z
   .object({ id: z.string(), name: z.string(), sizeLabel: z.string(), recommended: z.boolean() })
   .passthrough();
 
+const HistoryDraftSchema = z.object({
+  finalText: z.string(),
+  app: z.string(),
+  language: z.string(),
+  durationSec: z.number(),
+  mode: z.enum(["dictation", "note-recording", "upload"]),
+  hasAudio: z.boolean(),
+  cleanupApplied: z.boolean(),
+});
+
 /** Request argument tuples (Phase 0 channels take no arguments; settings:patch takes a patch). */
 export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.profileGet]: z.tuple([]),
@@ -204,6 +214,7 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.contentIntegrations]: z.tuple([]),
   [CHANNELS.contentSttModels]: z.tuple([]),
   [CHANNELS.contentLlmModels]: z.tuple([]),
+  [CHANNELS.contentAddHistory]: z.tuple([HistoryDraftSchema]),
 };
 
 /** Response payload schemas. */
@@ -232,4 +243,5 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.contentIntegrations]: z.array(IntegrationSchema),
   [CHANNELS.contentSttModels]: z.array(ModelInfoSchema),
   [CHANNELS.contentLlmModels]: z.array(ModelInfoSchema),
+  [CHANNELS.contentAddHistory]: z.array(HistoryEntrySchema),
 };

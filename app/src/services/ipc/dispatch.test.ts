@@ -47,6 +47,7 @@ const deps: DispatchDeps = {
     integrations: () => [],
     sttModels: () => [],
     llmModels: () => [],
+    addHistory: () => [],
   },
 };
 

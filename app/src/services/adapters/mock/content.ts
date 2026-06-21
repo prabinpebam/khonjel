@@ -1,4 +1,4 @@
-import type { ContentService } from "@services/ports";
+import type { ContentService, HistoryEntry } from "@services/ports";
 import * as seed from "@mock/seed";
 
 /** Mock content — resolves seed data immediately. Real adapters (Electron IPC) swap in later. */
@@ -15,4 +15,14 @@ export const mockContentService: ContentService = {
   integrations: async () => seed.INTEGRATIONS,
   sttModels: async () => seed.STT_MODELS,
   llmModels: async () => seed.LLM_MODELS,
+  addHistory: async (draft) => {
+    const words = draft.finalText.trim();
+    const entry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      wordCount: words.length > 0 ? words.split(/\s+/).length : 0,
+      ...draft,
+    };
+    return [entry, ...seed.HISTORY];
+  },
 };
