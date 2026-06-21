@@ -50,7 +50,9 @@ export function useDictation(onResult: (text: string) => void): UseDictation {
         setStatus("idle");
         return;
       }
-      const cleaned = await inference.cleanup(trimmed, {});
+      // Apply the user's dictionary + snippets during cleanup (spoken terms, substitutions).
+      const [dictionary, snippets] = await Promise.all([content.dictionary(), content.snippets()]);
+      const cleaned = await inference.cleanup(trimmed, { dictionary, snippets });
       void content.addHistory({
         finalText: cleaned.text,
         app: "Khonjel",

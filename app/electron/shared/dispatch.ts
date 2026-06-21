@@ -84,6 +84,7 @@ export interface DispatchDeps {
     sttModels: () => ModelInfo[] | Promise<ModelInfo[]>;
     llmModels: () => ModelInfo[] | Promise<ModelInfo[]>;
     addHistory: (draft: HistoryDraft) => HistoryEntry[] | Promise<HistoryEntry[]>;
+    replace: (collection: string, items: unknown[]) => void | Promise<void>;
   };
   // Grows one slice per phase (meetings, transcription, agent, ...).
 }
@@ -123,6 +124,7 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.contentSttModels]: () => deps.content.sttModels(),
     [CHANNELS.contentLlmModels]: () => deps.content.llmModels(),
     [CHANNELS.contentAddHistory]: (args) => deps.content.addHistory(args[0] as HistoryDraft),
+    [CHANNELS.contentReplace]: (args) => deps.content.replace(args[0] as string, args[1] as unknown[]),
   };
 
   return async function dispatch(channel: string, ...args: unknown[]): Promise<unknown> {

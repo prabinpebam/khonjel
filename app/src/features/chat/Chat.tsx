@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Mic, SendHorizontal } from "lucide-react";
 import { useServices } from "@services";
 import type { ChatMessage } from "@services/ports";
@@ -17,16 +17,24 @@ export function Chat() {
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const dictation = useDictation((text) => setInput((prev) => (prev ? `${prev} ${text}` : text)));
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     let live = true;
     void content.chat().then((m) => {
-      if (live) setMessages(m);
+      if (!live) return;
+      setMessages(m);
+      loadedRef.current = true;
     });
     return () => {
       live = false;
     };
   }, [content]);
+
+  // Persist the conversation so it survives a reload.
+  useEffect(() => {
+    if (loadedRef.current) void content.saveChat(messages);
+  }, [messages, content]);
 
   async function send(text: string) {
     const value = text.trim();

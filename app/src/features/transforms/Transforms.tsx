@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Info, Pencil, Plus, Trash2 } from "lucide-react";
 import { useServices } from "@services";
 import type { Transform } from "@services/ports";
@@ -15,16 +15,24 @@ export function Transforms() {
   const [transforms, setTransforms] = useState<Transform[]>([]);
   const optIn = useSettingsStore((s) => s.toggles["transforms.optIn"] ?? false);
   const setToggle = useSettingsStore((s) => s.setToggle);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     let live = true;
     void content.transforms().then((t) => {
-      if (live) setTransforms(t);
+      if (!live) return;
+      setTransforms(t);
+      loadedRef.current = true;
     });
     return () => {
       live = false;
     };
   }, [content]);
+
+  // Persist enable/disable + edits to the durable store.
+  useEffect(() => {
+    if (loadedRef.current) void content.saveTransforms(transforms);
+  }, [transforms, content]);
 
   function toggleEnabled(id: string) {
     setTransforms((prev) => prev.map((t) => (t.id === id ? { ...t, enabled: !t.enabled } : t)));

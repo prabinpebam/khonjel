@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
-import { ArrowDownUp, ArrowRight, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDownUp, ArrowRight, Pencil, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useServices } from "@services";
 import type { DictionaryEntry, LibraryScope, Snippet } from "@services/ports";
-import { useAsync } from "@hooks/useAsync";
 import { PageHeader } from "@components/common/PageHeader";
 import { PromoBanner } from "@components/common/PromoBanner";
 import { Badge } from "@components/ui/badge";
@@ -21,15 +20,116 @@ const SCOPES: { value: ScopeFilter; label: string }[] = [
   { value: "team", label: "Shared with team" },
 ];
 
+interface Draft {
+  id: string | null;
+  kind: "term" | "substitution" | "snippet";
+  a: string;
+  b: string;
+  scope: LibraryScope;
+}
+
+function upsert<T extends { id: string }>(list: T[], item: T): T[] {
+  const idx = list.findIndex((x) => x.id === item.id);
+  if (idx === -1) return [item, ...list];
+  const copy = list.slice();
+  copy[idx] = item;
+  return copy;
+}
+
 export function Dictionary() {
   const { content } = useServices();
   const [tab, setTab] = useState<HubTab>("dictionary");
   const [scope, setScope] = useState<ScopeFilter>("all");
   const [query, setQuery] = useState("");
   const [promoVisible, setPromoVisible] = useState(true);
+  const [entries, setEntries] = useState<DictionaryEntry[]>([]);
+  const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const loadedRef = useRef(false);
 
-  const entries = useAsync(() => content.dictionary(), [] as DictionaryEntry[]);
-  const snippets = useAsync(() => content.snippets(), [] as Snippet[]);
+  useEffect(() => {
+    let live = true;
+    void Promise.all([content.dictionary(), content.snippets()]).then(([d, s]) => {
+      if (!live) return;
+      setEntries(d);
+      setSnippets(s);
+      loadedRef.current = true;
+    });
+    return () => {
+      live = false;
+    };
+  }, [content]);
+
+  // Persist edits so the dictionary that powers dictation stays in sync.
+  useEffect(() => {
+    if (loadedRef.current) void content.saveDictionary(entries);
+  }, [entries, content]);
+  useEffect(() => {
+    if (loadedRef.current) void content.saveSnippets(snippets);
+  }, [snippets, content]);
+
+  function startAdd() {
+    setDraft({
+      id: null,
+      kind: tab === "snippets" ? "snippet" : "term",
+      a: "",
+      b: "",
+      scope: "personal",
+    });
+  }
+
+  function editEntry(entry: DictionaryEntry) {
+    setDraft({
+      id: entry.id,
+      kind: entry.type,
+      a: (entry.type === "term" ? entry.term : entry.trigger) ?? "",
+      b: entry.replacement ?? "",
+      scope: entry.scope,
+    });
+  }
+
+  function editSnippet(snippet: Snippet) {
+    setDraft({
+      id: snippet.id,
+      kind: "snippet",
+      a: snippet.trigger,
+      b: snippet.expansion,
+      scope: snippet.scope,
+    });
+  }
+
+  function deleteEntry(id: string) {
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  function deleteSnippet(id: string) {
+    setSnippets((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  function saveDraft() {
+    if (!draft) return;
+    const a = draft.a.trim();
+    if (a === "") return;
+    const id = draft.id ?? globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}`;
+    if (draft.kind === "snippet") {
+      const next: Snippet = { id, trigger: a, expansion: draft.b.trim(), scope: draft.scope };
+      setSnippets((prev) => upsert(prev, next));
+    } else if (draft.kind === "term") {
+      const next: DictionaryEntry = { id, type: "term", term: a, scope: draft.scope, source: "manual" };
+      setEntries((prev) => upsert(prev, next));
+    } else {
+      const next: DictionaryEntry = {
+        id,
+        type: "substitution",
+        trigger: a,
+        replacement: draft.b.trim(),
+        scope: draft.scope,
+        source: "manual",
+      };
+      setEntries((prev) => upsert(prev, next));
+    }
+    setDraft(null);
+  }
 
   const q = query.trim().toLowerCase();
 
@@ -63,7 +163,7 @@ export function Dictionary() {
       <PageHeader
         title="Dictionary"
         actions={
-          <Button>
+          <Button onClick={startAdd}>
             <Plus />
             Add new
           </Button>
@@ -129,6 +229,10 @@ export function Dictionary() {
         </div>
       ) : null}
 
+      {draft ? (
+        <DraftEditor draft={draft} onChange={setDraft} onSave={saveDraft} onCancel={() => setDraft(null)} />
+      ) : null}
+
       <Card className="divide-y divide-border-subtle">
         {tab === "dictionary" ? (
           visibleEntries.length === 0 ? (
@@ -149,7 +253,7 @@ export function Dictionary() {
                   {entry.source === "auto-learn" ? <Badge variant="accent">Auto-learned</Badge> : null}
                   {entry.scope === "team" ? <Badge variant="neutral">Team</Badge> : null}
                 </div>
-                <RowActions />
+                <RowActions onEdit={() => editEntry(entry)} onDelete={() => deleteEntry(entry.id)} />
               </div>
             ))
           )
@@ -164,7 +268,7 @@ export function Dictionary() {
                 <span className="truncate text-muted-foreground">{snippet.expansion}</span>
                 {snippet.scope === "team" ? <Badge variant="neutral">Team</Badge> : null}
               </div>
-              <RowActions />
+              <RowActions onEdit={() => editSnippet(snippet)} onDelete={() => deleteSnippet(snippet.id)} />
             </div>
           ))
         )}
@@ -173,10 +277,10 @@ export function Dictionary() {
   );
 }
 
-function RowActions() {
+function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
   return (
     <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-      <Button variant="ghost" size="icon" aria-label="Edit">
+      <Button variant="ghost" size="icon" aria-label="Edit" onClick={onEdit}>
         <Pencil />
       </Button>
       <Button
@@ -184,10 +288,89 @@ function RowActions() {
         size="icon"
         aria-label="Delete"
         className="text-muted-foreground hover:text-danger"
+        onClick={onDelete}
       >
         <Trash2 />
       </Button>
     </div>
+  );
+}
+
+function DraftEditor({
+  draft,
+  onChange,
+  onSave,
+  onCancel,
+}: {
+  draft: Draft;
+  onChange: (d: Draft) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const isSnippet = draft.kind === "snippet";
+  const hasReplacement = draft.kind === "substitution" || isSnippet;
+  return (
+    <Card className="mb-4 space-y-3 p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">
+          {draft.id ? "Edit entry" : "Add entry"}
+        </span>
+        <Button variant="ghost" size="icon" aria-label="Close" onClick={onCancel}>
+          <X />
+        </Button>
+      </div>
+      {!isSnippet ? (
+        <div className="flex items-center gap-1">
+          {(["term", "substitution"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => onChange({ ...draft, kind: k })}
+              className={cn(
+                "rounded-pill px-3 py-1 text-sm capitalize transition-colors",
+                draft.kind === k ? "bg-accent-soft text-accent" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {k}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input
+          value={draft.a}
+          onChange={(e) => onChange({ ...draft, a: e.target.value })}
+          placeholder={draft.kind === "term" ? "Word or phrase" : "Trigger"}
+        />
+        {hasReplacement ? (
+          <Input
+            value={draft.b}
+            onChange={(e) => onChange({ ...draft, b: e.target.value })}
+            placeholder={isSnippet ? "Expansion" : "Replacement"}
+          />
+        ) : null}
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          {(["personal", "team"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onChange({ ...draft, scope: s })}
+              className={cn(
+                "rounded-pill px-3 py-1 text-sm capitalize transition-colors",
+                draft.scope === s ? "bg-accent-soft text-accent" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        <Button onClick={onSave} disabled={draft.a.trim() === ""}>
+          Save
+        </Button>
+      </div>
+    </Card>
   );
 }
 

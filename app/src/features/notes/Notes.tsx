@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { Mic, Plus, Search, Sparkles, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Mic, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { useServices } from "@services";
 import type { Folder, Note } from "@services/ports";
 import { useAsync } from "@hooks/useAsync";
+import { useDictation } from "@hooks/useDictation";
 import { PageHeader } from "@components/common/PageHeader";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
@@ -10,13 +11,19 @@ import { Textarea } from "@components/ui/textarea";
 import { formatRelative } from "@lib/format";
 import { cn } from "@lib/utils";
 
+function preview(body: string): string {
+  return body.slice(0, 140).replace(/\s+/g, " ").trim();
+}
+
 export function Notes() {
-  const { content } = useServices();
+  const { content, inference } = useServices();
   const folders = useAsync(() => content.folders(), [] as Folder[]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [folderId, setFolderId] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -24,11 +31,37 @@ export function Notes() {
       if (!live) return;
       setNotes(loaded);
       setSelectedId((cur) => cur ?? loaded[0]?.id ?? null);
+      loadedRef.current = true;
     });
     return () => {
       live = false;
     };
   }, [content]);
+
+  // Persist edits to the durable store (debounced so typing is not a write per keystroke).
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    const timer = setTimeout(() => void content.saveNotes(notes), 500);
+    return () => clearTimeout(timer);
+  }, [notes, content]);
+
+  const selected = notes.find((note) => note.id === selectedId) ?? null;
+  const selectedIdValue = selected?.id ?? null;
+
+  const dictation = useDictation((text) => {
+    setNotes((prev) =>
+      prev.map((n) =>
+        n.id === selectedIdValue
+          ? {
+              ...n,
+              body: n.body ? `${n.body} ${text}` : text,
+              preview: preview(n.body ? `${n.body} ${text}` : text),
+              updatedAt: new Date().toISOString(),
+            }
+          : n,
+      ),
+    );
+  });
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -40,11 +73,53 @@ export function Notes() {
     });
   }, [notes, folderId, query]);
 
-  const selected = notes.find((note) => note.id === selectedId) ?? null;
-
   function updateSelected(patch: Partial<Note>) {
     if (!selected) return;
-    setNotes((prev) => prev.map((n) => (n.id === selected.id ? { ...n, ...patch } : n)));
+    setNotes((prev) =>
+      prev.map((n) => {
+        if (n.id !== selected.id) return n;
+        const next = { ...n, ...patch, updatedAt: new Date().toISOString() };
+        if (patch.body !== undefined) next.preview = preview(patch.body);
+        return next;
+      }),
+    );
+  }
+
+  function createNote() {
+    const note: Note = {
+      id: crypto.randomUUID(),
+      title: "Untitled note",
+      preview: "",
+      body: "",
+      folderId: folderId === "all" ? (folders[0]?.id ?? "all") : folderId,
+      updatedAt: new Date().toISOString(),
+      fromRecording: false,
+    };
+    setNotes((prev) => [note, ...prev]);
+    setSelectedId(note.id);
+  }
+
+  function deleteSelected() {
+    if (!selected) return;
+    const id = selected.id;
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+    setSelectedId(notes.find((n) => n.id !== id)?.id ?? null);
+  }
+
+  async function runAction(label: string, instruction: string, replace: boolean) {
+    if (!selected || busy || !selected.body.trim()) return;
+    setBusy(true);
+    try {
+      const { text } = await inference.chat([
+        { role: "user", content: `${instruction}\n\n---\n${selected.body}` },
+      ]);
+      const result = text.trim();
+      if (result) {
+        updateSelected({ body: replace ? result : `${selected.body}\n\n## ${label}\n${result}` });
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -52,7 +127,7 @@ export function Notes() {
       <PageHeader
         title="Notes"
         actions={
-          <Button>
+          <Button onClick={createNote}>
             <Plus />
             New note
           </Button>
@@ -133,14 +208,21 @@ export function Notes() {
                   onChange={(e) => updateSelected({ title: e.target.value })}
                   className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-foreground outline-none"
                 />
-                <Button variant="ghost" size="icon" aria-label="Record and append">
-                  <Mic />
+                <Button
+                  variant={dictation.status === "recording" ? "destructive" : "ghost"}
+                  size="icon"
+                  aria-label={dictation.status === "recording" ? "Stop recording" : "Record and append"}
+                  disabled={dictation.status === "transcribing"}
+                  onClick={dictation.toggle}
+                >
+                  {dictation.status === "transcribing" ? <Loader2 className="animate-spin" /> : <Mic />}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   aria-label="Delete note"
                   className="text-muted-foreground hover:text-danger"
+                  onClick={deleteSelected}
                 >
                   <Trash2 />
                 </Button>
@@ -152,14 +234,39 @@ export function Notes() {
                 className="flex-1 resize-none rounded-none border-0 font-mono"
               />
               <div className="flex flex-wrap items-center gap-2 border-t border-border p-3">
-                <Button variant="secondary" size="sm">
-                  <Sparkles />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() =>
+                    void runAction("Summary", "Summarize this note as a few concise bullet points.", false)
+                  }
+                >
+                  {busy ? <Loader2 className="animate-spin" /> : <Sparkles />}
                   Summarize
                 </Button>
-                <Button variant="secondary" size="sm">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() =>
+                    void runAction(
+                      "Rewrite",
+                      "Rewrite this note to be clear and well-structured. Return only the rewritten note.",
+                      true,
+                    )
+                  }
+                >
                   Rewrite
                 </Button>
-                <Button variant="secondary" size="sm">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() =>
+                    void runAction("Todos", "Extract action items from this note as a Markdown checklist.", false)
+                  }
+                >
                   Extract todos
                 </Button>
               </div>

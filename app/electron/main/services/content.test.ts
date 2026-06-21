@@ -115,4 +115,32 @@ describe("createContentStore", () => {
     // persisted to the document
     expect(createContentStore(io, deps).history()).toHaveLength(1);
   });
+
+  it("replace overwrites a collection and persists it across store instances", () => {
+    const io = memIO();
+    const store = createContentStore(io, deps);
+    store.replace("notes", [
+      {
+        id: "n1",
+        title: "Saved",
+        preview: "p",
+        body: "b",
+        folderId: "f",
+        updatedAt: "2026-01-01",
+        fromRecording: false,
+      },
+    ]);
+    expect(store.notes()).toHaveLength(1);
+    // a brand-new store reading the same IO sees the persisted write
+    expect(createContentStore(io, deps).notes()[0]!.title).toBe("Saved");
+  });
+
+  it("replace ignores unknown collection names (guards prototype pollution)", () => {
+    const io = memIO();
+    const store = createContentStore(io, deps);
+    store.replace("__proto__", [{ polluted: true }]);
+    store.replace("notARealCollection", [1, 2, 3]);
+    expect(store.notes()).toEqual([]);
+    expect((({}) as Record<string, unknown>).polluted).toBeUndefined();
+  });
 });

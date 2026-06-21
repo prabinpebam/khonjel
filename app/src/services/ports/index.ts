@@ -223,6 +223,15 @@ export interface ContentService {
   llmModels(): Promise<ModelInfo[]>;
   /** Append a completed dictation to history (id/createdAt/wordCount are filled by the backend). */
   addHistory(entry: HistoryDraft): Promise<HistoryEntry[]>;
+  /** Persist a user-owned collection wholesale (the caller holds the full array). */
+  saveNotes(notes: Note[]): Promise<void>;
+  saveFolders(folders: Folder[]): Promise<void>;
+  saveDictionary(entries: DictionaryEntry[]): Promise<void>;
+  saveSnippets(snippets: Snippet[]): Promise<void>;
+  saveTransforms(transforms: Transform[]): Promise<void>;
+  saveIntegrations(integrations: Integration[]): Promise<void>;
+  saveChat(messages: ChatMessage[]): Promise<void>;
+  saveUploads(jobs: UploadJob[]): Promise<void>;
 }
 
 /** The fields a caller supplies for a new history entry; the store derives id/createdAt/wordCount. */

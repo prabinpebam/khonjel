@@ -44,6 +44,20 @@ export interface ContentDeps {
   computeInsights: (history: HistoryEntry[]) => InsightsAggregate;
 }
 
+/** The user-owned collections a renderer feature may replace wholesale. */
+export const CONTENT_COLLECTIONS = [
+  "history",
+  "chat",
+  "folders",
+  "notes",
+  "uploads",
+  "dictionary",
+  "snippets",
+  "transforms",
+  "integrations",
+] as const;
+export type ContentCollection = (typeof CONTENT_COLLECTIONS)[number];
+
 export interface ContentStore {
   history: () => HistoryEntry[];
   insights: () => InsightsAggregate;
@@ -58,6 +72,7 @@ export interface ContentStore {
   sttModels: () => ModelInfo[];
   llmModels: () => ModelInfo[];
   addHistory: (draft: HistoryDraft) => HistoryEntry[];
+  replace: (collection: string, items: unknown[]) => void;
 }
 
 /** Builtin transforms shipped on a fresh install (non-builtin ones are user-created later). */
@@ -183,6 +198,12 @@ export function createContentStore(io: SettingsIO, deps: ContentDeps): ContentSt
       doc.history = [entry, ...doc.history];
       write(doc);
       return doc.history;
+    },
+    replace: (collection, items) => {
+      if (!(CONTENT_COLLECTIONS as readonly string[]).includes(collection)) return;
+      const doc = read();
+      (doc as unknown as Record<string, unknown[]>)[collection] = items;
+      write(doc);
     },
   };
 }

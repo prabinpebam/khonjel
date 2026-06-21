@@ -70,6 +70,7 @@ export const CHANNELS = {
   contentSttModels: "content:sttModels",
   contentLlmModels: "content:llmModels",
   contentAddHistory: "content:addHistory",
+  contentReplace: "content:replace",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -105,6 +106,7 @@ export interface ChannelContract {
   "content:sttModels": { request: []; response: ModelInfo[] };
   "content:llmModels": { request: []; response: ModelInfo[] };
   "content:addHistory": { request: [HistoryDraft]; response: HistoryEntry[] };
+  "content:replace": { request: [string, unknown[]]; response: void };
 }
 
 export type RequestOf<C extends Channel> = ChannelContract[C]["request"];

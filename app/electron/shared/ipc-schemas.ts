@@ -191,6 +191,18 @@ const HistoryDraftSchema = z.object({
   cleanupApplied: z.boolean(),
 });
 
+const ContentCollectionSchema = z.enum([
+  "history",
+  "chat",
+  "folders",
+  "notes",
+  "uploads",
+  "dictionary",
+  "snippets",
+  "transforms",
+  "integrations",
+]);
+
 /** Request argument tuples (Phase 0 channels take no arguments; settings:patch takes a patch). */
 export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.profileGet]: z.tuple([]),
@@ -222,6 +234,7 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.contentSttModels]: z.tuple([]),
   [CHANNELS.contentLlmModels]: z.tuple([]),
   [CHANNELS.contentAddHistory]: z.tuple([HistoryDraftSchema]),
+  [CHANNELS.contentReplace]: z.tuple([ContentCollectionSchema, z.array(z.unknown())]),
 };
 
 /** Response payload schemas. */
@@ -255,4 +268,5 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.contentSttModels]: z.array(ModelInfoSchema),
   [CHANNELS.contentLlmModels]: z.array(ModelInfoSchema),
   [CHANNELS.contentAddHistory]: z.array(HistoryEntrySchema),
+  [CHANNELS.contentReplace]: z.void(),
 };

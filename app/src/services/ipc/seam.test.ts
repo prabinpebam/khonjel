@@ -77,6 +77,7 @@ const dispatch = createDispatch({
     sttModels: () => [],
     llmModels: () => [],
     addHistory: () => [],
+    replace: () => undefined,
   },
 });
 const ipcServices = createIpcServices((channel, ...args) => dispatch(channel, ...args));

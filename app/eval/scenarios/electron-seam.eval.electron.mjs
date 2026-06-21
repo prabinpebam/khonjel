@@ -89,7 +89,7 @@ test("electron seam: real system info + settings persist across restart", async 
     }),
   );
   const testResult = await page.evaluate(() =>
-    window.khonjel.invoke("connections:test", "eval-conn", "my-deployment"),
+    window.khonjel.invoke("connections:test", "eval-conn", "my-deployment", "chat"),
   );
   expect(typeof testResult.ok, "connections:test returns a structured result").toBe("boolean");
   expect(testResult.ok, "unreachable provider endpoint reports not-ok (graceful)").toBe(false);

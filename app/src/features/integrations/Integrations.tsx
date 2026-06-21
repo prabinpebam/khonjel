@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Blocks, Calendar, Code2, Terminal, type LucideIcon } from "lucide-react";
 import { useServices } from "@services";
 import type { Integration } from "@services/ports";
@@ -23,16 +23,24 @@ const CONNECT_LABEL: Record<string, string> = {
 export function Integrations() {
   const { content } = useServices();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     let live = true;
     void content.integrations().then((items) => {
-      if (live) setIntegrations(items);
+      if (!live) return;
+      setIntegrations(items);
+      loadedRef.current = true;
     });
     return () => {
       live = false;
     };
   }, [content]);
+
+  // Persist connect/disconnect to the durable store.
+  useEffect(() => {
+    if (loadedRef.current) void content.saveIntegrations(integrations);
+  }, [integrations, content]);
 
   function toggle(id: string) {
     setIntegrations((prev) =>
