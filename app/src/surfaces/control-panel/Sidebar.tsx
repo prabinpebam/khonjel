@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CircleHelp, Search, Settings } from "lucide-react";
+import { CircleHelp, Mic, Search, Settings, Sparkles } from "lucide-react";
 import { NAV_ITEMS } from "@config/nav";
 import { useUiStore } from "@stores/ui";
 import { useServices } from "@services";
@@ -16,6 +16,7 @@ export function Sidebar() {
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const { profile } = useServices();
+  const stt = useActiveModel("stt.dictation", "stt");
   const llm = useActiveModel("llm.chat", "llm");
   const [name, setName] = useState("You");
 
@@ -96,14 +97,23 @@ export function Sidebar() {
         {!collapsed ? (
           <button
             type="button"
-            onClick={() => openSettings("language-models")}
-            title="Engine status -- open Language Model settings"
+            onClick={() => openSettings("speech-to-text")}
+            title="Engine status -- open AI model settings"
             className="mb-2 block w-full rounded-md border border-border bg-surface-2 p-3 text-left transition-colors hover:border-accent"
           >
-            <p className="truncate text-xs font-medium text-foreground">
-              {llm.scope} &middot; {llm.model}
-            </p>
-            <span className="mt-1 flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <Mic className="size-3 shrink-0 text-tertiary-foreground" />
+              <span className="truncate text-xs font-medium text-foreground">
+                {stt.scope} &middot; {stt.model}
+              </span>
+            </div>
+            <div className="mt-1 flex items-center gap-1.5">
+              <Sparkles className="size-3 shrink-0 text-tertiary-foreground" />
+              <span className="truncate text-xs font-medium text-foreground">
+                {llm.scope} &middot; {llm.model}
+              </span>
+            </div>
+            <span className="mt-1.5 flex items-center gap-1.5">
               <span className="size-2 rounded-pill bg-success" aria-hidden />
               <span className="text-xs text-tertiary-foreground">Ready</span>
             </span>
