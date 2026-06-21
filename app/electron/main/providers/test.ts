@@ -20,6 +20,9 @@ export async function testConnection(
 ): Promise<ConnectionTestResult> {
   if (!conn) return { ok: false, message: "Connection not found." };
   if (!target) return { ok: false, message: "Enter a model / deployment to test." };
+  if (conn.kind === "azure-openai" && !conn.apiVersion?.trim()) {
+    return { ok: false, message: "Azure needs an API version (set it on the connection)." };
+  }
   try {
     const req = buildChatRequest(conn, target, secret, {
       messages: [{ role: "user", content: "ping" }],

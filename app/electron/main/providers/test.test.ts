@@ -31,4 +31,15 @@ describe("testConnection", () => {
     expect((await testConnection(undefined, "", "x", async () => ({}))).ok).toBe(false);
     expect((await testConnection(conn, "", "", async () => ({}))).ok).toBe(false);
   });
+
+  it("flags a missing Azure API version before sending a request", async () => {
+    let called = false;
+    const result = await testConnection({ ...conn, apiVersion: undefined }, "SECRET", "gpt-5.4", async () => {
+      called = true;
+      return {};
+    });
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("API version");
+    expect(called, "should not hit the network when config is incomplete").toBe(false);
+  });
 });
