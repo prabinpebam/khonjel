@@ -3,6 +3,7 @@ import { mockProfileService } from "./profile";
 import { mockSystemService } from "./system";
 import { mockContentService } from "./content";
 import { mockSettingsService } from "./settings";
+import { mockInferenceService } from "./inference";
 
 /** The mock implementation of every port. Swapped for real adapters later. */
 export const mockServices: Services = {
@@ -10,4 +11,5 @@ export const mockServices: Services = {
   system: mockSystemService,
   content: mockContentService,
   settings: mockSettingsService,
+  inference: mockInferenceService,
 };

@@ -10,7 +10,14 @@
  */
 import { CHANNELS, type Channel, ipcError } from "./ipc-contract";
 import { RequestSchemas } from "./ipc-schemas";
-import type { Platform, Profile, SettingsPatch, SettingsSnapshot } from "../../src/services/ports";
+import type {
+  CleanupOptions,
+  CleanupResult,
+  Platform,
+  Profile,
+  SettingsPatch,
+  SettingsSnapshot,
+} from "../../src/services/ports";
 
 export interface DispatchDeps {
   profile: { get: () => Profile | Promise<Profile> };
@@ -22,7 +29,10 @@ export interface DispatchDeps {
     get: () => SettingsSnapshot | Promise<SettingsSnapshot>;
     patch: (patch: SettingsPatch) => SettingsSnapshot | Promise<SettingsSnapshot>;
   };
-  // Grows one slice per phase (db-backed content, inference, …).
+  inference: {
+    cleanup: (input: string, options: CleanupOptions) => CleanupResult | Promise<CleanupResult>;
+  };
+  // Grows one slice per phase (db-backed content, models, meetings, …).
 }
 
 export type Dispatch = (channel: string, ...args: unknown[]) => Promise<unknown>;
@@ -34,6 +44,7 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.systemGetPlatform]: () => deps.system.getPlatform(),
     [CHANNELS.settingsGet]: () => deps.settings.get(),
     [CHANNELS.settingsPatch]: (args) => deps.settings.patch(args[0] as SettingsPatch),
+    [CHANNELS.inferenceCleanup]: (args) => deps.inference.cleanup(args[0] as string, args[1] as CleanupOptions),
   };
 
   return async function dispatch(channel: string, ...args: unknown[]): Promise<unknown> {

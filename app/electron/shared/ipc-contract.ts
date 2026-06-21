@@ -9,7 +9,14 @@
  *
  * See docs/product-spec/04-architecture-and-delivery/backend/08-ipc-and-ports-contracts.md.
  */
-import type { Platform, Profile, SettingsPatch, SettingsSnapshot } from "../../src/services/ports";
+import type {
+  CleanupOptions,
+  CleanupResult,
+  Platform,
+  Profile,
+  SettingsPatch,
+  SettingsSnapshot,
+} from "../../src/services/ports";
 
 /** Bumped only on breaking channel changes; preload sends it, main rejects mismatches. */
 export const CONTRACT_VERSION = 1;
@@ -21,6 +28,7 @@ export const CHANNELS = {
   systemGetPlatform: "system:getPlatform",
   settingsGet: "settings:get",
   settingsPatch: "settings:patch",
+  inferenceCleanup: "inference:cleanup",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -32,6 +40,7 @@ export interface ChannelContract {
   "system:getPlatform": { request: []; response: Platform };
   "settings:get": { request: []; response: SettingsSnapshot };
   "settings:patch": { request: [SettingsPatch]; response: SettingsSnapshot };
+  "inference:cleanup": { request: [string, CleanupOptions]; response: CleanupResult };
 }
 
 export type RequestOf<C extends Channel> = ChannelContract[C]["request"];

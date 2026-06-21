@@ -1,4 +1,4 @@
-import type { Platform, Profile, Services, SettingsSnapshot } from "@services/ports";
+import type { CleanupResult, Platform, Profile, Services, SettingsSnapshot } from "@services/ports";
 import { CHANNELS } from "@ipc/ipc-contract";
 
 /**
@@ -25,6 +25,9 @@ export function createIpcServices(invoke: Invoke, fallback: Services): Services 
     settings: {
       get: () => invoke(CHANNELS.settingsGet) as Promise<SettingsSnapshot>,
       patch: (patch) => invoke(CHANNELS.settingsPatch, patch) as Promise<SettingsSnapshot>,
+    },
+    inference: {
+      cleanup: (input, options) => invoke(CHANNELS.inferenceCleanup, input, options ?? {}) as Promise<CleanupResult>,
     },
     // Not yet backed by the backend — keep the mock until its phase implements it.
     content: fallback.content,

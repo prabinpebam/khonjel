@@ -50,6 +50,28 @@ export interface SettingsService {
   patch(patch: SettingsPatch): Promise<SettingsSnapshot>;
 }
 
+/**
+ * Inference: the deterministic-then-LLM text pipeline. Phase 1 ships `cleanup` (the dictation hot
+ * path: dictionary -> dictated punctuation -> skip-if-clean -> LLM refine -> snippets). The agent,
+ * chat, note-format, and transform purposes are added in Phase 5. See backend/03 §4 + 08 §3.2.
+ */
+export interface CleanupOptions {
+  cleanupEnabled?: boolean;
+  agentName?: string;
+  dictionary?: DictionaryEntry[];
+  snippets?: Snippet[];
+}
+
+export interface CleanupResult {
+  text: string;
+  cleaned: boolean;
+  mode: "dictation" | "agent";
+}
+
+export interface InferenceService {
+  cleanup(input: string, options?: CleanupOptions): Promise<CleanupResult>;
+}
+
 export type {
   CaptureMode,
   HistoryEntry,
@@ -107,4 +129,5 @@ export interface Services {
   system: SystemService;
   content: ContentService;
   settings: SettingsService;
+  inference: InferenceService;
 }

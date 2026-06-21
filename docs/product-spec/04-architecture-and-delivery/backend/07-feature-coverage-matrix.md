@@ -167,7 +167,7 @@ rules in [11](11-privacy-security-and-packaging.md).
 | ContentService | 12 read methods | 4 | BE1+BE3 | Mock |
 | TranscriptionService | capture/cancel/events | 1 | BE1+BE2+BE4 | Mock |
 | InjectorService | inject/repaste/clipboard | 1 | BE2+BE4 | Mock |
-| InferenceService | cleanup/agent/chat/note/run/ping | 1–5 | BE1+BE2+BE4 | Mock |
+| InferenceService | cleanup (pipeline) · agent/chat/note/run/ping (P5) | 1–5 | BE1+BE2+BE3 | Partial (cleanup wired; stub LLM engine) |
 | SettingsService | get/patch (secrets → Phase 2) | 0/2 | BE1+BE2+BE3+BE4 | **Implemented** (durable JSON, verified under Electron) |
 | HotkeyService | list/rebind/events | 2 | BE2+BE4 | Mock |
 | ModelCatalogService | list/download/hardware/discover/cache | 3 | BE1+BE2 | Mock |
@@ -191,3 +191,12 @@ rules in [11](11-privacy-security-and-packaging.md).
 > Electron + browser eval. **Zero frontend regression** throughout (`npm run verify` + `npm run eval`
 > clean; bundle stable). Note: `secrets→keychain` lands in Phase 2 (connections); SQLite is reserved
 > for Phase 4 relational data. Next: **Phase 1 — the dictation hot path**. See [14](14-implementation-plan.md).
+
+> **Phase 1 (hot path) — in progress.** The **pure text pipeline** is built and BE1-tested
+> (dictionary -> dictated-punctuation -> instruction-mode split -> `isClean` skip -> LLM refine
+> + fallback -> snippets; [app/electron/main/pipeline/](../../../../app/electron/main/pipeline/), 20
+> tests). **`InferenceService.cleanup`** runs the real pipeline behind the seam with an **injected
+> LLM engine** (a deterministic **stub** today; llama.cpp / a provider plugs into the same interface
+> later) — BE1/BE2/BE3 (**65 unit tests** total). **Audio capture/STT, text injection, and history
+> persistence are native/runtime edges** (contracts in [08](08-ipc-and-ports-contracts.md)/[12](12-audio-capture-and-os-integration.md));
+> the real binaries integrate at runtime/packaging. Zero frontend regression throughout.

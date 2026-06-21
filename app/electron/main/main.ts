@@ -6,6 +6,7 @@ import type { Platform } from "../../src/services/ports";
 import { checkContractVersion } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
 import { createSettingsStore, fileSettingsIO } from "./services/settings";
+import { createInferenceService, stubInferenceEngine } from "./services/inference";
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -27,6 +28,7 @@ function buildDispatch() {
       },
     },
     settings: createSettingsStore(fileSettingsIO(path.join(app.getPath("userData"), "settings.json"))),
+    inference: createInferenceService(stubInferenceEngine),
   });
 }
 

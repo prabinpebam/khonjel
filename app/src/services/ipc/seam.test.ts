@@ -22,6 +22,14 @@ const dispatch = createDispatch({
       return { toggles: { ...settingsState.toggles }, values: { ...settingsState.values } };
     },
   },
+  inference: {
+    cleanup: (input, options) => {
+      const trimmed = input.trim();
+      const looksClean = /^[A-Z].*[.!?]$/.test(trimmed);
+      const cleaned = options.cleanupEnabled !== false && !looksClean;
+      return { text: trimmed, cleaned, mode: "dictation" };
+    },
+  },
 });
 const ipcServices = createIpcServices((channel, ...args) => dispatch(channel, ...args), mockServices);
 
@@ -51,6 +59,14 @@ describe.each<[string, Services]>([
     await services.settings.patch({ values: { "stt.dictation.mode": "providers" } });
     const snapshot = await services.settings.get();
     expect(snapshot.values["stt.dictation.mode"]).toBe("providers");
+  });
+
+  it("inference.cleanup returns a structured result and skips already-clean text", async () => {
+    const clean = await services.inference.cleanup("This is already clean.", {});
+    expect(clean.cleaned).toBe(false);
+    expect(clean.mode).toBe("dictation");
+    const messy = await services.inference.cleanup("um so like the the thing", {});
+    expect(messy.cleaned).toBe(true);
   });
 
   it("content stays available (mock until Phase 4)", () => {

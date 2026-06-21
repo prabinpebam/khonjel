@@ -27,6 +27,30 @@ const SettingsPatchSchema = z.object({
   values: z.record(z.string(), z.string()).optional(),
 });
 
+const DictionaryEntrySchema = z
+  .object({
+    type: z.enum(["term", "substitution"]),
+    term: z.string().optional(),
+    trigger: z.string().optional(),
+    replacement: z.string().optional(),
+  })
+  .passthrough();
+
+const SnippetSchema = z.object({ trigger: z.string(), expansion: z.string() }).passthrough();
+
+const CleanupOptionsSchema = z.object({
+  cleanupEnabled: z.boolean().optional(),
+  agentName: z.string().optional(),
+  dictionary: z.array(DictionaryEntrySchema).optional(),
+  snippets: z.array(SnippetSchema).optional(),
+});
+
+const CleanupResultSchema = z.object({
+  text: z.string(),
+  cleaned: z.boolean(),
+  mode: z.enum(["dictation", "agent"]),
+});
+
 /** Request argument tuples (Phase 0 channels take no arguments; settings:patch takes a patch). */
 export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.profileGet]: z.tuple([]),
@@ -34,6 +58,7 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.systemGetPlatform]: z.tuple([]),
   [CHANNELS.settingsGet]: z.tuple([]),
   [CHANNELS.settingsPatch]: z.tuple([SettingsPatchSchema]),
+  [CHANNELS.inferenceCleanup]: z.tuple([z.string(), CleanupOptionsSchema]),
 };
 
 /** Response payload schemas. */
@@ -43,4 +68,5 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.systemGetPlatform]: PlatformSchema,
   [CHANNELS.settingsGet]: SettingsSnapshotSchema,
   [CHANNELS.settingsPatch]: SettingsSnapshotSchema,
+  [CHANNELS.inferenceCleanup]: CleanupResultSchema,
 };

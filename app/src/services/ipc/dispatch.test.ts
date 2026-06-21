@@ -13,6 +13,9 @@ const deps: DispatchDeps = {
     get: () => ({ toggles: {}, values: {} }),
     patch: (patch) => ({ toggles: { ...(patch.toggles ?? {}) }, values: { ...(patch.values ?? {}) } }),
   },
+  inference: {
+    cleanup: (input) => ({ text: input, cleaned: false, mode: "dictation" }),
+  },
 };
 
 describe("createDispatch", () => {
