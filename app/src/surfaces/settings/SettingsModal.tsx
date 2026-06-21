@@ -9,6 +9,7 @@ import { GeneralSettings } from "./sections/GeneralSettings";
 import { HotkeysSettings } from "./sections/HotkeysSettings";
 import { SpeechToTextSettings } from "./sections/SpeechToTextSettings";
 import { LanguageModelsSettings } from "./sections/LanguageModelsSettings";
+import { ConnectionsSettings } from "./sections/ConnectionsSettings";
 import { PrivacySettings } from "./sections/PrivacySettings";
 import { SystemSettings } from "./sections/SystemSettings";
 import { AccountSettings } from "./sections/AccountSettings";
@@ -19,6 +20,7 @@ const SECTIONS: Record<SettingsSectionId, ComponentType> = {
   hotkeys: HotkeysSettings,
   "speech-to-text": SpeechToTextSettings,
   "language-models": LanguageModelsSettings,
+  connections: ConnectionsSettings,
   privacy: PrivacySettings,
   system: SystemSettings,
   account: AccountSettings,

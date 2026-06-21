@@ -1,4 +1,5 @@
 import {
+  Cable,
   Cpu,
   KeyRound,
   Mic,
@@ -15,6 +16,7 @@ export type SettingsSectionId =
   | "hotkeys"
   | "speech-to-text"
   | "language-models"
+  | "connections"
   | "privacy"
   | "system"
   | "account"
@@ -45,6 +47,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     items: [
       { id: "speech-to-text", label: "Speech-to-Text", icon: Mic },
       { id: "language-models", label: "Language Models", icon: Sparkles },
+      { id: "connections", label: "Connections", icon: Cable },
     ],
   },
   {
