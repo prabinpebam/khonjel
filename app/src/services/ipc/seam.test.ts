@@ -47,6 +47,12 @@ const dispatch = createDispatch({
       connectionState = connectionState.filter((c) => c.id !== id);
       return [...connectionState];
     },
+    test: () => ({ ok: true }),
+  },
+  secrets: {
+    set: () => undefined,
+    has: () => false,
+    remove: () => undefined,
   },
   content: {
     history: () => [],

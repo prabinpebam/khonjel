@@ -20,4 +20,8 @@ export const mockConnectionService: ConnectionService = {
     profiles = profiles.filter((c) => c.id !== id);
     return [...profiles];
   },
+  async test() {
+    // Browser/dev has no provider egress; report a friendly stub result.
+    return { ok: true, message: "Mock: connection looks valid (no real request sent)." };
+  },
 };

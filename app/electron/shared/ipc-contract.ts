@@ -15,6 +15,7 @@ import type {
   CleanupOptions,
   CleanupResult,
   ConnectionProfile,
+  ConnectionTestResult,
   DictionaryEntry,
   Folder,
   HistoryDraft,
@@ -52,6 +53,10 @@ export const CHANNELS = {
   connectionsList: "connections:list",
   connectionsUpsert: "connections:upsert",
   connectionsRemove: "connections:remove",
+  connectionsTest: "connections:test",
+  secretsSet: "secrets:set",
+  secretsHas: "secrets:has",
+  secretsRemove: "secrets:remove",
   contentHistory: "content:history",
   contentInsights: "content:insights",
   contentChat: "content:chat",
@@ -83,6 +88,10 @@ export interface ChannelContract {
   "connections:list": { request: []; response: ConnectionProfile[] };
   "connections:upsert": { request: [ConnectionProfile]; response: ConnectionProfile[] };
   "connections:remove": { request: [string]; response: ConnectionProfile[] };
+  "connections:test": { request: [string, string]; response: ConnectionTestResult };
+  "secrets:set": { request: [string, string]; response: void };
+  "secrets:has": { request: [string]; response: boolean };
+  "secrets:remove": { request: [string]; response: void };
   "content:history": { request: []; response: HistoryEntry[] };
   "content:insights": { request: []; response: InsightsAggregate };
   "content:chat": { request: []; response: ChatMessage[] };

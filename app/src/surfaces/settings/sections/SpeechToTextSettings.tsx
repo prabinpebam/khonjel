@@ -32,7 +32,7 @@ export function SpeechToTextSettings() {
           <h3 className="mb-2 text-sm font-semibold text-foreground">Inference mode</h3>
           <InferenceModeSelector
             modeKey={`${prefix}.mode`}
-            modes={["local", "providers", "self-hosted", "cloud"]}
+            modes={["local", "providers", "self-hosted", "enterprise", "cloud"]}
           />
         </section>
 

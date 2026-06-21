@@ -93,6 +93,8 @@ const ConnectionProfileSchema = z.object({
 
 const ConnectionListSchema = z.array(ConnectionProfileSchema);
 
+const ConnectionTestResultSchema = z.object({ ok: z.boolean(), message: z.string().optional() });
+
 const HistoryEntrySchema = z
   .object({
     id: z.string(),
@@ -202,6 +204,10 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.connectionsList]: z.tuple([]),
   [CHANNELS.connectionsUpsert]: z.tuple([ConnectionProfileSchema]),
   [CHANNELS.connectionsRemove]: z.tuple([z.string()]),
+  [CHANNELS.connectionsTest]: z.tuple([z.string(), z.string()]),
+  [CHANNELS.secretsSet]: z.tuple([z.string(), z.string()]),
+  [CHANNELS.secretsHas]: z.tuple([z.string()]),
+  [CHANNELS.secretsRemove]: z.tuple([z.string()]),
   [CHANNELS.contentHistory]: z.tuple([]),
   [CHANNELS.contentInsights]: z.tuple([]),
   [CHANNELS.contentChat]: z.tuple([]),
@@ -231,6 +237,10 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.connectionsList]: ConnectionListSchema,
   [CHANNELS.connectionsUpsert]: ConnectionListSchema,
   [CHANNELS.connectionsRemove]: ConnectionListSchema,
+  [CHANNELS.connectionsTest]: ConnectionTestResultSchema,
+  [CHANNELS.secretsSet]: z.void(),
+  [CHANNELS.secretsHas]: z.boolean(),
+  [CHANNELS.secretsRemove]: z.void(),
   [CHANNELS.contentHistory]: z.array(HistoryEntrySchema),
   [CHANNELS.contentInsights]: InsightsAggregateSchema,
   [CHANNELS.contentChat]: z.array(ChatMessageSchema),

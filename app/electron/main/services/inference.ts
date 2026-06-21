@@ -9,6 +9,7 @@ import type { CleanupOptions, CleanupResult } from "../../../src/services/ports"
 import { runPipeline } from "../pipeline/index";
 import type { DictionaryRule, SnippetRule } from "../pipeline/types";
 import { resolvePrompt } from "../inference/prompts";
+import type { ProviderRouter } from "../providers/router";
 
 /** A single chat message at the engine layer (includes the system role). */
 export interface EngineMessage {
@@ -30,7 +31,15 @@ export interface InferenceServiceImpl {
   chat: (messages: { role: "user" | "assistant"; content: string }[]) => Promise<{ text: string }>;
 }
 
-export function createInferenceService(engine: InferenceEngine): InferenceServiceImpl {
+/** Cleanup token budget: ~2x the input, clamped (backend/10 SS4). */
+function cleanupMaxTokens(text: string): number {
+  return Math.min(2048, Math.max(100, text.length * 2));
+}
+
+export function createInferenceService(
+  engine: InferenceEngine,
+  router?: ProviderRouter,
+): InferenceServiceImpl {
   return {
     cleanup: async (input, options = {}) => {
       const dictionary: DictionaryRule[] = (options.dictionary ?? []).map((entry) => ({
@@ -49,24 +58,43 @@ export function createInferenceService(engine: InferenceEngine): InferenceServic
         snippets,
         agentName: options.agentName,
         cleanupEnabled: options.cleanupEnabled ?? true,
-        refine: engine.refine,
+        // Stage 3: a cloud-bound `llm.cleanup` slot refines remotely; otherwise the local engine.
+        // Cloud failure on this hot path silently falls back to local cleanup (never blocks).
+        refine: async (text) => {
+          try {
+            const cloud = await router?.completeForSlot(
+              "llm.cleanup",
+              [
+                { role: "system", content: resolvePrompt("cleanup") },
+                { role: "user", content: text },
+              ],
+              { maxTokens: cleanupMaxTokens(text) },
+            );
+            if (cloud != null) return cloud;
+          } catch {
+            // fall through to the local engine
+          }
+          return engine.refine(text);
+        },
         runAgent: engine.runAgent,
       });
 
       return { text: result.text, cleaned: result.cleaned, mode: result.mode };
     },
     chat: async (messages) => {
+      const full: EngineMessage[] = [
+        { role: "system", content: resolvePrompt("chat") },
+        ...messages.map((m) => ({ role: m.role, content: m.content })),
+      ];
+      // A cloud-bound `llm.chat` slot answers remotely (errors surface as IpcError); else local.
+      const cloud = await router?.completeForSlot("llm.chat", full, { maxTokens: 2048 });
+      if (cloud != null) return { text: cloud };
       if (!engine.chat) {
         return {
           text: "No chat model is configured. Connect one in Settings -> Language Models -> Chat, or download a local model.",
         };
       }
-      const full: EngineMessage[] = [
-        { role: "system", content: resolvePrompt("chat") },
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-      ];
-      const text = await engine.chat(full);
-      return { text };
+      return { text: await engine.chat(full) };
     },
   };
 }

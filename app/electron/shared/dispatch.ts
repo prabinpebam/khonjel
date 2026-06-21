@@ -16,6 +16,7 @@ import type {
   CleanupOptions,
   CleanupResult,
   ConnectionProfile,
+  ConnectionTestResult,
   DictionaryEntry,
   Folder,
   HistoryDraft,
@@ -58,6 +59,12 @@ export interface DispatchDeps {
     list: () => ConnectionProfile[] | Promise<ConnectionProfile[]>;
     upsert: (profile: ConnectionProfile) => ConnectionProfile[] | Promise<ConnectionProfile[]>;
     remove: (id: string) => ConnectionProfile[] | Promise<ConnectionProfile[]>;
+    test: (id: string, target: string) => ConnectionTestResult | Promise<ConnectionTestResult>;
+  };
+  secrets: {
+    set: (id: string, secret: string) => void | Promise<void>;
+    has: (id: string) => boolean | Promise<boolean>;
+    remove: (id: string) => void | Promise<void>;
   };
   content: {
     history: () => HistoryEntry[] | Promise<HistoryEntry[]>;
@@ -94,6 +101,10 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.connectionsList]: () => deps.connections.list(),
     [CHANNELS.connectionsUpsert]: (args) => deps.connections.upsert(args[0] as ConnectionProfile),
     [CHANNELS.connectionsRemove]: (args) => deps.connections.remove(args[0] as string),
+    [CHANNELS.connectionsTest]: (args) => deps.connections.test(args[0] as string, args[1] as string),
+    [CHANNELS.secretsSet]: (args) => deps.secrets.set(args[0] as string, args[1] as string),
+    [CHANNELS.secretsHas]: (args) => deps.secrets.has(args[0] as string),
+    [CHANNELS.secretsRemove]: (args) => deps.secrets.remove(args[0] as string),
     [CHANNELS.contentHistory]: () => deps.content.history(),
     [CHANNELS.contentInsights]: () => deps.content.insights(),
     [CHANNELS.contentChat]: () => deps.content.chat(),

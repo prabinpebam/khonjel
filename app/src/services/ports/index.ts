@@ -147,6 +147,23 @@ export interface ConnectionService {
   list(): Promise<ConnectionProfile[]>;
   upsert(profile: ConnectionProfile): Promise<ConnectionProfile[]>;
   remove(id: string): Promise<ConnectionProfile[]>;
+  /** Validate a connection + model/deployment with a minimal request. */
+  test(id: string, target: string): Promise<ConnectionTestResult>;
+}
+
+export interface ConnectionTestResult {
+  ok: boolean;
+  message?: string;
+}
+
+/**
+ * Provider API keys. The secret is sent once to main (set), encrypted at rest with the OS keychain
+ * (Electron safeStorage), and NEVER read back to the renderer — only presence (has) + delete.
+ */
+export interface SecretsService {
+  set(id: string, secret: string): Promise<void>;
+  has(id: string): Promise<boolean>;
+  remove(id: string): Promise<void>;
 }
 
 export type {
@@ -223,4 +240,5 @@ export interface Services {
   inference: InferenceService;
   transcription: TranscriptionService;
   connections: ConnectionService;
+  secrets: SecretsService;
 }

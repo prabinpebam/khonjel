@@ -73,6 +73,27 @@ test("electron seam: real system info + settings persist across restart", async 
     "ships builtin transforms on a fresh install",
   ).toBe(true);
 
+  // Provider connections: safeStorage keychain round-trips presence (never the value), and a bound
+  // connection is testable -- an unreachable endpoint fails gracefully with a structured result.
+  await page.evaluate(() => window.khonjel.invoke("secrets:set", "eval-conn", "test-key-123"));
+  const hasKey = await page.evaluate(() => window.khonjel.invoke("secrets:has", "eval-conn"));
+  expect(hasKey, "secret presence tracked via safeStorage").toBe(true);
+
+  await page.evaluate(() =>
+    window.khonjel.invoke("connections:upsert", {
+      id: "eval-conn",
+      kind: "azure-openai",
+      baseEndpoint: "http://127.0.0.1:9",
+      apiVersion: "2024-12-01-preview",
+      authMode: "bearer-token",
+    }),
+  );
+  const testResult = await page.evaluate(() =>
+    window.khonjel.invoke("connections:test", "eval-conn", "my-deployment"),
+  );
+  expect(typeof testResult.ok, "connections:test returns a structured result").toBe("boolean");
+  expect(testResult.ok, "unreachable provider endpoint reports not-ok (graceful)").toBe(false);
+
   await page.evaluate(() => window.khonjel.invoke("settings:patch", { values: { "eval.persist": "yes" } }));
   await app.close();
 

@@ -168,6 +168,56 @@ Implementation:
 > (`baseEndpoint=user URL`, `target=model id`). Azure only adds `apiVersion` + deployment routing —
 > so supporting Azure also generalizes every other endpoint-style provider.
 
+## 3b. Reference request shapes (verbatim — captured so we never re-derive from Azure docs)
+
+> Everything below is **configuration**: `endpoint`, `deployment`, `api-version`, `model`, and the
+> key are user data on a `ConnectionProfile` + slot binding. The literals are illustrative only.
+
+**Azure STT — transcription (`POST …/audio/transcriptions`, multipart):**
+```bash
+curl -X POST "https://<resource>.cognitiveservices.azure.com/openai/deployments/<deployment>/audio/transcriptions?api-version=<api-version>" \
+  -H "Authorization: Bearer $AZURE_API_KEY" \
+  -F "model=<deployment>" \
+  -F "file=@audio.wav"
+# auth.mode=api-key-header sends `api-key: $AZURE_API_KEY` instead of the Bearer header.
+# Content-Type is multipart/form-data (set automatically by the form encoder, with boundary).
+```
+
+**Azure LLM — chat completions (`POST …/chat/completions`, JSON), single + multi-turn:**
+```jsonc
+// URL: https://<resource>.cognitiveservices.azure.com/openai/deployments/<deployment>/chat/completions?api-version=<api-version>
+// Headers: Authorization: Bearer <key>  (or  api-key: <key>) ; Content-Type: application/json
+{
+  "model": "<deployment>",                 // Azure: the URL deployment is authoritative
+  "max_completion_tokens": 16384,          // Azure/newer models REQUIRE this; never send max_tokens
+  "messages": [
+    { "role": "system", "content": "You are a helpful assistant." },
+    { "role": "user", "content": "I am going to Paris, what should I see?" },
+    { "role": "assistant", "content": "… prior reply …" },   // full prior turns are sent back
+    { "role": "user", "content": "What is so great about #1?" }
+  ]
+}
+```
+Multi-turn = the renderer sends the **whole conversation** (system + all prior user/assistant turns +
+the new user turn); the backend forwards it unchanged. `response.choices[0].message.content` is the reply.
+
+**Slot → connection binding** (the renderer writes these flat settings keys; main resolves them):
+```
+{slot}.mode          = local | self-hosted | providers | enterprise | cloud
+{slot}.connectionId  = <ConnectionProfile.id>     // for self-hosted/providers/enterprise
+{slot}.target        = <model id | Azure deployment name>
+# slots: stt.dictation, stt.note, llm.cleanup, llm.agent, llm.note, llm.chat
+```
+When a slot resolves to a bound connection, `InferenceService.cleanup/chat` and
+`TranscriptionService.transcribe` route to the provider (via `proxyFetch`) instead of the local
+engine; otherwise they stay local. A missing/erroring provider surfaces a structured `IpcError`.
+
+**Keychain = Electron `safeStorage`** (decided): the per-connection secret is encrypted with
+`safeStorage.encryptString` and persisted to `<userData>/secrets.json` (a `{ id: cipher }` map).
+Renderer sets it once via `secrets:set(id, key)`; it is **never read back to the renderer** — only
+`secrets:has(id)` / `secrets:delete(id)` are exposed. `connections:test(id, target)` does a minimal
+chat ping (1 token) and reports `{ ok, message }`.
+
 ## 4. Config resolution (request → provider call)
 
 ```mermaid

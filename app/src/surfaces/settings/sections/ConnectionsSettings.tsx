@@ -37,20 +37,30 @@ const EMPTY: ConnectionProfile = {
 
 /** Provider connection profiles (cloud/self-hosted/Azure). Backed by the real ConnectionService. */
 export function ConnectionsSettings() {
-  const { connections } = useServices();
+  const { connections, secrets } = useServices();
   const [list, setList] = useState<ConnectionProfile[]>([]);
+  const [keyed, setKeyed] = useState<Record<string, boolean>>({});
   const [draft, setDraft] = useState<ConnectionProfile>(EMPTY);
+  const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
-    void connections.list().then((l) => {
-      if (live) setList(l);
+    void connections.list().then(async (l) => {
+      if (!live) return;
+      setList(l);
+      const flags: Record<string, boolean> = {};
+      await Promise.all(
+        l.map(async (c) => {
+          flags[c.id] = await secrets.has(c.id);
+        }),
+      );
+      if (live) setKeyed(flags);
     });
     return () => {
       live = false;
     };
-  }, [connections]);
+  }, [connections, secrets]);
 
   const isAzure = draft.kind === "azure-openai";
 
@@ -69,12 +79,23 @@ export function ConnectionsSettings() {
       headerName: draft.authMode === "api-key-header" ? draft.headerName?.trim() || "api-key" : undefined,
       apiVersion: isAzure ? draft.apiVersion?.trim() || undefined : undefined,
     };
-    setList(await connections.upsert(profile));
+    const next = await connections.upsert(profile);
+    if (apiKey.trim()) {
+      await secrets.set(id, apiKey.trim());
+      setKeyed((k) => ({ ...k, [id]: true }));
+    }
+    setList(next);
     setDraft(EMPTY);
+    setApiKey("");
   }
 
   async function remove(id: string) {
     setList(await connections.remove(id));
+    setKeyed((k) => {
+      const next = { ...k };
+      delete next[id];
+      return next;
+    });
   }
 
   return (
@@ -99,6 +120,15 @@ export function ConnectionsSettings() {
                     {profile.kind} · {profile.baseEndpoint}
                   </p>
                 </div>
+                <span
+                  className={`shrink-0 rounded-pill border px-2 py-0.5 text-xs ${
+                    keyed[profile.id]
+                      ? "border-border text-muted-foreground"
+                      : "border-danger text-danger"
+                  }`}
+                >
+                  {keyed[profile.id] ? "Key set" : "No key"}
+                </span>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -173,6 +203,16 @@ export function ConnectionsSettings() {
               />
             </div>
           ) : null}
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="conn-key">API key</Label>
+            <Input
+              id="conn-key"
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="Stored encrypted in your OS keychain (safeStorage); never shown again"
+            />
+          </div>
         </div>
         {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
         <Button className="mt-4" onClick={() => void save()}>

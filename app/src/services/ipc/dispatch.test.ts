@@ -24,6 +24,12 @@ const deps: DispatchDeps = {
     list: () => [],
     upsert: (profile) => [profile],
     remove: () => [],
+    test: () => ({ ok: true }),
+  },
+  secrets: {
+    set: () => undefined,
+    has: () => false,
+    remove: () => undefined,
   },
   content: {
     history: () => [],

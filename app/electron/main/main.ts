@@ -16,6 +16,11 @@ import * as win32 from "./injection/win32";
 import { createHotkeyManager, type HotkeyManager } from "./hotkeys";
 import { createConnectionStore } from "./services/connections";
 import { createContentStore } from "./services/content";
+import { createSecretStore } from "./secrets/store";
+import { safeStorageCipher } from "./secrets/safeStorageCipher";
+import { createProviderRouter } from "./providers/router";
+import { proxyFetch } from "./providers/proxyFetch";
+import { testConnection } from "./providers/test";
 import { listModels } from "./models/catalog";
 import { computeInsights } from "./insights/compute";
 
@@ -29,12 +34,27 @@ let hotkeyManager: HotkeyManager | null = null;
  * (JSON file); later phases inject the db, keychain, inference, etc.
  */
 function buildDispatch(inferenceRuntime: InferenceRuntime) {
+  const userData = app.getPath("userData");
   const injector = createInjector({
     writeClipboard: win32.writeClipboard,
     paste: win32.paste,
     typeText: win32.typeText,
     getForegroundApp: win32.getForegroundApp,
   });
+
+  // Durable stores (native-free JSON files) + the secret keychain (Electron safeStorage).
+  const settingsStore = createSettingsStore(fileSettingsIO(path.join(userData, "settings.json")));
+  const connectionStore = createConnectionStore(fileSettingsIO(path.join(userData, "connections.json")));
+  const secretStore = createSecretStore(fileSettingsIO(path.join(userData, "secrets.json")), safeStorageCipher);
+
+  // The provider router resolves a slot's binding (settings) -> connection + secret -> proxyFetch.
+  const router = createProviderRouter({
+    getSettings: () => settingsStore.get(),
+    getConnection: (id) => connectionStore.list().find((c) => c.id === id),
+    getSecret: (id) => secretStore.get(id),
+    fetch: proxyFetch,
+  });
+
   return createDispatch({
     profile: {
       get: () => ({ id: "local", name: "You" }),
@@ -47,15 +67,16 @@ function buildDispatch(inferenceRuntime: InferenceRuntime) {
       },
       injectText: (text) => injector.inject(text),
     },
-    settings: createSettingsStore(fileSettingsIO(path.join(app.getPath("userData"), "settings.json"))),
-    inference: createInferenceService(inferenceRuntime.engine),
+    settings: settingsStore,
+    inference: createInferenceService(inferenceRuntime.engine, router),
     transcription: createTranscriptionService({
       transcriber: resolveTranscriber({
-        userDataDir: app.getPath("userData"),
+        userDataDir: userData,
         appDir: path.join(__dirname, ".."),
         isWindows: process.platform === "win32",
         env: process.env,
       }),
+      router,
       writeTempWav: (bytes) => {
         const file = path.join(
           app.getPath("temp"),
@@ -72,11 +93,28 @@ function buildDispatch(inferenceRuntime: InferenceRuntime) {
         }
       },
     }),
-    connections: createConnectionStore(
-      fileSettingsIO(path.join(app.getPath("userData"), "connections.json")),
-    ),
+    connections: {
+      list: () => connectionStore.list(),
+      upsert: (profile) => connectionStore.upsert(profile),
+      remove: (id) => {
+        secretStore.remove(id); // drop the orphaned key with the profile
+        return connectionStore.remove(id);
+      },
+      test: (id, target) =>
+        testConnection(
+          connectionStore.list().find((c) => c.id === id),
+          secretStore.get(id) ?? "",
+          target,
+          proxyFetch.json,
+        ),
+    },
+    secrets: {
+      set: (id, secret) => secretStore.set(id, secret),
+      has: (id) => secretStore.has(id),
+      remove: (id) => secretStore.remove(id),
+    },
     content: createContentStore(
-      fileSettingsIO(path.join(app.getPath("userData"), "content.json")),
+      fileSettingsIO(path.join(userData, "content.json")),
       { listModels, computeInsights },
     ),
   });

@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Check, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 import type { ReactNode } from "react";
+import { useServices } from "@services";
 import { useSettingsStore } from "@stores/settings";
-import type { ModelInfo } from "@services/ports";
+import type { ConnectionProfile, ConnectionTestResult, ModelInfo } from "@services/ports";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 import { Label } from "@components/ui/label";
@@ -22,31 +23,6 @@ const MODE_META: Record<InferenceMode, { label: string; description: string }> =
 
 /** Modes shown as non-selectable placeholders (planned, not yet available). */
 const PLACEHOLDER_MODES = new Set<InferenceMode>(["cloud"]);
-
-const STT_PROVIDERS = ["Deepgram", "AssemblyAI", "ElevenLabs", "Speechmatics", "Mistral Voxtral", "xAI", "Custom"];
-const LLM_PROVIDERS = [
-  "OpenAI",
-  "Anthropic",
-  "Google Gemini",
-  "Groq",
-  "Mistral",
-  "DeepSeek",
-  "xAI",
-  "Cohere",
-  "Together",
-  "OpenRouter",
-  "Perplexity",
-  "Custom",
-];
-const HELPERS = ["Ollama", "LM Studio", "vLLM", "llama-server"];
-const ENTERPRISE = ["AWS Bedrock", "Azure OpenAI", "Google Vertex"];
-
-function toOptions(values: string[]) {
-  return values.map((v) => {
-    const value = v.toLowerCase().replace(/\s+/g, "-");
-    return { value, label: v, icon: <ProviderIcon provider={value} /> };
-  });
-}
 
 export function InferenceModeSelector({ modeKey, modes }: { modeKey: string; modes: InferenceMode[] }) {
   const value = useSettingsStore((s) => s.values[modeKey] ?? "local");
@@ -131,31 +107,6 @@ function ValueSelect({
   );
 }
 
-function PasswordInput({ valueKey, placeholder }: { valueKey: string; placeholder?: string }) {
-  const value = useSettingsStore((s) => s.values[valueKey] ?? "");
-  const setValue = useSettingsStore((s) => s.setValue);
-  const [show, setShow] = useState(false);
-  return (
-    <div className="relative">
-      <Input
-        type={show ? "text" : "password"}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => setValue(valueKey, e.target.value)}
-        className="pe-9"
-      />
-      <button
-        type="button"
-        aria-label={show ? "Hide value" : "Show value"}
-        onClick={() => setShow((v) => !v)}
-        className="absolute top-1/2 -translate-y-1/2 text-tertiary-foreground end-2"
-      >
-        {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-      </button>
-    </div>
-  );
-}
-
 function modelOptions(models: ModelInfo[]) {
   return models.map((m) => ({
     value: m.id,
@@ -182,62 +133,8 @@ export function InferenceConfigBlock({
     );
   }
 
-  if (mode === "providers") {
-    return (
-      <div className="flex flex-col gap-4">
-        <Field label="Provider">
-          <ValueSelect
-            valueKey={`${prefix}.provider`}
-            options={toOptions(kind === "stt" ? STT_PROVIDERS : LLM_PROVIDERS)}
-          />
-        </Field>
-        <Field label="API key">
-          <PasswordInput valueKey={`${prefix}.apiKey`} placeholder="sk-…" />
-        </Field>
-        <Field label="Model">
-          <ValueSelect valueKey={`${prefix}.model`} options={modelOptions(models)} />
-        </Field>
-      </div>
-    );
-  }
-
-  if (mode === "self-hosted") {
-    return (
-      <div className="flex flex-col gap-4">
-        <Field label="Base URL">
-          <ValueInput valueKey={`${prefix}.baseUrl`} placeholder="http://localhost:8000" />
-        </Field>
-        <Field label="Helper">
-          <ValueSelect valueKey={`${prefix}.helper`} options={toOptions(HELPERS)} />
-        </Field>
-        <Field label="API key (optional)">
-          <PasswordInput valueKey={`${prefix}.apiKey`} placeholder="Bearer token" />
-        </Field>
-        <Button variant="secondary" size="sm" className="self-start">
-          <RefreshCw />
-          Refresh models
-        </Button>
-      </div>
-    );
-  }
-
-  if (mode === "enterprise") {
-    return (
-      <div className="flex flex-col gap-4">
-        <Field label="Provider">
-          <ValueSelect valueKey={`${prefix}.enterprise`} options={toOptions(ENTERPRISE)} />
-        </Field>
-        <Field label="Region">
-          <ValueInput valueKey={`${prefix}.region`} placeholder="us-east-1" />
-        </Field>
-        <Field label="Deployment">
-          <ValueInput valueKey={`${prefix}.deployment`} placeholder="deployment name" />
-        </Field>
-        <Button variant="secondary" size="sm" className="self-start">
-          Test connection
-        </Button>
-      </div>
-    );
+  if (mode === "providers" || mode === "enterprise" || mode === "self-hosted") {
+    return <ConnectionSlotConfig prefix={prefix} />;
   }
 
   // local
@@ -284,6 +181,92 @@ function LocalProviderPicker({ valueKey }: { valueKey: string }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Cloud / self-hosted / enterprise slot config: bind this slot to a saved Connection (created in
+ * Settings -> Connections, including Azure OpenAI and custom OpenAI-compatible URLs) plus a model /
+ * deployment, and test it. Writes `{prefix}.connectionId` + `{prefix}.target` to settings, which
+ * the main-process provider router reads to route the request.
+ */
+function ConnectionSlotConfig({ prefix }: { prefix: string }) {
+  const { connections } = useServices();
+  const [list, setList] = useState<ConnectionProfile[]>([]);
+  const connectionId = useSettingsStore((s) => s.values[`${prefix}.connectionId`] ?? "");
+  const target = useSettingsStore((s) => s.values[`${prefix}.target`] ?? "");
+  const setValue = useSettingsStore((s) => s.setValue);
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<ConnectionTestResult | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void connections.list().then((l) => {
+      if (live) setList(l);
+    });
+    return () => {
+      live = false;
+    };
+  }, [connections]);
+
+  async function runTest() {
+    if (!connectionId) return;
+    setTesting(true);
+    setResult(null);
+    try {
+      setResult(await connections.test(connectionId, target));
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  if (list.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No connections yet. Add one in Settings -&gt; Connections (Azure OpenAI, an OpenAI-compatible
+        custom URL, or a provider), then select it here.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Field label="Connection">
+        <Select
+          aria-label="Connection"
+          value={connectionId}
+          onValueChange={(v) => setValue(`${prefix}.connectionId`, v)}
+          options={list.map((c) => ({
+            value: c.id,
+            label: `${c.id} (${c.kind})`,
+            icon: <ProviderIcon provider={c.kind} />,
+          }))}
+          placeholder="Select a connection"
+        />
+      </Field>
+      <Field label="Model / deployment">
+        <ValueInput
+          valueKey={`${prefix}.target`}
+          placeholder="e.g. gpt-4o-transcribe, or your Azure deployment name"
+        />
+      </Field>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="self-start"
+          disabled={!connectionId || testing}
+          onClick={() => void runTest()}
+        >
+          {testing ? "Testing connection" : "Test connection"}
+        </Button>
+        {result ? (
+          <span className={cn("text-sm", result.ok ? "text-accent" : "text-danger")}>
+            {result.ok ? "Connected" : (result.message ?? "Failed")}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

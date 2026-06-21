@@ -9,10 +9,13 @@
 import { ipcError } from "../../shared/ipc-contract";
 import type { TranscriptionRequest, TranscriptionResult } from "../../../src/services/ports";
 import type { Transcriber } from "../stt/whisper";
+import type { ProviderRouter } from "../providers/router";
 
 export interface TranscriptionDeps {
   /** Undefined when no STT model/binary is available. */
   transcriber?: Transcriber;
+  /** Cloud STT router (Azure/OpenAI); when a slot is bound it takes precedence over local whisper. */
+  router?: ProviderRouter;
   /** Persist decoded WAV bytes to a temp path and return it. */
   writeTempWav: (bytes: Buffer) => string;
   /** Remove a temp file (best-effort). */
@@ -26,15 +29,23 @@ export interface TranscriptionServiceImpl {
 export function createTranscriptionService(deps: TranscriptionDeps): TranscriptionServiceImpl {
   return {
     transcribe: async (req) => {
+      const bytes = Buffer.from(req.audioBase64, "base64");
+      if (bytes.length === 0) {
+        throw ipcError("validation", "Empty audio payload.");
+      }
+      // A cloud-bound `stt.dictation` slot transcribes remotely (Azure/OpenAI); errors surface as
+      // IpcError(provider_error). Otherwise fall back to the local whisper engine.
+      const cloud = await deps.router?.transcribeForSlot("stt.dictation", bytes, {
+        language: req.language,
+      });
+      if (cloud != null) {
+        return { text: cloud };
+      }
       if (!deps.transcriber) {
         throw ipcError(
           "model_unavailable",
           "No speech-to-text model is installed. Run `npm run fetch:whisper` or pick a model in Settings.",
         );
-      }
-      const bytes = Buffer.from(req.audioBase64, "base64");
-      if (bytes.length === 0) {
-        throw ipcError("validation", "Empty audio payload.");
       }
       const wavPath = deps.writeTempWav(bytes);
       try {
