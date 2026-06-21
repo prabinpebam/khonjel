@@ -27,11 +27,6 @@ export function PrivacySettings() {
   return (
     <div>
       <SettingGroup label="Privacy">
-        <ToggleRow
-          title="Cloud backup"
-          subtitle="Encrypted sync across your devices (requires sign-in)."
-          settingKey="cloudBackup"
-        />
         <SettingRow
           title="Usage analytics"
           subtitle="No data is collected."

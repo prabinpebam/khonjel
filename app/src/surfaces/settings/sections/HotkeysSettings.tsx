@@ -123,30 +123,6 @@ export function HotkeysSettings() {
             />
           }
         />
-        <HotkeyRow
-          title="Voice Agent"
-          subtitle="Send speech to the AI agent as a command."
-          settingKey="hotkey.voiceAgent"
-        />
-        <HotkeyRow
-          title="Meeting Mode"
-          subtitle="Start live meeting transcription."
-          settingKey="hotkey.meeting"
-          extra={
-            <InlineSelect
-              settingKey="hotkey.meeting.layout"
-              options={[
-                { value: "side-panel", label: "Side panel" },
-                { value: "full-width", label: "Full width" },
-              ]}
-            />
-          }
-        />
-        <HotkeyRow
-          title="Chat Agent"
-          subtitle="Open the chat agent overlay."
-          settingKey="hotkey.chatAgent"
-        />
       </SettingGroup>
     </div>
   );

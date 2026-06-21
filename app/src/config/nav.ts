@@ -1,7 +1,6 @@
 import {
   BarChart3,
   BookOpen,
-  Blocks,
   Home,
   MessageSquare,
   NotebookPen,
@@ -17,8 +16,7 @@ export type NavId =
   | "notes"
   | "upload"
   | "dictionary"
-  | "transforms"
-  | "integrations";
+  | "transforms";
 
 export interface NavItem {
   id: NavId;
@@ -37,5 +35,4 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "upload", label: "Upload", icon: Upload, color: "text-cat-upload" },
   { id: "dictionary", label: "Dictionary", icon: BookOpen, color: "text-cat-dictionary" },
   { id: "transforms", label: "Transforms", icon: Shuffle, color: "text-cat-transforms" },
-  { id: "integrations", label: "Integrations", icon: Blocks, color: "text-cat-integrations" },
 ];

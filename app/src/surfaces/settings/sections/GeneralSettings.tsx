@@ -53,19 +53,6 @@ function MicDeviceRow() {
   );
 }
 
-const LOCALES = [
-  { value: "en", label: "English" },
-  { value: "es", label: "Spanish" },
-  { value: "fr", label: "French" },
-  { value: "de", label: "German" },
-  { value: "ja", label: "Japanese" },
-  { value: "zh-CN", label: "Chinese (Simplified)" },
-  { value: "pt-BR", label: "Portuguese (Brazil)" },
-  { value: "ko", label: "Korean" },
-  { value: "it", label: "Italian" },
-  { value: "ru", label: "Russian" },
-];
-
 export function GeneralSettings() {
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
@@ -95,17 +82,6 @@ export function GeneralSettings() {
         <ToggleRow title="Pause media while dictating" settingKey="pauseMedia" />
       </SettingGroup>
 
-      <SettingGroup label="Notifications">
-        <ToggleRow title="Disable all notifications" settingKey="disableNotifications" />
-        <ToggleRow
-          title="Meeting detection"
-          subtitle="Detect Zoom, Teams, and FaceTime calls."
-          settingKey="meetingDetection"
-        />
-        <ToggleRow title="Calendar reminders" settingKey="calendarReminders" />
-        <ToggleRow title="Update notifications" settingKey="updates" />
-      </SettingGroup>
-
       <SettingGroup label="Clipboard">
         <ToggleRow title="Auto-paste at cursor" settingKey="autoPaste" />
         <ToggleRow title="Keep transcription in clipboard" settingKey="keepInClipboard" />
@@ -133,7 +109,6 @@ export function GeneralSettings() {
       </SettingGroup>
 
       <SettingGroup label="Language">
-        <SelectRow title="Interface language" settingKey="uiLanguage" options={LOCALES} />
         <SelectRow
           title="Transcription language"
           settingKey="transcriptionLanguage"

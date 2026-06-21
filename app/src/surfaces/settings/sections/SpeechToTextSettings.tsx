@@ -40,24 +40,15 @@ export function SpeechToTextSettings() {
           <InferenceConfigBlock prefix={prefix} kind="stt" models={models} />
         </section>
 
-        <SettingGroup label="Options">
-          {tab === "dictation" ? (
+        {tab === "dictation" ? (
+          <SettingGroup label="Options">
             <ToggleRow
               title="Transcription preview"
-              subtitle="Show a live HUD while you speak."
+              subtitle="Show the floating bar while you speak."
               settingKey="stt.dictation.preview"
             />
-          ) : (
-            <>
-              <ToggleRow
-                title="Diarization"
-                subtitle="Identify and label speakers."
-                settingKey="stt.note.diarization"
-              />
-              <ToggleRow title="Speaker labels" settingKey="stt.note.speakerLabels" />
-            </>
-          )}
-        </SettingGroup>
+          </SettingGroup>
+        ) : null}
       </div>
     </div>
   );

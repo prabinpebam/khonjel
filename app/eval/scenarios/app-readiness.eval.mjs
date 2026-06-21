@@ -11,7 +11,7 @@ import { test, expect } from "@playwright/test";
 import { createDomEvalRecorder } from "../recorder/dom-eval-recorder.mjs";
 
 // The 8 primary views are a product contract (src/config/nav.ts).
-const NAV_IDS = ["home", "insights", "chat", "notes", "upload", "dictionary", "transforms", "integrations"];
+const NAV_IDS = ["home", "insights", "chat", "notes", "upload", "dictionary", "transforms"];
 
 test("S1 — shell is ready and every primary view is reachable and non-blank", async ({ page }) => {
   const recorder = createDomEvalRecorder(page, {

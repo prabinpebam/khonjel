@@ -8,7 +8,6 @@ import { Notes } from "@features/notes/Notes";
 import { Upload } from "@features/upload/Upload";
 import { Dictionary } from "@features/dictionary/Dictionary";
 import { Transforms } from "@features/transforms/Transforms";
-import { Integrations } from "@features/integrations/Integrations";
 import { SettingsModal } from "@surfaces/settings/SettingsModal";
 import { CommandPalette } from "@surfaces/command/CommandPalette";
 import { TitleBar } from "./TitleBar";
@@ -23,7 +22,6 @@ const VIEWS: Record<NavId, ComponentType> = {
   upload: Upload,
   dictionary: Dictionary,
   transforms: Transforms,
-  integrations: Integrations,
 };
 
 /** The primary desktop window: title bar + sidebar + floating content panel. */

@@ -12,8 +12,6 @@ import { LanguageModelsSettings } from "./sections/LanguageModelsSettings";
 import { ConnectionsSettings } from "./sections/ConnectionsSettings";
 import { PrivacySettings } from "./sections/PrivacySettings";
 import { SystemSettings } from "./sections/SystemSettings";
-import { AccountSettings } from "./sections/AccountSettings";
-import { WorkspaceSettings } from "./sections/WorkspaceSettings";
 
 const SECTIONS: Record<SettingsSectionId, ComponentType> = {
   general: GeneralSettings,
@@ -23,8 +21,6 @@ const SECTIONS: Record<SettingsSectionId, ComponentType> = {
   connections: ConnectionsSettings,
   privacy: PrivacySettings,
   system: SystemSettings,
-  account: AccountSettings,
-  workspace: WorkspaceSettings,
 };
 
 export function SettingsModal() {

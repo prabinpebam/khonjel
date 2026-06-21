@@ -11,7 +11,7 @@ Goal: no UI that lies. Every control must either **do something real** or **not 
 - **REMOVE** — delete/hide the control because the feature needs unbuilt infrastructure (keeps the UI honest).
 - **SOFTEN** — replace a fake indicator with an honest one.
 
-> Progress: **14 / 64 done** (updated as work proceeds).
+> Progress: **32 / 64 done** (updated as work proceeds).
 >
 > **Decisions (from review):**
 > - Cloud/team features (Account, Workspace, cloud backup, Integrations OAuth) -> **REMOVE** the non-functional UI.
@@ -29,17 +29,17 @@ Goal: no UI that lies. Every control must either **do something real** or **not 
 - [ ] **A4** System → "Open" (model cache folder) — IMPLEMENT (open userData/models in OS).
 - [ ] **A5** System → "Clear cache" — IMPLEMENT (delete downloaded models, confirm).
 - [ ] **A6** System → "Reset all data" — IMPLEMENT (wipe settings/content/audio + relaunch, confirm).
-- [ ] **A7** Account → "Delete account" — REMOVE (no cloud account).
-- [ ] **A8** Account → "Sign in/out" (fake `useState`) — REMOVE (no auth backend).
-- [ ] **A9** Workspace → "Invite" — REMOVE (no team backend).
-- [ ] **A10** Workspace → "Create team" — REMOVE (no team backend).
+- [x] **A7** Account → "Delete account" — REMOVE (no cloud account).
+- [x] **A8** Account → "Sign in/out" (fake `useState`) — REMOVE (no auth backend).
+- [x] **A9** Workspace → "Invite" — REMOVE (no team backend).
+- [x] **A10** Workspace → "Create team" — REMOVE (no team backend).
 
 ## B. Cosmetic mock sections / fake data
 
-- [ ] **B1** AccountSettings is a fake mock — REMOVE/replace with honest "local-only" copy.
-- [ ] **B2** WorkspaceSettings hardcoded members/teams — REMOVE the section + nav entry.
+- [x] **B1** AccountSettings is a fake mock — REMOVE/replace with honest "local-only" copy.
+- [x] **B2** WorkspaceSettings hardcoded members/teams — REMOVE the section + nav entry.
 - [ ] **B3** System fake version/log-size/cache-size — WIRE to real values (app.getVersion, fs sizes).
-- [ ] **B4** Integrations fake connect/disconnect (no OAuth) — REMOVE fake status; link to real setup.
+- [x] **B4** Integrations fake connect/disconnect (no OAuth) — REMOVE fake status; link to real setup.
 - [ ] **B5** Sidebar "Ready" dot always green — SOFTEN (reflect real model availability or drop the word).
 - [ ] **B6** Insights "Your Voice" placeholder tab — REMOVE tab (re-add when built).
 - [ ] **B7** Dictionary "Shared with team" scope + Team badges — REMOVE team scope (no sharing).
@@ -50,10 +50,10 @@ Goal: no UI that lies. Every control must either **do something real** or **not 
 - [x] **C2** `preferBuiltInMic` — WIRE (bias default device selection). _Done: resolveMicDeviceId picks a built-in input when no explicit device._
 - [ ] **C3** `dictationSounds` — IMPLEMENT (play start/stop cue) or REMOVE.
 - [ ] **C4** `pauseMedia` — REMOVE (no reliable media-pause without extra APIs).
-- [ ] **C5** `disableNotifications` — WIRE once a notification exists (see C8), else REMOVE.
-- [ ] **C6** `meetingDetection` — REMOVE (no meeting detection surface).
-- [ ] **C7** `calendarReminders` — REMOVE (no calendar integration).
-- [ ] **C8** `updates` notifications — REMOVE (no updater).
+- [x] **C5** `disableNotifications` — WIRE once a notification exists (see C8), else REMOVE.
+- [x] **C6** `meetingDetection` — REMOVE (no meeting detection surface).
+- [x] **C7** `calendarReminders` — REMOVE (no calendar integration).
+- [x] **C8** `updates` notifications — REMOVE (no updater).
 - [ ] **C9** `autoDetectCalls` — REMOVE (orphan default, no UI, no backend).
 - [ ] **C10** `autoPaste` — WIRE (gate inject strategy: paste vs leave-in-clipboard).
 - [ ] **C11** `keepInClipboard` — WIRE (keep transcript on clipboard after inject).
@@ -63,16 +63,16 @@ Goal: no UI that lies. Every control must either **do something real** or **not 
 - [ ] **C15** `saveNotesAsFiles` — IMPLEMENT (write notes to disk) or REMOVE.
 - [x] **C16** `floatingAutoHide` — WIRE (auto-hide the floating bar when idle/unfocused). _Done: bar hides on idle when on; pinned visible when off._
 - [x] **C17** `floatingStartPosition` — WIRE (position the floating bar). _Done: bottom-right / center / bottom-left honored._
-- [ ] **C18** `uiLanguage` — REMOVE (no i18n).
+- [x] **C18** `uiLanguage` — REMOVE (no i18n).
 - [ ] **C19** `transcriptionLanguage` — WIRE (pass language to STT) or REMOVE (en-only model).
-- [ ] **C20** `cloudBackup` — REMOVE (no sync).
+- [x] **C20** `cloudBackup` — REMOVE (no sync).
 - [ ] **C21** `audioRetentionDays` — IMPLEMENT (retention cleanup) or REMOVE.
 - [x] **C22** `saveHistory` — WIRE (gate addHistory). _Done: dictation only records history when enabled._
 - [ ] **C23** `includeDiscarded` — REMOVE (no discard flow).
 - [ ] **C24** `loggingLevel` — WIRE (set main log level) or REMOVE.
 - [x] **C25** `stt.dictation.preview` — WIRE (toggle the floating bar HUD). _Done: when off, dictation still records/injects but the bar stays hidden._
-- [ ] **C26** `stt.note.diarization` — REMOVE (no diarization/note-record surface).
-- [ ] **C27** `stt.note.speakerLabels` — REMOVE (same).
+- [x] **C26** `stt.note.diarization` — REMOVE (no diarization/note-record surface).
+- [x] **C27** `stt.note.speakerLabels` — REMOVE (same).
 - [x] **C28** `llm.cleanup.enabled` — WIRE (pass cleanupEnabled from renderer). _Done: useDictation passes the toggle into cleanup._
 - [ ] **C29** `llm.cleanup.systemPrompt` — WIRE (use as cleanup system prompt).
 - [ ] **C30** `llm.chat.systemPrompt` — WIRE (use as chat system prompt).
@@ -83,9 +83,9 @@ Goal: no UI that lies. Every control must either **do something real** or **not 
 
 ## D. Hotkeys
 
-- [ ] **D1** `hotkey.voiceAgent` never registered — REMOVE (no voice-agent surface).
-- [ ] **D2** `hotkey.meeting` (+layout) never registered — REMOVE (no meeting surface).
-- [ ] **D3** `hotkey.chatAgent` never registered — REMOVE (no chat overlay).
+- [x] **D1** `hotkey.voiceAgent` never registered — REMOVE (no voice-agent surface).
+- [x] **D2** `hotkey.meeting` (+layout) never registered — REMOVE (no meeting surface).
+- [x] **D3** `hotkey.chatAgent` never registered — REMOVE (no chat overlay).
 - [ ] **D4** `hotkey.dictation.mode` tap/push — IMPLEMENT push-to-talk or REMOVE the mode select.
 
 ## E. Misleading affordances

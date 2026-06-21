@@ -6,8 +6,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
-  User,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -18,9 +16,7 @@ export type SettingsSectionId =
   | "language-models"
   | "connections"
   | "privacy"
-  | "system"
-  | "account"
-  | "workspace";
+  | "system";
 
 export interface SettingsSection {
   id: SettingsSectionId;
@@ -57,13 +53,6 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
   {
     label: "System",
     items: [{ id: "system", label: "System", icon: Cpu }],
-  },
-  {
-    label: "Account",
-    items: [
-      { id: "account", label: "Account", icon: User },
-      { id: "workspace", label: "Workspace", icon: Users },
-    ],
   },
 ];
 
