@@ -31,6 +31,9 @@ const dispatch = createDispatch({
       return { text: trimmed, cleaned, mode: "dictation" };
     },
   },
+  transcription: {
+    transcribe: (req) => ({ text: req.audioBase64.length > 0 ? "sample transcript" : "" }),
+  },
   connections: {
     list: () => [...connectionState],
     upsert: (profile) => {
@@ -121,5 +124,10 @@ describe.each<[string, Services]>([
   it("content routes through the seam and resolves an array", async () => {
     expect(Array.isArray(await services.content.notes())).toBe(true);
     expect(Array.isArray(await services.content.sttModels())).toBe(true);
+  });
+
+  it("transcription returns text through the seam", async () => {
+    const result = await services.transcription.transcribe({ audioBase64: "Zm9v" });
+    expect(typeof result.text).toBe("string");
   });
 });

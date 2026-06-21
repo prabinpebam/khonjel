@@ -4,6 +4,7 @@ import { mockSystemService } from "./system";
 import { mockContentService } from "./content";
 import { mockSettingsService } from "./settings";
 import { mockInferenceService } from "./inference";
+import { mockTranscriptionService } from "./transcription";
 import { mockConnectionService } from "./connections";
 
 /** The mock implementation of every port. Swapped for real adapters later. */
@@ -13,5 +14,6 @@ export const mockServices: Services = {
   content: mockContentService,
   settings: mockSettingsService,
   inference: mockInferenceService,
+  transcription: mockTranscriptionService,
   connections: mockConnectionService,
 };

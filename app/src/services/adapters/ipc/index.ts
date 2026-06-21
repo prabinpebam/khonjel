@@ -15,6 +15,8 @@ import type {
   SettingsSnapshot,
   Snippet,
   Transform,
+  TranscriptionRequest,
+  TranscriptionResult,
   UploadJob,
 } from "@services/ports";
 import { CHANNELS } from "@ipc/ipc-contract";
@@ -45,6 +47,10 @@ export function createIpcServices(invoke: Invoke): Services {
     },
     inference: {
       cleanup: (input, options) => invoke(CHANNELS.inferenceCleanup, input, options ?? {}) as Promise<CleanupResult>,
+    },
+    transcription: {
+      transcribe: (req: TranscriptionRequest) =>
+        invoke(CHANNELS.transcriptionTranscribe, req) as Promise<TranscriptionResult>,
     },
     connections: {
       list: () => invoke(CHANNELS.connectionsList) as Promise<ConnectionProfile[]>,

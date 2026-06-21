@@ -27,6 +27,8 @@ import type {
   SettingsSnapshot,
   Snippet,
   Transform,
+  TranscriptionRequest,
+  TranscriptionResult,
   UploadJob,
 } from "../../src/services/ports";
 
@@ -41,6 +43,7 @@ export const CHANNELS = {
   settingsGet: "settings:get",
   settingsPatch: "settings:patch",
   inferenceCleanup: "inference:cleanup",
+  transcriptionTranscribe: "transcription:transcribe",
   connectionsList: "connections:list",
   connectionsUpsert: "connections:upsert",
   connectionsRemove: "connections:remove",
@@ -68,6 +71,7 @@ export interface ChannelContract {
   "settings:get": { request: []; response: SettingsSnapshot };
   "settings:patch": { request: [SettingsPatch]; response: SettingsSnapshot };
   "inference:cleanup": { request: [string, CleanupOptions]; response: CleanupResult };
+  "transcription:transcribe": { request: [TranscriptionRequest]; response: TranscriptionResult };
   "connections:list": { request: []; response: ConnectionProfile[] };
   "connections:upsert": { request: [ConnectionProfile]; response: ConnectionProfile[] };
   "connections:remove": { request: [string]; response: ConnectionProfile[] };

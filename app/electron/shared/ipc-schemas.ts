@@ -51,6 +51,14 @@ const CleanupResultSchema = z.object({
   mode: z.enum(["dictation", "agent"]),
 });
 
+const TranscriptionRequestSchema = z.object({
+  audioBase64: z.string(),
+  language: z.string().optional(),
+  translate: z.boolean().optional(),
+});
+
+const TranscriptionResultSchema = z.object({ text: z.string() });
+
 const ConnectionProfileSchema = z.object({
   id: z.string(),
   kind: z.enum([
@@ -166,6 +174,7 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.settingsGet]: z.tuple([]),
   [CHANNELS.settingsPatch]: z.tuple([SettingsPatchSchema]),
   [CHANNELS.inferenceCleanup]: z.tuple([z.string(), CleanupOptionsSchema]),
+  [CHANNELS.transcriptionTranscribe]: z.tuple([TranscriptionRequestSchema]),
   [CHANNELS.connectionsList]: z.tuple([]),
   [CHANNELS.connectionsUpsert]: z.tuple([ConnectionProfileSchema]),
   [CHANNELS.connectionsRemove]: z.tuple([z.string()]),
@@ -191,6 +200,7 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.settingsGet]: SettingsSnapshotSchema,
   [CHANNELS.settingsPatch]: SettingsSnapshotSchema,
   [CHANNELS.inferenceCleanup]: CleanupResultSchema,
+  [CHANNELS.transcriptionTranscribe]: TranscriptionResultSchema,
   [CHANNELS.connectionsList]: ConnectionListSchema,
   [CHANNELS.connectionsUpsert]: ConnectionListSchema,
   [CHANNELS.connectionsRemove]: ConnectionListSchema,

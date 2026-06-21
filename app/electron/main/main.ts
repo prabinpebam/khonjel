@@ -2,12 +2,15 @@
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import * as path from "node:path";
+import { writeFileSync, unlinkSync } from "node:fs";
 import type { Platform } from "../../src/services/ports";
 import { checkContractVersion } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
 import { createSettingsStore, fileSettingsIO } from "./services/settings";
 import { createInferenceService } from "./services/inference";
 import { createInferenceRuntime, type InferenceRuntime } from "./inference/runtime";
+import { createTranscriptionService } from "./services/transcription";
+import { resolveTranscriber } from "./stt/runtime";
 import { createConnectionStore } from "./services/connections";
 import { createContentStore } from "./services/content";
 import { listModels } from "./models/catalog";
@@ -35,6 +38,29 @@ function buildDispatch(inferenceRuntime: InferenceRuntime) {
     },
     settings: createSettingsStore(fileSettingsIO(path.join(app.getPath("userData"), "settings.json"))),
     inference: createInferenceService(inferenceRuntime.engine),
+    transcription: createTranscriptionService({
+      transcriber: resolveTranscriber({
+        userDataDir: app.getPath("userData"),
+        appDir: path.join(__dirname, ".."),
+        isWindows: process.platform === "win32",
+        env: process.env,
+      }),
+      writeTempWav: (bytes) => {
+        const file = path.join(
+          app.getPath("temp"),
+          `khonjel-${Date.now()}-${Math.random().toString(36).slice(2)}.wav`,
+        );
+        writeFileSync(file, bytes);
+        return file;
+      },
+      cleanup: (file) => {
+        try {
+          unlinkSync(file);
+        } catch {
+          // best-effort temp cleanup
+        }
+      },
+    }),
     connections: createConnectionStore(
       fileSettingsIO(path.join(app.getPath("userData"), "connections.json")),
     ),

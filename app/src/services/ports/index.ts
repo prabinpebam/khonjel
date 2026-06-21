@@ -73,6 +73,27 @@ export interface InferenceService {
 }
 
 /**
+ * Speech-to-text. The renderer captures mic audio and sends it as base64 WAV (16kHz mono PCM16);
+ * the main process runs it through the local whisper.cpp engine. A missing model surfaces as an
+ * IpcError with code `model_unavailable`. See backend/10 (local STT).
+ */
+export interface TranscriptionRequest {
+  audioBase64: string;
+  /** Whisper language code or "auto". */
+  language?: string;
+  /** Translate to English instead of transcribing in-language. */
+  translate?: boolean;
+}
+
+export interface TranscriptionResult {
+  text: string;
+}
+
+export interface TranscriptionService {
+  transcribe(req: TranscriptionRequest): Promise<TranscriptionResult>;
+}
+
+/**
  * Provider connection profiles (cloud/self-hosted, incl. Azure OpenAI). The non-secret profile is
  * configured here; the key/token is set separately into the OS keychain (Phase 2 runtime). The URL
  * and auth construction is pure backend logic. See backend/10 §3a.
@@ -167,5 +188,6 @@ export interface Services {
   content: ContentService;
   settings: SettingsService;
   inference: InferenceService;
+  transcription: TranscriptionService;
   connections: ConnectionService;
 }

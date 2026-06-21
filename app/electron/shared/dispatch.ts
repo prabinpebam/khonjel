@@ -28,6 +28,8 @@ import type {
   SettingsSnapshot,
   Snippet,
   Transform,
+  TranscriptionRequest,
+  TranscriptionResult,
   UploadJob,
 } from "../../src/services/ports";
 
@@ -43,6 +45,9 @@ export interface DispatchDeps {
   };
   inference: {
     cleanup: (input: string, options: CleanupOptions) => CleanupResult | Promise<CleanupResult>;
+  };
+  transcription: {
+    transcribe: (req: TranscriptionRequest) => TranscriptionResult | Promise<TranscriptionResult>;
   };
   connections: {
     list: () => ConnectionProfile[] | Promise<ConnectionProfile[]>;
@@ -76,6 +81,8 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.settingsGet]: () => deps.settings.get(),
     [CHANNELS.settingsPatch]: (args) => deps.settings.patch(args[0] as SettingsPatch),
     [CHANNELS.inferenceCleanup]: (args) => deps.inference.cleanup(args[0] as string, args[1] as CleanupOptions),
+    [CHANNELS.transcriptionTranscribe]: (args) =>
+      deps.transcription.transcribe(args[0] as TranscriptionRequest),
     [CHANNELS.connectionsList]: () => deps.connections.list(),
     [CHANNELS.connectionsUpsert]: (args) => deps.connections.upsert(args[0] as ConnectionProfile),
     [CHANNELS.connectionsRemove]: (args) => deps.connections.remove(args[0] as string),

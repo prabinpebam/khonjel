@@ -16,6 +16,9 @@ const deps: DispatchDeps = {
   inference: {
     cleanup: (input) => ({ text: input, cleaned: false, mode: "dictation" }),
   },
+  transcription: {
+    transcribe: (req) => ({ text: `heard:${req.audioBase64}` }),
+  },
   connections: {
     list: () => [],
     upsert: (profile) => [profile],
