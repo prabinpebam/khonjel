@@ -35,8 +35,10 @@
       "@hooks/*": ["./src/hooks/*"],
       "@lib/*": ["./src/lib/*"],
       "@styles/*": ["./src/styles/*"],
-      "@types": ["./src/types"]
+      "@types": ["./src/types"],
+      "@ipc": ["./electron/shared"],
+      "@ipc/*": ["./electron/shared/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "electron/shared"]
 }

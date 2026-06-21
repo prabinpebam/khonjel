@@ -24,6 +24,7 @@ export default defineConfig({
       "@lib": alias("./src/lib"),
       "@styles": alias("./src/styles"),
       "@types": alias("./src/types"),
+      "@ipc": alias("./electron/shared"),
     },
   },
 });

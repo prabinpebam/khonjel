@@ -12,7 +12,7 @@ import tseslint from "typescript-eslint";
  * docs/product-spec/03-ux-ui/design-system/01-intent.md and 06-test-and-validation-strategy.md.
  */
 export default tseslint.config(
-  { ignores: ["dist", "node_modules", "coverage"] },
+  { ignores: ["dist", "node_modules", "coverage", "electron/main.cjs", "electron/preload.cjs"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   jsxA11y.flatConfigs.recommended,
@@ -74,6 +74,13 @@ export default tseslint.config(
     },
     rules: {
       "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  // Electron main/preload TypeScript sources run in Node (process, __dirname, etc.).
+  {
+    files: ["electron/**/*.ts"],
+    languageOptions: {
+      globals: globals.node,
     },
   },
   // EDD eval harness: the capture fn runs in the browser (via page.evaluate); the recorder,

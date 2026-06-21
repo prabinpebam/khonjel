@@ -162,8 +162,8 @@ rules in [11](11-privacy-security-and-packaging.md).
 
 | Port (from [08](08-ipc-and-ports-contracts.md)) | Capabilities | First phase | Tests ([06 §3a](06-feature-coverage-framework.md)) | Status |
 |---|---|---|---|---|
-| ProfileService | 1 | 0 | BE1+BE3 | **Implemented** |
-| SystemService | 6 | 0/2 | BE1+BE3 | Partial (version) |
+| ProfileService | 1 | 0 | BE1+BE2+BE3 | **Implemented** (real ipc seam) |
+| SystemService | 6 | 0/2 | BE1+BE2+BE3 | Partial (version+platform via ipc) |
 | ContentService | 12 read methods | 4 | BE1+BE3 | Mock |
 | TranscriptionService | capture/cancel/events | 1 | BE1+BE2+BE4 | Mock |
 | InjectorService | inject/repaste/clipboard | 1 | BE2+BE4 | Mock |
@@ -179,3 +179,12 @@ rules in [11](11-privacy-security-and-packaging.md).
 > **Backend "done" = every cell above reads `Implemented`, each capability's acceptance check
 > (in 08–12) passes, and its required BE test levels ([06 §3a](06-feature-coverage-framework.md))
 > are green — with the dictation hot path verified fully offline.**
+
+> **Phase 0 status (seam proof, in progress):** the typed IPC contract, the pure dispatch layer,
+> the renderer `ipc` adapter (with the mock↔ipc switch in `ServicesProvider`), and the TypeScript
+> Electron main/preload (esbuild build) are wired and **green**. `profile:get` +
+> `system:getAppVersion/getPlatform` run over real IPC under Electron (mock in the browser),
+> covered by `app/src/services/ipc/*.test.ts` (BE1/BE2/BE3) with **zero frontend regression**
+> (`npm run verify` + `npm run eval` clean). Remaining Phase 0: SQLite + migrations (T0.6),
+> settings-in-main (T0.7), Electron eval runner (T0.8). See
+> [14-implementation-plan §4](14-implementation-plan.md).

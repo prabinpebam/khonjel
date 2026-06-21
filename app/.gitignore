@@ -5,6 +5,10 @@ dist-ssr
 # Electron packaging output
 release
 
+# Electron main/preload build output (generated from electron/main/*.ts by build-electron)
+electron/main.cjs
+electron/preload.cjs
+
 # Dependencies
 node_modules
 
