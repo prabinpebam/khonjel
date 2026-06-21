@@ -78,12 +78,18 @@ EDD scenario. `Sx` scenarios are defined in the
 | T0.7 | **Settings source-of-truth in main** (flat maps) + `settings:get/patch` | BE1 merge/validate · BE2 contract · BE3 parity with the renderer store | **S3** under Electron: toggle persists across restart (gated with T0.8) | SettingsService |
 | T0.8 | **Electron eval runner**: switch Playwright to launch the Electron main process; wire durable DB settings into live boot (better-sqlite3 native rebuild) + renderer adoption | harness smoke (launches packaged app) | S1/S2/S3 run against Electron, not just Vite | ProfileService, SystemService, SettingsService ✅ |
 
-> **Plan refinement (T0.7):** `secrets→keychain` moves to **Phase 2** (provider connection
-> profiles), where keys are first used (`secrets:set` / `connections:test`, S8/Azure) — building
-> the native keychain with no consumer in T0.7 would be premature.
+> **Plan refinements:** (1) `secrets→keychain` moves to **Phase 2** (provider connections), where
+> keys are first used (S8/Azure) — a native keychain with no consumer in T0.7 would be premature.
+> (2) **Settings persist to a native-free JSON file**, not a SQLite row ([09 §4](09-data-and-storage.md)):
+> it works in the Node tests, dev Electron, and packaged app with **no better-sqlite3 ABI rebuild**;
+> SQLite is reserved for Phase 4 relational data.
 
-> Phase 0 output: the **seam is real** end-to-end with TS, a typed IPC contract, a migrated DB,
-> main-owned settings, and both test lanes running against the actual Electron app.
+> **Phase 0 COMPLETE ✅** — the **seam is real** end-to-end: TS main, a typed + versioned IPC
+> contract, durable JSON settings (+ renderer `SettingsSync` adoption), and the SQLite migration
+> framework (for Phase 4). **Both test lanes run against the actual Electron app** —
+> `npm run eval:electron` launches the real app twice and gates the live seam + settings
+> persistence across restart. 39 unit tests (BE1/BE2/BE3) + browser/Electron eval (BE4); **zero
+> frontend regression** throughout. **Next: Phase 1 — the dictation hot path.**
 
 ### Phase 1 — The hot path (dictation)
 

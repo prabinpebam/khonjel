@@ -29,16 +29,6 @@ describe("runMigrations", () => {
     db.close();
   });
 
-  it("creates the settings table from the initial migration", () => {
-    const db = freshDb();
-    runMigrations(db);
-    const row = db
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'settings'")
-      .get();
-    expect(row).toBeTruthy();
-    db.close();
-  });
-
   it("only applies migrations not yet recorded (forward-only, partial)", () => {
     const db = freshDb();
     const a: Migration = { id: "0001_a", up: (d) => d.exec("CREATE TABLE a (x)") };

@@ -1,19 +1,26 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
-import { openDatabase } from "../../store/db";
-import { createSettingsStore } from "./settings";
+import { createSettingsStore, type SettingsIO } from "./settings";
 
-/** BE1 — the main settings store (Phase 0, T0.7), against an in-memory migrated DB. */
+/** BE1 — the main settings store (Phase 0, T0.7), with an in-memory IO (no fs, no native). */
+function memoryIO(): SettingsIO {
+  let doc: string | null = null;
+  return {
+    read: () => doc,
+    write: (next) => {
+      doc = next;
+    },
+  };
+}
+
 describe("createSettingsStore", () => {
   it("returns empty flat maps before anything is written", () => {
-    const db = openDatabase(":memory:");
-    expect(createSettingsStore(db).get()).toEqual({ toggles: {}, values: {} });
-    db.close();
+    expect(createSettingsStore(memoryIO()).get()).toEqual({ toggles: {}, values: {} });
   });
 
   it("shallow-merges toggles and values across patches and persists", () => {
-    const db = openDatabase(":memory:");
-    const store = createSettingsStore(db);
+    const io = memoryIO();
+    const store = createSettingsStore(io);
 
     store.patch({ toggles: { "llm.cleanup.enabled": false }, values: { "stt.dictation.mode": "providers" } });
     const next = store.patch({ toggles: { meetingDetection: true } });
@@ -22,8 +29,12 @@ describe("createSettingsStore", () => {
     expect(next.toggles.meetingDetection).toBe(true); // merged
     expect(next.values["stt.dictation.mode"]).toBe("providers");
 
-    // Durable: a fresh store over the same DB reads the persisted row.
-    expect(createSettingsStore(db).get().values["stt.dictation.mode"]).toBe("providers");
-    db.close();
+    // Durable: a fresh store over the same IO reads the persisted doc.
+    expect(createSettingsStore(io).get().values["stt.dictation.mode"]).toBe("providers");
+  });
+
+  it("tolerates a corrupt document by returning empty maps", () => {
+    const io: SettingsIO = { read: () => "{not json", write: () => {} };
+    expect(createSettingsStore(io).get()).toEqual({ toggles: {}, values: {} });
   });
 });

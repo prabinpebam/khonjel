@@ -36,13 +36,8 @@
 ## 3. Schema (kysely table definitions, abbreviated)
 
 ```sql
--- settings: single-row JSON document holding the renderer's two flat maps
-CREATE TABLE settings (
-  id            INTEGER PRIMARY KEY CHECK (id = 1),
-  doc           TEXT NOT NULL,              -- JSON { toggles: {..}, values: {..} } (zod-validated)
-  schema_ver    INTEGER NOT NULL,
-  updated_at    TEXT NOT NULL
-);
+-- NOTE: settings are NOT in SQLite — they are a native-free JSON file (see §4). The tables below
+-- are the relational data (Phase 4+), where SQLite + the packaging-time native rebuild are justified.
 
 -- transcriptions (Home/Insights history) ⇄ HistoryEntry
 CREATE TABLE transcriptions (
@@ -146,16 +141,21 @@ CREATE TABLE prompt_overrides (
 > (WPM, percentile, app-usage, streak, heatmap) — not stored — so they're always consistent.
 > Cache the heavy ones in memory in main if profiling shows cost.
 
-## 4. Settings document
-- One row (`settings.doc`) holds the renderer's **two flat maps** —
-  `{ toggles: Record<string,boolean>, values: Record<string,string> }` keyed by dotted strings
-  (e.g. `"stt.dictation.mode"`, `"llm.cleanup.mode"`) exactly as
-  [app/src/stores/settings.ts](../../../../app/src/stores/settings.ts) defines them — **validated
-  with zod** on every read/write. This is deliberately **not** a nested object, so the main store
-  and the renderer store share one shape. Hot keys can be promoted to columns later if profiling
-  demands; JSON keeps migrations cheap now.
-- On `settings:patch`, main shallow-merges the provided `toggles`/`values` entries, validates,
-  writes, then emits `settings:changed` so the renderer mirror updates.
+## 4. Settings document (a JSON file, not SQLite)
+- Settings persist to **`<userData>/settings.json`** — a single JSON document holding the
+  renderer's **two flat maps** `{ toggles: Record<string,boolean>, values: Record<string,string> }`
+  keyed by dotted strings (e.g. `"stt.dictation.mode"`), exactly as
+  [app/src/stores/settings.ts](../../../../app/src/stores/settings.ts) defines them.
+- **Why a file, not a SQLite row:** settings are small key/value data, and a JSON file is
+  **native-free** — it works identically in the Node test lane, the dev Electron run, and the
+  packaged app, with **no better-sqlite3 ABI rebuild**. SQLite is reserved for the heavier
+  **relational** data (history/notes/…) where the packaging rebuild is worthwhile.
+- The store is **IO-injected** ([app/electron/main/services/settings.ts](../../../../app/electron/main/services/settings.ts)):
+  file-backed in the app, in-memory in tests (BE1). Request payloads are zod-validated at the IPC
+  boundary; a corrupt file degrades to empty maps rather than crashing.
+- On `settings:patch`, main shallow-merges the provided `toggles`/`values`, writes the file, and
+  returns the new snapshot; under Electron the renderer adopts main as the source of truth via
+  `SettingsSync` (mock/localStorage in the browser).
 - **Provider connections** (cloud/self-hosted endpoints, incl. **Azure OpenAI**) are stored in
   the `provider_connections` table; a slot binds to one via the existing dotted keys
   (`<slot>.provider` → connection `id`, `<slot>.model` → deployment name for Azure or model id

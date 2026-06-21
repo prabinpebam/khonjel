@@ -2,47 +2,33 @@
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import * as path from "node:path";
-import type { Platform, SettingsPatch, SettingsSnapshot } from "../../src/services/ports";
+import type { Platform } from "../../src/services/ports";
 import { checkContractVersion } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
+import { createSettingsStore, fileSettingsIO } from "./services/settings";
 
 let mainWindow: BrowserWindow | null = null;
 
 /**
- * In-memory settings used by the live composition root for now. The durable, SQLite-backed store
- * is built and BE1-tested in electron/main/services/settings.ts; it is wired into live boot under
- * Electron (with the better-sqlite3 native rebuild) in T0.8, alongside the renderer adoption and
- * the S3 "persists across restart" EDD gate.
+ * Composition root: construct the real dependencies and the pure dispatch layer. Built after the
+ * app is ready so `userData` paths resolve. Phase 0 wires profile + system + durable settings
+ * (JSON file); later phases inject the db, keychain, inference, etc.
  */
-function createMemorySettings() {
-  const snapshot: SettingsSnapshot = { toggles: {}, values: {} };
-  return {
-    get: (): SettingsSnapshot => ({ toggles: { ...snapshot.toggles }, values: { ...snapshot.values } }),
-    patch: (patch: SettingsPatch): SettingsSnapshot => {
-      Object.assign(snapshot.toggles, patch.toggles ?? {});
-      Object.assign(snapshot.values, patch.values ?? {});
-      return { toggles: { ...snapshot.toggles }, values: { ...snapshot.values } };
+function buildDispatch() {
+  return createDispatch({
+    profile: {
+      get: () => ({ id: "local", name: "You" }),
     },
-  };
+    system: {
+      getAppVersion: () => app.getVersion(),
+      getPlatform: () => {
+        const plat = process.platform;
+        return (plat === "win32" || plat === "darwin" || plat === "linux" ? plat : "web") as Platform;
+      },
+    },
+    settings: createSettingsStore(fileSettingsIO(path.join(app.getPath("userData"), "settings.json"))),
+  });
 }
-
-/**
- * Composition root: construct the real dependencies and the pure dispatch layer.
- * Phase 0 wires profile + system + settings; later phases inject the db, keychain, inference, etc.
- */
-const dispatch = createDispatch({
-  profile: {
-    get: () => ({ id: "local", name: "You" }),
-  },
-  system: {
-    getAppVersion: () => app.getVersion(),
-    getPlatform: () => {
-      const plat = process.platform;
-      return (plat === "win32" || plat === "darwin" || plat === "linux" ? plat : "web") as Platform;
-    },
-  },
-  settings: createMemorySettings(),
-});
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -64,7 +50,7 @@ function createWindow(): void {
 
   mainWindow.once("ready-to-show", () => mainWindow?.show());
 
-  if (app.isPackaged) {
+  if (app.isPackaged || process.env.KHONJEL_LOAD_DIST === "1") {
     void mainWindow.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   } else {
     void mainWindow.loadURL("http://localhost:5173");
@@ -82,6 +68,7 @@ function createWindow(): void {
 }
 
 void app.whenReady().then(() => {
+  const dispatch = buildDispatch();
   // The single allow-listed request/response bridge. The preload sends the contract version on
   // every call (rejected on mismatch); `dispatch` then validates channel + payload (unknown
   // channel -> not_found; bad payload -> validation). Together these are the allow-list.

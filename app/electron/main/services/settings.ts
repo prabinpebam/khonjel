@@ -1,44 +1,64 @@
 /**
  * Settings domain service (main process): the durable source of truth for the renderer's two
- * flat maps, stored as one JSON row in `settings` (see backend/09 §4). Per-domain module so the
- * composition root stays thin (architecture §3). DB is injected, so it unit-tests against an
- * in-memory database (BE1) without Electron.
+ * flat maps, persisted as a single JSON document (see backend/09 §4).
+ *
+ * Settings use a **JSON file**, not SQLite: it is small key/value data, and a JSON file is
+ * native-free — it works identically in the Node test lane, the dev Electron run, and the
+ * packaged app, with NO better-sqlite3 ABI rebuild. SQLite (better-sqlite3) is reserved for the
+ * heavier relational data (history/notes/…) in Phase 4, where the packaging rebuild is justified.
+ *
+ * The persistence IO is injected, so the store is unit-tested with an in-memory IO (BE1) and
+ * never touches `fs` in tests. The composition root injects file-backed IO.
  */
-import type Database from "better-sqlite3";
+import { readFileSync, writeFileSync } from "node:fs";
 import type { SettingsPatch, SettingsSnapshot } from "../../../src/services/ports";
 
-const SCHEMA_VER = 1;
+/** Pluggable durable IO: returns the persisted JSON doc (or null), and writes a new doc. */
+export interface SettingsIO {
+  read: () => string | null;
+  write: (doc: string) => void;
+}
 
 export interface SettingsStore {
   get: () => SettingsSnapshot;
   patch: (patch: SettingsPatch) => SettingsSnapshot;
 }
 
-export function createSettingsStore(db: Database.Database): SettingsStore {
-  const read = (): SettingsSnapshot => {
-    const row = db.prepare("SELECT doc FROM settings WHERE id = 1").get() as { doc: string } | undefined;
-    if (!row) return { toggles: {}, values: {} };
-    const parsed = JSON.parse(row.doc) as Partial<SettingsSnapshot>;
+function parse(doc: string | null): SettingsSnapshot {
+  if (!doc) return { toggles: {}, values: {} };
+  try {
+    const parsed = JSON.parse(doc) as Partial<SettingsSnapshot>;
     return { toggles: parsed.toggles ?? {}, values: parsed.values ?? {} };
-  };
+  } catch {
+    return { toggles: {}, values: {} };
+  }
+}
 
-  const write = (snapshot: SettingsSnapshot): void => {
-    db.prepare(
-      `INSERT INTO settings (id, doc, schema_ver, updated_at) VALUES (1, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET doc = excluded.doc, schema_ver = excluded.schema_ver, updated_at = excluded.updated_at`,
-    ).run(JSON.stringify(snapshot), SCHEMA_VER, new Date().toISOString());
-  };
-
+export function createSettingsStore(io: SettingsIO): SettingsStore {
   return {
-    get: () => read(),
+    get: () => parse(io.read()),
     patch: (patch) => {
-      const current = read();
+      const current = parse(io.read());
       const next: SettingsSnapshot = {
         toggles: { ...current.toggles, ...(patch.toggles ?? {}) },
         values: { ...current.values, ...(patch.values ?? {}) },
       };
-      write(next);
+      io.write(JSON.stringify(next));
       return next;
     },
+  };
+}
+
+/** File-backed IO for the live app: `<userData>/settings.json`. */
+export function fileSettingsIO(filePath: string): SettingsIO {
+  return {
+    read: () => {
+      try {
+        return readFileSync(filePath, "utf8");
+      } catch {
+        return null;
+      }
+    },
+    write: (doc) => writeFileSync(filePath, doc, "utf8"),
   };
 }

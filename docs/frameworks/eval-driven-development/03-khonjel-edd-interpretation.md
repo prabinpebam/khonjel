@@ -148,9 +148,12 @@ These are the EDD-specific entries for
 
 1. **No backend yet** — S5–S10 can only be *scaffolded* until the real adapters exist; today
    they assert against the mock and are marked `pending-backend`.
-2. **Electron surface** — scenarios run against the Vite dev server (`:5174`) now; once the app
-   runs under Electron, the runner must launch the Electron main process (Playwright Electron) so
-   IPC, hotkeys, and injection are real (the framework's real-app requirement).
+2. **Electron surface** — ~~scenarios run against the Vite dev server (`:5174`) now~~ **RESOLVED
+   (T0.8):** a Playwright-**Electron** runner (`npm run eval:electron`,
+   [`app/eval/scenarios/electron-seam.eval.electron.mjs`](../../../app/eval/scenarios/electron-seam.eval.electron.mjs))
+   launches the real Electron main process and gates the live IPC seam + settings persistence
+   across restart. Browser scenarios (S1–S4) still run via the dev server; capture/agent/meeting
+   scenarios move to the Electron runner as they land.
 3. **Hot-path timing** — `LISTENING_FEEDBACK_LATE` needs a real capture clock; wire it to the
    `capture:listening` event ([backend 08](../../product-spec/04-architecture-and-delivery/backend/08-ipc-and-ports-contracts.md)).
 4. **Provider egress observation** — `PROVIDER_KEY_LEAKED_TO_RENDERER` needs the network/IPC tap

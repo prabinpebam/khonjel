@@ -163,12 +163,12 @@ rules in [11](11-privacy-security-and-packaging.md).
 | Port (from [08](08-ipc-and-ports-contracts.md)) | Capabilities | First phase | Tests ([06 §3a](06-feature-coverage-framework.md)) | Status |
 |---|---|---|---|---|
 | ProfileService | 1 | 0 | BE1+BE2+BE3 | **Implemented** (real ipc seam) |
-| SystemService | 6 | 0/2 | BE1+BE2+BE3 | Partial (version+platform via ipc) |
+| SystemService | 6 | 0/2 | BE1+BE2+BE3+BE4 | Partial (version+platform, verified under Electron) |
 | ContentService | 12 read methods | 4 | BE1+BE3 | Mock |
 | TranscriptionService | capture/cancel/events | 1 | BE1+BE2+BE4 | Mock |
 | InjectorService | inject/repaste/clipboard | 1 | BE2+BE4 | Mock |
 | InferenceService | cleanup/agent/chat/note/run/ping | 1–5 | BE1+BE2+BE4 | Mock |
-| SettingsService | get/patch/secrets | 2 | BE1+BE2+BE3 | Mock |
+| SettingsService | get/patch (secrets → Phase 2) | 0/2 | BE1+BE2+BE3+BE4 | **Implemented** (durable JSON, verified under Electron) |
 | HotkeyService | list/rebind/events | 2 | BE2+BE4 | Mock |
 | ModelCatalogService | list/download/hardware/discover/cache | 3 | BE1+BE2 | Mock |
 | NotesService / DictionaryService / SnippetService / TransformService / UploadService | content CRUD + run | 4–5 | BE1+BE2+BE3 | Mock |
@@ -180,16 +180,14 @@ rules in [11](11-privacy-security-and-packaging.md).
 > (in 08–12) passes, and its required BE test levels ([06 §3a](06-feature-coverage-framework.md))
 > are green — with the dictation hot path verified fully offline.**
 
-> **Phase 0 status (seam proof, in progress):** the typed IPC contract (with per-call
-> `CONTRACT_VERSION` enforcement), the pure dispatch layer, the renderer `ipc` adapter (with the
-> mock↔ipc switch in `ServicesProvider`), and the TypeScript Electron main/preload (esbuild build)
-> are wired and **green**. `profile:get` + `system:getAppVersion/getPlatform` run over real IPC
-> under Electron (mock in the browser). **T0.6 + T0.7 backend done:** the SQLite migration runner
-> (forward-only, idempotent, version-tracked, WAL) + initial `settings` schema, and the
-> **`SettingsService` port** with a DB-backed main settings store (`settings:get/patch`, shallow-merge)
-> + mock + ipc adapters — all BE1/BE2/BE3-tested ([app/electron/](../../../../app/electron/),
-> `app/src/services/ipc/*.test.ts`; **37 unit tests**), with **zero frontend regression**
-> (`npm run verify` + `npm run eval` clean). Remaining Phase 0: **T0.8** — Electron eval runner
-> (Playwright-Electron), wire the durable DB settings into live boot (better-sqlite3 native
-> rebuild) + renderer adoption + the S3 "persists across restart" gate. `secrets→keychain` moves
-> to Phase 2 (connections). See [14-implementation-plan §4](14-implementation-plan.md).
+> **Phase 0 COMPLETE (seam proof).** The typed IPC contract (per-call `CONTRACT_VERSION`
+> enforcement), pure dispatch, renderer `ipc` adapter (mock↔ipc switch), TypeScript Electron
+> main/preload (esbuild), the SQLite migration runner (forward-only/idempotent/WAL, for Phase 4
+> relational data), and the **`SettingsService`** (durable **native-free JSON** store + renderer
+> `SettingsSync` adoption) are all wired and verified. **`profile`/`system`/`settings` run over
+> real IPC under Electron**, gated by an **Electron eval** (`npm run eval:electron`) that launches
+> the actual app twice and proves the live seam + **settings persistence across restart**. BE1/BE2/BE3
+> in `app/src/services/ipc/*.test.ts` + `app/electron/**/*.test.ts` (**39 unit tests**); BE4 via the
+> Electron + browser eval. **Zero frontend regression** throughout (`npm run verify` + `npm run eval`
+> clean; bundle stable). Note: `secrets→keychain` lands in Phase 2 (connections); SQLite is reserved
+> for Phase 4 relational data. Next: **Phase 1 — the dictation hot path**. See [14](14-implementation-plan.md).

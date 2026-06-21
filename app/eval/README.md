@@ -38,9 +38,10 @@ npx playwright install chromium
 
 ```
 cd app
-npm run eval                       # all scenarios (starts/reuses the dev server automatically)
+npm run eval                       # all browser scenarios (starts/reuses the dev server automatically)
 npm run eval -- app-readiness      # filter to one scenario by name
 npm run eval:headed                # watch it drive the real app
+npm run eval:electron              # launch the REAL Electron app (seam + settings persistence)
 ```
 
 A scenario is **CLEAN** when the recorder reports zero `critical` and zero `warning` anomalies

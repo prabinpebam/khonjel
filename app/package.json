@@ -21,6 +21,7 @@
     "verify": "npm run verify:quick && npm run build",
     "eval": "playwright test --config=playwright.config.mjs",
     "eval:headed": "playwright test --config=playwright.config.mjs --headed",
+    "eval:electron": "npm run build && npm run build:electron && playwright test --config=playwright.electron.config.mjs",
     "eval:shots": "node scripts/eval-shots.mjs",
     "gen:icon": "node scripts/gen-icon.mjs",
     "build:electron": "node scripts/build-electron.mjs",

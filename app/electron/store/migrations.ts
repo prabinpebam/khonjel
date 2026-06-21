@@ -12,18 +12,8 @@ export interface Migration {
 }
 
 export const MIGRATIONS: Migration[] = [
-  {
-    // Phase 0 / T0.6: the settings source-of-truth row (renderer's two flat maps as JSON).
-    id: "0001_init_settings",
-    up: (db) => {
-      db.exec(`
-        CREATE TABLE settings (
-          id          INTEGER PRIMARY KEY CHECK (id = 1),
-          doc         TEXT NOT NULL,            -- JSON { toggles: {..}, values: {..} }
-          schema_ver  INTEGER NOT NULL,
-          updated_at  TEXT NOT NULL
-        );
-      `);
-    },
-  },
+  // Relational tables (transcriptions, notes, folders, dictionary, snippets, transforms,
+  // integrations, model_cache, provider_connections) land in Phase 4 migrations (backend/09 §3),
+  // where SQLite + the packaging-time native rebuild are justified. Settings are NOT here — they
+  // are a native-free JSON file (electron/main/services/settings.ts).
 ];
