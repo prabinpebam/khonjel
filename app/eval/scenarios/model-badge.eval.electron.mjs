@@ -4,13 +4,14 @@ import os from "node:os";
 import fs from "node:fs";
 
 /**
- * EDD (BE4) under real Electron — model-badge display for a routed (cloud/Azure) slot.
+ * EDD (BE4) under real Electron — model-badge display for the single shared language model.
  *
- * Reproduces the user-reported bug ("I set the chat model to Azure but it still shows the local
+ * Reproduces the user-reported bug ("I changed the model but the badge still shows the local
  * model") against the ACTUAL Electron app (real settings.json + connections.json + SettingsSync),
- * not the browser mock. Drives the real Settings UI to bind the Chat LLM slot to an Azure
- * connection, then asserts the chat badge AND the sidebar engine card read the Azure deployment --
- * both live and after an app restart (the persisted next-launch view).
+ * not the browser mock. There is ONE Language Model shared by every task; these scenarios drive the
+ * real Settings UI to change it (to an Azure connection, and between local models) and assert the
+ * chat badge AND the sidebar engine card follow it — live, after a restart, and that the single
+ * change fans out to every LLM task slot so nothing silently drifts.
  */
 const APP_DIR = path.resolve(import.meta.dirname, "..", "..");
 
@@ -37,6 +38,18 @@ async function chatHeader(page) {
   return page.locator("main").first().innerText();
 }
 
+/** Precise sidebar LLM line via the stable data-eval hook. */
+function engineLlm(page) {
+  return page.locator('[data-eval="engine-llm"]').innerText();
+}
+
+/** Navigate to Chat (mounting the badge) and read the precise model badge. */
+async function chatBadge(page) {
+  await page.locator('[data-eval-nav="chat"]').click();
+  await page.waitForTimeout(300);
+  return page.locator('[data-eval="chat-model"]').innerText();
+}
+
 /** Create an Azure connection through the real Connections UI. */
 async function createAzureConnection(page, modal, { id, model }) {
   await modal.getByRole("button", { name: "Connections" }).first().click();
@@ -52,11 +65,9 @@ async function createAzureConnection(page, modal, { id, model }) {
   await page.waitForTimeout(300);
 }
 
-/** Bind a Language Models tab (e.g. "Dictation Cleanup", "Chat") to a connection + deployment. */
-async function bindLlmSlot(page, modal, { tab, connectionId, target }) {
+/** Bind the single shared Language Model config to a connection + deployment. */
+async function bindLlmModel(page, modal, { connectionId, target }) {
   await modal.getByRole("button", { name: "Language Models" }).first().click();
-  await page.waitForTimeout(150);
-  await modal.getByRole("tab", { name: tab }).click();
   await page.waitForTimeout(150);
   await modal.getByText("Enterprise", { exact: false }).first().click();
   await page.waitForTimeout(250);
@@ -66,6 +77,17 @@ async function bindLlmSlot(page, modal, { tab, connectionId, target }) {
   await page.waitForTimeout(150);
   await modal.getByRole("textbox").first().fill(target);
   await page.waitForTimeout(300);
+}
+
+/** Read the model id persisted for every LLM task slot from the real settings.json. */
+function llmSlotModels(userDataDir) {
+  const values = JSON.parse(fs.readFileSync(path.join(userDataDir, "settings.json"), "utf8")).values ?? {};
+  return {
+    chat: values["llm.chat.model"],
+    cleanup: values["llm.cleanup.model"],
+    agent: values["llm.agent.model"],
+    note: values["llm.note.model"],
+  };
 }
 
 test("model badge: a routed (Azure) chat slot shows in the chat badge AND the sidebar, live and after restart", async () => {
@@ -80,10 +102,10 @@ test("model badge: a routed (Azure) chat slot shows in the chat badge AND the si
   const modal = page.locator('[data-eval="settings-modal"]');
   await modal.waitFor();
   await createAzureConnection(page, modal, { id: "azure-gpt54-chat", model: "gpt-5.4" });
-  // Only the Chat LLM is routed to Azure; the cleanup slot stays local. Both the chat badge AND the
-  // sidebar LLM line must reflect the chat slot -- if the sidebar read a different slot it would show
-  // the local model and this test would fail.
-  await bindLlmSlot(page, modal, { tab: "Chat", connectionId: "azure-gpt54-chat", target: "gpt-5.4" });
+  // The single shared Language Model is routed to Azure. Both the chat badge AND the sidebar LLM
+  // line read the chat slot, so both must reflect the Azure deployment -- if either read a stale or
+  // different slot it would show the local model and this test would fail.
+  await bindLlmModel(page, modal, { connectionId: "azure-gpt54-chat", target: "gpt-5.4" });
   await page.keyboard.press("Escape");
 
   // ---- Assert the live displays reflect the Azure deployment, not a local model ----
@@ -112,30 +134,74 @@ test("model badge: a routed (Azure) chat slot shows in the chat badge AND the si
   fs.rmSync(userDataDir, { recursive: true, force: true });
 });
 
-test("model badge: 'Apply to all language model tasks' routes the chat slot too", async () => {
-  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-applyall-"));
+test("model badge: changing the one shared model fans out to every LLM task and the badge follows", async () => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-unify-"));
 
   const app = await electron.launch(launchOpts(userDataDir));
   const page = await app.firstWindow();
   await waitReady(page);
 
+  // Baseline: the chat badge shows the default local model.
+  const badgeBefore = await chatBadge(page);
+  expect(badgeBefore, "baseline chat badge is the default local model").toMatch(/1\.5B/i);
+
+  // Change THE model once, in the single shared Language Model config.
   await page.locator('button[aria-label="Settings"]').first().click();
   const modal = page.locator('[data-eval="settings-modal"]');
   await modal.waitFor();
-  await createAzureConnection(page, modal, { id: "azure-gpt54-chat", model: "gpt-5.4" });
-  // Configure ONLY the Dictation Cleanup tab (as the user did), then fan it out to every LLM task.
-  await bindLlmSlot(page, modal, { tab: "Dictation Cleanup", connectionId: "azure-gpt54-chat", target: "gpt-5.4" });
-  await modal.getByRole("button", { name: "Apply to all language model tasks" }).click();
-  await page.waitForTimeout(300);
+  await modal.getByRole("button", { name: "Language Models" }).first().click();
+  await page.waitForTimeout(150);
+  await modal.locator('button[aria-haspopup="listbox"]').first().click();
+  await page.locator('div.shadow-pop button:has-text("3B")').first().click();
+  await page.waitForTimeout(700);
   await page.keyboard.press("Escape");
 
-  // The chat slot -- never touched directly -- now resolves to the Azure connection.
+  // The single change is mirrored to cleanup/agent/note too -- there is no per-tab model to drift.
+  const after = llmSlotModels(userDataDir);
+  expect(after.chat, "chat slot updated").toMatch(/3b/i);
+  expect(after.cleanup, "cleanup slot mirrors the shared model").toBe(after.chat);
+  expect(after.agent, "agent slot mirrors the shared model").toBe(after.chat);
+  expect(after.note, "note slot mirrors the shared model").toBe(after.chat);
+
+  // ...and the two surfaces the user watches reflect it.
   const card = await engineCard(page);
   const chat = await chatHeader(page);
-  expect(chat, "chat badge follows the applied cloud connection").toMatch(/gpt-5\.4/);
-  expect(chat.toLowerCase(), "chat badge is not a local model").not.toMatch(/qwen/);
-  expect(card, "sidebar LLM line follows the applied cloud connection").toMatch(/gpt-5\.4/);
-  expect(card.toLowerCase(), "sidebar LLM line is not a local model").not.toMatch(/qwen/);
+  expect(chat, "chat badge follows the shared model").toMatch(/3B/i);
+  expect(card, "sidebar LLM line follows the shared model").toMatch(/3B/i);
+
+  await app.close();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+});
+
+test("model badge reactivity: changing the chat model in settings updates the badge + sidebar with NO remount", async () => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-react-"));
+
+  const app = await electron.launch(launchOpts(userDataDir));
+  const page = await app.firstWindow();
+  await waitReady(page);
+
+  // Mount the Chat view so its badge is live, and capture the baseline (default local model).
+  const badgeBefore = await chatBadge(page);
+  const llmBefore = await engineLlm(page);
+  expect(badgeBefore, "baseline chat badge is the default local model").toMatch(/1\.5B/i);
+  expect(llmBefore, "baseline sidebar LLM is the default local model").toMatch(/1\.5B/i);
+
+  // Change ONLY the model in settings -- do NOT navigate away. This tests LIVE reactivity:
+  // the badge + sidebar are still mounted behind the modal and must update immediately.
+  await page.locator('button[aria-label="Settings"]').first().click();
+  const modal = page.locator('[data-eval="settings-modal"]');
+  await modal.waitFor();
+  await modal.getByRole("button", { name: "Language Models" }).first().click();
+  await page.waitForTimeout(150);
+  await modal.locator('button[aria-haspopup="listbox"]').first().click();
+  await page.locator('div.shadow-pop button:has-text("3B")').first().click();
+  await page.waitForTimeout(400);
+
+  const badgeAfter = await page.locator('[data-eval="chat-model"]').innerText();
+  const llmAfter = await engineLlm(page);
+  expect(badgeAfter, "chat badge reflects the change live (no remount)").toMatch(/3B/i);
+  expect(badgeAfter, "chat badge actually changed").not.toBe(badgeBefore);
+  expect(llmAfter, "sidebar LLM reflects the change live (no remount)").toMatch(/3B/i);
 
   await app.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });

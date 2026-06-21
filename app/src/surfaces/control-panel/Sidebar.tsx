@@ -104,13 +104,13 @@ export function Sidebar() {
           >
             <div className="flex items-center gap-1.5">
               <Mic className="size-3 shrink-0 text-tertiary-foreground" />
-              <span className="truncate text-xs font-medium text-foreground">
+              <span data-eval="engine-stt" className="truncate text-xs font-medium text-foreground">
                 {stt.scope} &middot; {stt.model}
               </span>
             </div>
             <div className="mt-1 flex items-center gap-1.5">
               <Sparkles className="size-3 shrink-0 text-tertiary-foreground" />
-              <span className="truncate text-xs font-medium text-foreground">
+              <span data-eval="engine-llm" className="truncate text-xs font-medium text-foreground">
                 {llm.scope} &middot; {llm.model}
               </span>
             </div>

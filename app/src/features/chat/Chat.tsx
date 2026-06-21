@@ -67,7 +67,9 @@ export function Chat() {
     <div className="flex min-h-full flex-col">
       <PageHeader
         title="Chat"
-        actions={<Badge variant="accent">{`${llm.scope} \u00b7 ${llm.model}`}</Badge>}
+        actions={
+          <Badge variant="accent" data-eval="chat-model">{`${llm.scope} \u00b7 ${llm.model}`}</Badge>
+        }
       />
 
       <div className="flex-1">
