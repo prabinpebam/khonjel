@@ -12,6 +12,10 @@ electron/preload.cjs
 # Dependencies
 node_modules
 
+# Downloaded native runtimes + model weights (fetched by scripts/fetch-llama.mjs etc.)
+vendor
+models
+
 # Test / eval artifacts
 coverage
 eval/screens

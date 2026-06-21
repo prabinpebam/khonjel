@@ -25,6 +25,7 @@
     "eval:shots": "node scripts/eval-shots.mjs",
     "gen:icon": "node scripts/gen-icon.mjs",
     "build:electron": "node scripts/build-electron.mjs",
+    "fetch:llama": "node scripts/fetch-llama.mjs",
     "electron": "npm run build:electron && electron .",
     "package": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --win portable",
     "package:dir": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --dir"

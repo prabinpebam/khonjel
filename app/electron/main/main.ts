@@ -6,20 +6,22 @@ import type { Platform } from "../../src/services/ports";
 import { checkContractVersion } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
 import { createSettingsStore, fileSettingsIO } from "./services/settings";
-import { createInferenceService, stubInferenceEngine } from "./services/inference";
+import { createInferenceService } from "./services/inference";
+import { createInferenceRuntime, type InferenceRuntime } from "./inference/runtime";
 import { createConnectionStore } from "./services/connections";
 import { createContentStore } from "./services/content";
 import { listModels } from "./models/catalog";
 import { computeInsights } from "./insights/compute";
 
 let mainWindow: BrowserWindow | null = null;
+let inferenceRuntime: InferenceRuntime | null = null;
 
 /**
  * Composition root: construct the real dependencies and the pure dispatch layer. Built after the
  * app is ready so `userData` paths resolve. Phase 0 wires profile + system + durable settings
  * (JSON file); later phases inject the db, keychain, inference, etc.
  */
-function buildDispatch() {
+function buildDispatch(inferenceRuntime: InferenceRuntime) {
   return createDispatch({
     profile: {
       get: () => ({ id: "local", name: "You" }),
@@ -32,7 +34,7 @@ function buildDispatch() {
       },
     },
     settings: createSettingsStore(fileSettingsIO(path.join(app.getPath("userData"), "settings.json"))),
-    inference: createInferenceService(stubInferenceEngine),
+    inference: createInferenceService(inferenceRuntime.engine),
     connections: createConnectionStore(
       fileSettingsIO(path.join(app.getPath("userData"), "connections.json")),
     ),
@@ -81,7 +83,13 @@ function createWindow(): void {
 }
 
 void app.whenReady().then(() => {
-  const dispatch = buildDispatch();
+  inferenceRuntime = createInferenceRuntime({
+    userDataDir: app.getPath("userData"),
+    appDir: path.join(__dirname, ".."),
+    isWindows: process.platform === "win32",
+    env: process.env,
+  });
+  const dispatch = buildDispatch(inferenceRuntime);
   // The single allow-listed request/response bridge. The preload sends the contract version on
   // every call (rejected on mismatch); `dispatch` then validates channel + payload (unknown
   // channel -> not_found; bad payload -> validation). Together these are the allow-list.
@@ -94,6 +102,15 @@ void app.whenReady().then(() => {
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  // Upgrade from the deterministic stub to the local LLM in the background (never blocks startup).
+  void inferenceRuntime.start().then((mode) => {
+    console.log(`[khonjel] inference engine: ${mode}`);
+  });
+});
+
+app.on("before-quit", () => {
+  inferenceRuntime?.stop();
 });
 
 app.on("window-all-closed", () => {
