@@ -31,7 +31,9 @@ export function resolveActiveModel(
     return { scope: "Local", model: name || "Not set", isLocal: true };
   }
   const conn = connections.find((c) => c.id === connectionId);
-  const model = target || conn?.model || modelId;
+  // A routed slot's model comes from the slot's target override or the connection's default --
+  // never the local `modelId` (that belongs to local mode).
+  const model = target || conn?.model || "";
   // Prefer the provider kind; fall back to the bound connection's name (so a routed slot still
   // reads clearly before the connections list has loaded), then a generic label.
   const scope = conn?.kind || connectionId || "Cloud";

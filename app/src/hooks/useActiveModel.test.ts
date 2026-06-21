@@ -61,11 +61,10 @@ describe("resolveActiveModel", () => {
     ).toEqual({ scope: "azure-transcribe", model: "gpt-4o-transcribe", isLocal: false });
   });
 
-  it("routed: falls back to Cloud / Not set when nothing is bound", () => {
-    expect(resolveActiveModel("enterprise", "", "", "", models, connections)).toEqual({
-      scope: "Cloud",
-      model: "Not set",
-      isLocal: false,
-    });
+  it("routed: falls back to Cloud / Not set when nothing is bound (ignores the local model id)", () => {
+    // The local `modelId` belongs to local mode; a routed slot must not display it.
+    expect(
+      resolveActiveModel("enterprise", "qwen2.5-1.5b-instruct-q4_k_m.gguf", "", "", models, connections),
+    ).toEqual({ scope: "Cloud", model: "Not set", isLocal: false });
   });
 });
