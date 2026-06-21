@@ -1,4 +1,5 @@
 import { Bell, Minus, PanelLeft, Square, X } from "lucide-react";
+import { useUiStore } from "@stores/ui";
 import { Button } from "@components/ui/button";
 
 /**
@@ -6,10 +7,17 @@ import { Button } from "@components/ui/button";
  * left region is the OS drag handle and the right cluster drives window IPC.
  */
 export function TitleBar() {
+  const toggleSidebar = useUiStore((s) => s.toggleSidebar);
+
   return (
     <header className="app-drag flex h-[var(--titlebar-height)] shrink-0 items-center justify-between bg-canvas ps-2 pe-2">
       <div className="app-no-drag flex items-center gap-1">
-        <Button variant="ghost" size="icon" aria-label="Toggle sidebar">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Toggle sidebar"
+          onClick={() => toggleSidebar()}
+        >
           <PanelLeft />
         </Button>
       </div>

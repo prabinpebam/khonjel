@@ -12,6 +12,7 @@ export function Sidebar() {
   const setActiveView = useUiStore((s) => s.setActiveView);
   const openSettings = useUiStore((s) => s.openSettings);
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
+  const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const { profile } = useServices();
   const [name, setName] = useState("You");
 
@@ -26,20 +27,36 @@ export function Sidebar() {
   }, [profile]);
 
   return (
-    <aside className="flex w-[var(--sidebar-width)] shrink-0 flex-col bg-sidebar ps-3 pe-2 pb-3">
-      <div className="flex items-center gap-2 px-2 py-2">
-        <span className="size-6 rounded-md bg-gradient-to-br from-cat-home to-cat-dictionary" aria-hidden />
-        <span className="text-sm font-semibold text-foreground">Khonjel</span>
+    <aside
+      className={cn(
+        "flex shrink-0 flex-col bg-sidebar pb-3 transition-[width] duration-200",
+        collapsed ? "w-16 px-2" : "w-[var(--sidebar-width)] ps-3 pe-2",
+      )}
+    >
+      <div className={cn("flex items-center gap-2 py-2", collapsed ? "justify-center px-0" : "px-2")}>
+        <span
+          className="size-6 shrink-0 rounded-md bg-gradient-to-br from-cat-home to-cat-dictionary"
+          aria-hidden
+        />
+        {!collapsed ? <span className="text-sm font-semibold text-foreground">Khonjel</span> : null}
       </div>
 
       <button
         type="button"
         onClick={() => setPaletteOpen(true)}
-        className="mb-2 flex h-9 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-sm text-tertiary-foreground transition-colors hover:text-foreground"
+        aria-label="Search"
+        className={cn(
+          "mb-2 flex h-9 items-center rounded-md border border-border bg-surface text-sm text-tertiary-foreground transition-colors hover:text-foreground",
+          collapsed ? "justify-center px-0" : "gap-2 px-2.5",
+        )}
       >
-        <Search className="size-4" />
-        <span className="flex-1 text-left">Search</span>
-        <kbd className="rounded-sm bg-surface-2 px-1.5 py-0.5 font-mono text-xs">Ctrl K</kbd>
+        <Search className="size-4 shrink-0" />
+        {!collapsed ? (
+          <>
+            <span className="flex-1 text-left">Search</span>
+            <kbd className="rounded-sm bg-surface-2 px-1.5 py-0.5 font-mono text-xs">Ctrl K</kbd>
+          </>
+        ) : null}
       </button>
 
       <nav className="flex flex-col gap-0.5">
@@ -52,31 +69,38 @@ export function Sidebar() {
               type="button"
               onClick={() => setActiveView(item.id)}
               aria-current={selected ? "page" : undefined}
+              aria-label={collapsed ? item.label : undefined}
+              title={collapsed ? item.label : undefined}
               className={cn(
-                "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium transition-colors",
+                "flex h-9 items-center rounded-md text-sm font-medium transition-colors",
+                collapsed ? "justify-center px-0" : "gap-2.5 px-2.5",
                 selected
                   ? "bg-sidebar-selected text-foreground shadow-nav"
                   : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
               )}
             >
-              <Icon className={cn("size-4", item.color)} />
-              <span>{item.label}</span>
+              <Icon className={cn("size-4 shrink-0", item.color)} />
+              {!collapsed ? <span>{item.label}</span> : null}
             </button>
           );
         })}
       </nav>
 
       <div className="mt-auto">
-        <div className="mb-2 rounded-md border border-border bg-surface-2 p-3">
-          <div className="flex items-center gap-2">
-            <span className="size-2 rounded-pill bg-success" aria-hidden />
-            <span className="text-xs font-medium text-foreground">Local &middot; Ready</span>
+        {!collapsed ? (
+          <div className="mb-2 rounded-md border border-border bg-surface-2 p-3">
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-pill bg-success" aria-hidden />
+              <span className="text-xs font-medium text-foreground">Local &middot; Ready</span>
+            </div>
+            <p className="mt-1 text-xs text-tertiary-foreground">
+              whisper-large-v3 &middot; on device
+            </p>
           </div>
-          <p className="mt-1 text-xs text-tertiary-foreground">whisper-large-v3 &middot; on device</p>
-        </div>
+        ) : null}
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
+        <div className={cn("flex items-center", collapsed ? "flex-col gap-1" : "justify-between")}>
+          <div className={cn("flex items-center gap-1", collapsed && "flex-col")}>
             <Button variant="ghost" size="icon" aria-label="Settings" onClick={() => openSettings()}>
               <Settings />
             </Button>
@@ -84,11 +108,13 @@ export function Sidebar() {
               <CircleHelp />
             </Button>
           </div>
-          <div className="flex items-center gap-2 pe-1">
+          <div className={cn("flex items-center gap-2", !collapsed && "pe-1")}>
             <span className="grid size-6 place-items-center rounded-pill bg-accent-soft text-xs font-medium text-accent">
               {name.charAt(0).toUpperCase()}
             </span>
-            <span className="text-xs font-medium text-muted-foreground">{name}</span>
+            {!collapsed ? (
+              <span className="text-xs font-medium text-muted-foreground">{name}</span>
+            ) : null}
           </div>
         </div>
       </div>
