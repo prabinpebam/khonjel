@@ -12,6 +12,7 @@
 import type {
   CleanupOptions,
   CleanupResult,
+  ConnectionProfile,
   Platform,
   Profile,
   SettingsPatch,
@@ -29,6 +30,9 @@ export const CHANNELS = {
   settingsGet: "settings:get",
   settingsPatch: "settings:patch",
   inferenceCleanup: "inference:cleanup",
+  connectionsList: "connections:list",
+  connectionsUpsert: "connections:upsert",
+  connectionsRemove: "connections:remove",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -41,6 +45,9 @@ export interface ChannelContract {
   "settings:get": { request: []; response: SettingsSnapshot };
   "settings:patch": { request: [SettingsPatch]; response: SettingsSnapshot };
   "inference:cleanup": { request: [string, CleanupOptions]; response: CleanupResult };
+  "connections:list": { request: []; response: ConnectionProfile[] };
+  "connections:upsert": { request: [ConnectionProfile]; response: ConnectionProfile[] };
+  "connections:remove": { request: [string]; response: ConnectionProfile[] };
 }
 
 export type RequestOf<C extends Channel> = ChannelContract[C]["request"];

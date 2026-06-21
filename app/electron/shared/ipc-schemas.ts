@@ -51,6 +51,28 @@ const CleanupResultSchema = z.object({
   mode: z.enum(["dictation", "agent"]),
 });
 
+const ConnectionProfileSchema = z.object({
+  id: z.string(),
+  kind: z.enum([
+    "openai",
+    "openai-compatible",
+    "azure-openai",
+    "anthropic",
+    "gemini",
+    "groq",
+    "deepgram",
+    "xai",
+    "bedrock",
+    "vertex",
+  ]),
+  baseEndpoint: z.string(),
+  apiVersion: z.string().optional(),
+  authMode: z.enum(["api-key-header", "bearer-token", "aad"]),
+  headerName: z.string().optional(),
+});
+
+const ConnectionListSchema = z.array(ConnectionProfileSchema);
+
 /** Request argument tuples (Phase 0 channels take no arguments; settings:patch takes a patch). */
 export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.profileGet]: z.tuple([]),
@@ -59,6 +81,9 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.settingsGet]: z.tuple([]),
   [CHANNELS.settingsPatch]: z.tuple([SettingsPatchSchema]),
   [CHANNELS.inferenceCleanup]: z.tuple([z.string(), CleanupOptionsSchema]),
+  [CHANNELS.connectionsList]: z.tuple([]),
+  [CHANNELS.connectionsUpsert]: z.tuple([ConnectionProfileSchema]),
+  [CHANNELS.connectionsRemove]: z.tuple([z.string()]),
 };
 
 /** Response payload schemas. */
@@ -69,4 +94,7 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.settingsGet]: SettingsSnapshotSchema,
   [CHANNELS.settingsPatch]: SettingsSnapshotSchema,
   [CHANNELS.inferenceCleanup]: CleanupResultSchema,
+  [CHANNELS.connectionsList]: ConnectionListSchema,
+  [CHANNELS.connectionsUpsert]: ConnectionListSchema,
+  [CHANNELS.connectionsRemove]: ConnectionListSchema,
 };

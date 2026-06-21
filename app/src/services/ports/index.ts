@@ -72,6 +72,43 @@ export interface InferenceService {
   cleanup(input: string, options?: CleanupOptions): Promise<CleanupResult>;
 }
 
+/**
+ * Provider connection profiles (cloud/self-hosted, incl. Azure OpenAI). The non-secret profile is
+ * configured here; the key/token is set separately into the OS keychain (Phase 2 runtime). The URL
+ * and auth construction is pure backend logic. See backend/10 §3a.
+ */
+export type ConnectionKind =
+  | "openai"
+  | "openai-compatible"
+  | "azure-openai"
+  | "anthropic"
+  | "gemini"
+  | "groq"
+  | "deepgram"
+  | "xai"
+  | "bedrock"
+  | "vertex";
+
+export type ConnectionAuthMode = "api-key-header" | "bearer-token" | "aad";
+
+export interface ConnectionProfile {
+  id: string;
+  kind: ConnectionKind;
+  /** Base URL, no path (e.g. https://<resource>.cognitiveservices.azure.com). */
+  baseEndpoint: string;
+  /** Required for azure-openai (query param); unused for most others. */
+  apiVersion?: string;
+  authMode: ConnectionAuthMode;
+  /** Header name for api-key-header mode (Azure uses "api-key"). */
+  headerName?: string;
+}
+
+export interface ConnectionService {
+  list(): Promise<ConnectionProfile[]>;
+  upsert(profile: ConnectionProfile): Promise<ConnectionProfile[]>;
+  remove(id: string): Promise<ConnectionProfile[]>;
+}
+
 export type {
   CaptureMode,
   HistoryEntry,
@@ -130,4 +167,5 @@ export interface Services {
   content: ContentService;
   settings: SettingsService;
   inference: InferenceService;
+  connections: ConnectionService;
 }

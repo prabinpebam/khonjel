@@ -16,6 +16,11 @@ const deps: DispatchDeps = {
   inference: {
     cleanup: (input) => ({ text: input, cleaned: false, mode: "dictation" }),
   },
+  connections: {
+    list: () => [],
+    upsert: (profile) => [profile],
+    remove: () => [],
+  },
 };
 
 describe("createDispatch", () => {

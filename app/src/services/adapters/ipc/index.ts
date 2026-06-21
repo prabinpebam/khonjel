@@ -1,4 +1,11 @@
-import type { CleanupResult, Platform, Profile, Services, SettingsSnapshot } from "@services/ports";
+import type {
+  CleanupResult,
+  ConnectionProfile,
+  Platform,
+  Profile,
+  Services,
+  SettingsSnapshot,
+} from "@services/ports";
 import { CHANNELS } from "@ipc/ipc-contract";
 
 /**
@@ -28,6 +35,11 @@ export function createIpcServices(invoke: Invoke, fallback: Services): Services 
     },
     inference: {
       cleanup: (input, options) => invoke(CHANNELS.inferenceCleanup, input, options ?? {}) as Promise<CleanupResult>,
+    },
+    connections: {
+      list: () => invoke(CHANNELS.connectionsList) as Promise<ConnectionProfile[]>,
+      upsert: (profile) => invoke(CHANNELS.connectionsUpsert, profile) as Promise<ConnectionProfile[]>,
+      remove: (id) => invoke(CHANNELS.connectionsRemove, id) as Promise<ConnectionProfile[]>,
     },
     // Not yet backed by the backend — keep the mock until its phase implements it.
     content: fallback.content,

@@ -13,6 +13,7 @@ import { RequestSchemas } from "./ipc-schemas";
 import type {
   CleanupOptions,
   CleanupResult,
+  ConnectionProfile,
   Platform,
   Profile,
   SettingsPatch,
@@ -32,6 +33,11 @@ export interface DispatchDeps {
   inference: {
     cleanup: (input: string, options: CleanupOptions) => CleanupResult | Promise<CleanupResult>;
   };
+  connections: {
+    list: () => ConnectionProfile[] | Promise<ConnectionProfile[]>;
+    upsert: (profile: ConnectionProfile) => ConnectionProfile[] | Promise<ConnectionProfile[]>;
+    remove: (id: string) => ConnectionProfile[] | Promise<ConnectionProfile[]>;
+  };
   // Grows one slice per phase (db-backed content, models, meetings, …).
 }
 
@@ -45,6 +51,9 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.settingsGet]: () => deps.settings.get(),
     [CHANNELS.settingsPatch]: (args) => deps.settings.patch(args[0] as SettingsPatch),
     [CHANNELS.inferenceCleanup]: (args) => deps.inference.cleanup(args[0] as string, args[1] as CleanupOptions),
+    [CHANNELS.connectionsList]: () => deps.connections.list(),
+    [CHANNELS.connectionsUpsert]: (args) => deps.connections.upsert(args[0] as ConnectionProfile),
+    [CHANNELS.connectionsRemove]: (args) => deps.connections.remove(args[0] as string),
   };
 
   return async function dispatch(channel: string, ...args: unknown[]): Promise<unknown> {

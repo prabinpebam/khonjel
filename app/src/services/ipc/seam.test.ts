@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { Services } from "@services/ports";
+import type { ConnectionProfile, Services } from "@services/ports";
 import { mockServices } from "@services/adapters/mock";
 import { createIpcServices } from "@services/adapters/ipc";
 import { createDispatch } from "@ipc/dispatch";
@@ -11,6 +11,7 @@ import { createDispatch } from "@ipc/dispatch";
  * validation, handler, response -- is exercised deterministically without launching Electron.
  */
 const settingsState = { toggles: {} as Record<string, boolean>, values: {} as Record<string, string> };
+let connectionState: ConnectionProfile[] = [];
 const dispatch = createDispatch({
   profile: { get: () => ({ id: "local", name: "You" }) },
   system: { getAppVersion: () => "9.9.9", getPlatform: () => "linux" as const },
@@ -28,6 +29,19 @@ const dispatch = createDispatch({
       const looksClean = /^[A-Z].*[.!?]$/.test(trimmed);
       const cleaned = options.cleanupEnabled !== false && !looksClean;
       return { text: trimmed, cleaned, mode: "dictation" };
+    },
+  },
+  connections: {
+    list: () => [...connectionState],
+    upsert: (profile) => {
+      connectionState = connectionState.some((c) => c.id === profile.id)
+        ? connectionState.map((c) => (c.id === profile.id ? profile : c))
+        : [...connectionState, profile];
+      return [...connectionState];
+    },
+    remove: (id) => {
+      connectionState = connectionState.filter((c) => c.id !== id);
+      return [...connectionState];
     },
   },
 });
@@ -67,6 +81,18 @@ describe.each<[string, Services]>([
     expect(clean.mode).toBe("dictation");
     const messy = await services.inference.cleanup("um so like the the thing", {});
     expect(messy.cleaned).toBe(true);
+  });
+
+  it("connections.upsert then list round-trips a profile", async () => {
+    await services.connections.upsert({
+      id: "p1",
+      kind: "azure-openai",
+      baseEndpoint: "https://x.cognitiveservices.azure.com",
+      authMode: "api-key-header",
+    });
+    expect((await services.connections.list()).some((c) => c.id === "p1")).toBe(true);
+    await services.connections.remove("p1");
+    expect((await services.connections.list()).some((c) => c.id === "p1")).toBe(false);
   });
 
   it("content stays available (mock until Phase 4)", () => {

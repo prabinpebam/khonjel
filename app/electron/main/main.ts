@@ -7,6 +7,7 @@ import { checkContractVersion } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
 import { createSettingsStore, fileSettingsIO } from "./services/settings";
 import { createInferenceService, stubInferenceEngine } from "./services/inference";
+import { createConnectionStore } from "./services/connections";
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -29,6 +30,9 @@ function buildDispatch() {
     },
     settings: createSettingsStore(fileSettingsIO(path.join(app.getPath("userData"), "settings.json"))),
     inference: createInferenceService(stubInferenceEngine),
+    connections: createConnectionStore(
+      fileSettingsIO(path.join(app.getPath("userData"), "connections.json")),
+    ),
   });
 }
 
