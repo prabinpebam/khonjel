@@ -5,6 +5,7 @@ import { useUiStore } from "@stores/ui";
 import { useServices } from "@services";
 import { Button } from "@components/ui/button";
 import { cn } from "@lib/utils";
+import khonjelMark from "@/assets/brand/khonjel-mark.svg?raw";
 
 /** Greige sidebar with the white-pill selected nav (the Khonjel signature). */
 export function Sidebar() {
@@ -35,8 +36,9 @@ export function Sidebar() {
     >
       <div className={cn("flex items-center gap-2 py-2", collapsed ? "justify-center px-0" : "px-2")}>
         <span
-          className="size-6 shrink-0 rounded-md bg-gradient-to-br from-cat-home to-cat-dictionary"
           aria-hidden
+          className="inline-flex size-6 shrink-0 items-center justify-center text-accent [&>svg]:size-6"
+          dangerouslySetInnerHTML={{ __html: khonjelMark }}
         />
         {!collapsed ? <span className="text-sm font-semibold text-foreground">Khonjel</span> : null}
       </div>

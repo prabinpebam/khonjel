@@ -18,9 +18,10 @@
     "verify:quick": "npm run typecheck && npm run lint && npm run lint:ds",
     "verify": "npm run verify:quick && npm run build",
     "eval:shots": "node scripts/eval-shots.mjs",
+    "gen:icon": "node scripts/gen-icon.mjs",
     "electron": "electron .",
-    "package": "npm run build && electron-builder --win portable",
-    "package:dir": "npm run build && electron-builder --dir"
+    "package": "npm run gen:icon && npm run build && electron-builder --win portable",
+    "package:dir": "npm run gen:icon && npm run build && electron-builder --dir"
   },
   "dependencies": {
     "@lobehub/icons-static-svg": "^1.91.0",
@@ -34,6 +35,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.1",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
@@ -64,7 +66,8 @@
       "package.json"
     ],
     "win": {
-      "target": "portable"
+      "target": "portable",
+      "icon": "build/icon.png"
     },
     "portable": {
       "artifactName": "Khonjel-${version}-portable.exe"
