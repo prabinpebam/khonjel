@@ -60,7 +60,8 @@ export function createIpcServices(invoke: Invoke): Services {
       list: () => invoke(CHANNELS.connectionsList) as Promise<ConnectionProfile[]>,
       upsert: (profile) => invoke(CHANNELS.connectionsUpsert, profile) as Promise<ConnectionProfile[]>,
       remove: (id) => invoke(CHANNELS.connectionsRemove, id) as Promise<ConnectionProfile[]>,
-      test: (id, target) => invoke(CHANNELS.connectionsTest, id, target) as Promise<ConnectionTestResult>,
+      test: (id, target, operation) =>
+        invoke(CHANNELS.connectionsTest, id, target, operation) as Promise<ConnectionTestResult>,
     },
     secrets: {
       set: (id, secret) => invoke(CHANNELS.secretsSet, id, secret) as Promise<void>,

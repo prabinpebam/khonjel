@@ -204,7 +204,7 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.connectionsList]: z.tuple([]),
   [CHANNELS.connectionsUpsert]: z.tuple([ConnectionProfileSchema]),
   [CHANNELS.connectionsRemove]: z.tuple([z.string()]),
-  [CHANNELS.connectionsTest]: z.tuple([z.string(), z.string()]),
+  [CHANNELS.connectionsTest]: z.tuple([z.string(), z.string(), z.enum(["chat", "transcription"])]),
   [CHANNELS.secretsSet]: z.tuple([z.string(), z.string()]),
   [CHANNELS.secretsHas]: z.tuple([z.string()]),
   [CHANNELS.secretsRemove]: z.tuple([z.string()]),

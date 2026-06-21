@@ -59,7 +59,11 @@ export interface DispatchDeps {
     list: () => ConnectionProfile[] | Promise<ConnectionProfile[]>;
     upsert: (profile: ConnectionProfile) => ConnectionProfile[] | Promise<ConnectionProfile[]>;
     remove: (id: string) => ConnectionProfile[] | Promise<ConnectionProfile[]>;
-    test: (id: string, target: string) => ConnectionTestResult | Promise<ConnectionTestResult>;
+    test: (
+      id: string,
+      target: string,
+      operation: "chat" | "transcription",
+    ) => ConnectionTestResult | Promise<ConnectionTestResult>;
   };
   secrets: {
     set: (id: string, secret: string) => void | Promise<void>;
@@ -101,7 +105,8 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.connectionsList]: () => deps.connections.list(),
     [CHANNELS.connectionsUpsert]: (args) => deps.connections.upsert(args[0] as ConnectionProfile),
     [CHANNELS.connectionsRemove]: (args) => deps.connections.remove(args[0] as string),
-    [CHANNELS.connectionsTest]: (args) => deps.connections.test(args[0] as string, args[1] as string),
+    [CHANNELS.connectionsTest]: (args) =>
+      deps.connections.test(args[0] as string, args[1] as string, args[2] as "chat" | "transcription"),
     [CHANNELS.secretsSet]: (args) => deps.secrets.set(args[0] as string, args[1] as string),
     [CHANNELS.secretsHas]: (args) => deps.secrets.has(args[0] as string),
     [CHANNELS.secretsRemove]: (args) => deps.secrets.remove(args[0] as string),

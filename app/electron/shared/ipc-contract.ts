@@ -88,7 +88,7 @@ export interface ChannelContract {
   "connections:list": { request: []; response: ConnectionProfile[] };
   "connections:upsert": { request: [ConnectionProfile]; response: ConnectionProfile[] };
   "connections:remove": { request: [string]; response: ConnectionProfile[] };
-  "connections:test": { request: [string, string]; response: ConnectionTestResult };
+  "connections:test": { request: [string, string, "chat" | "transcription"]; response: ConnectionTestResult };
   "secrets:set": { request: [string, string]; response: void };
   "secrets:has": { request: [string]; response: boolean };
   "secrets:remove": { request: [string]; response: void };

@@ -100,12 +100,13 @@ function buildDispatch(inferenceRuntime: InferenceRuntime) {
         secretStore.remove(id); // drop the orphaned key with the profile
         return connectionStore.remove(id);
       },
-      test: (id, target) =>
+      test: (id, target, operation) =>
         testConnection(
           connectionStore.list().find((c) => c.id === id),
           secretStore.get(id) ?? "",
           target,
-          proxyFetch.json,
+          operation,
+          proxyFetch,
         ),
     },
     secrets: {

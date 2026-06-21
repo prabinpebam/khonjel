@@ -134,7 +134,7 @@ export function InferenceConfigBlock({
   }
 
   if (mode === "providers" || mode === "enterprise" || mode === "self-hosted") {
-    return <ConnectionSlotConfig prefix={prefix} />;
+    return <ConnectionSlotConfig prefix={prefix} kind={kind} />;
   }
 
   // local
@@ -191,7 +191,7 @@ function LocalProviderPicker({ valueKey }: { valueKey: string }) {
  * deployment, and test it. Writes `{prefix}.connectionId` + `{prefix}.target` to settings, which
  * the main-process provider router reads to route the request.
  */
-function ConnectionSlotConfig({ prefix }: { prefix: string }) {
+function ConnectionSlotConfig({ prefix, kind }: { prefix: string; kind: "stt" | "llm" }) {
   const { connections } = useServices();
   const [list, setList] = useState<ConnectionProfile[]>([]);
   const connectionId = useSettingsStore((s) => s.values[`${prefix}.connectionId`] ?? "");
@@ -215,7 +215,7 @@ function ConnectionSlotConfig({ prefix }: { prefix: string }) {
     setTesting(true);
     setResult(null);
     try {
-      setResult(await connections.test(connectionId, target));
+      setResult(await connections.test(connectionId, target, kind === "stt" ? "transcription" : "chat"));
     } finally {
       setTesting(false);
     }

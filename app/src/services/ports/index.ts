@@ -147,9 +147,12 @@ export interface ConnectionService {
   list(): Promise<ConnectionProfile[]>;
   upsert(profile: ConnectionProfile): Promise<ConnectionProfile[]>;
   remove(id: string): Promise<ConnectionProfile[]>;
-  /** Validate a connection + model/deployment with a minimal request. */
-  test(id: string, target: string): Promise<ConnectionTestResult>;
+  /** Validate a connection + model/deployment, pinging the operation the slot will use. */
+  test(id: string, target: string, operation: ConnectionTestOperation): Promise<ConnectionTestResult>;
 }
+
+/** Which endpoint a connection test should exercise (matches the slot's kind). */
+export type ConnectionTestOperation = "chat" | "transcription";
 
 export interface ConnectionTestResult {
   ok: boolean;
