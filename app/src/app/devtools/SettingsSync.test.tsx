@@ -35,6 +35,34 @@ describe("SettingsSync", () => {
     expect(useSettingsStore.getState().toggles["llm.cleanup.enabled"]).toBe(false);
   });
 
+  it("migrates retired model ids adopted from main and heals settings.json", async () => {
+    const get = vi.fn().mockResolvedValue({
+      toggles: {},
+      values: { "llm.chat.model": "qwen-3.5-4b" },
+    });
+    const patch = vi.fn().mockResolvedValue({ toggles: {}, values: {} });
+
+    render(
+      <ServicesContext.Provider value={servicesWith({ get, patch })}>
+        <SettingsSync />
+      </ServicesContext.Provider>,
+    );
+
+    await waitFor(() =>
+      expect(useSettingsStore.getState().values["llm.chat.model"]).toBe(
+        "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      ),
+    );
+    // the corrected id is written back to main (settings.json self-heals)
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          values: expect.objectContaining({ "llm.chat.model": "qwen2.5-1.5b-instruct-q4_k_m.gguf" }),
+        }),
+      ),
+    );
+  });
+
   it("write-throughs a store change to main", async () => {
     const get = vi.fn().mockResolvedValue({ toggles: {}, values: {} });
     const patch = vi.fn().mockResolvedValue({ toggles: {}, values: {} });

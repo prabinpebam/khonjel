@@ -89,6 +89,22 @@ const LEGACY_MODEL_IDS: Record<string, string> = {
   "phi-4-mini": "qwen2.5-3b-instruct-q4_k_m.gguf",
 };
 
+/**
+ * Heal any persisted `*.model` values that still reference retired catalog ids. Applied both when
+ * rehydrating localStorage (zustand merge) and when SettingsSync adopts the main-process settings,
+ * so the pickers and the model badges always resolve a real catalog entry.
+ */
+export function migrateModelIds(values: Record<string, string>): Record<string, string> {
+  const next = { ...values };
+  for (const key of Object.keys(next)) {
+    if (key.endsWith(".model")) {
+      const mapped = LEGACY_MODEL_IDS[next[key] ?? ""];
+      if (mapped) next[key] = mapped;
+    }
+  }
+  return next;
+}
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
@@ -102,18 +118,10 @@ export const useSettingsStore = create<SettingsState>()(
       name: "khonjel.settings",
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<SettingsState>;
-        const values = { ...DEFAULT_VALUES, ...(p.values ?? {}) };
-        // Migrate model ids saved before the catalog ids were unified (keeps pickers + badges resolving).
-        for (const key of Object.keys(values)) {
-          if (key.endsWith(".model")) {
-            const mapped = LEGACY_MODEL_IDS[values[key] ?? ""];
-            if (mapped) values[key] = mapped;
-          }
-        }
         return {
           ...current,
           toggles: { ...DEFAULT_TOGGLES, ...(p.toggles ?? {}) },
-          values,
+          values: migrateModelIds({ ...DEFAULT_VALUES, ...(p.values ?? {}) }),
         };
       },
     },

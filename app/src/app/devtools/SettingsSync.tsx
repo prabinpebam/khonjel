@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useServices } from "@services";
-import { useSettingsStore } from "@stores/settings";
+import { useSettingsStore, migrateModelIds } from "@stores/settings";
 
 /**
  * SettingsSync — electron-only adoption of the main-owned SettingsService.
@@ -25,9 +25,12 @@ export function SettingsSync() {
         Object.keys(snapshot.toggles).length > 0 || Object.keys(snapshot.values).length > 0;
 
       if (hasPersisted) {
+        // Main is the source of truth, but heal any retired model ids it still holds (older
+        // settings.json) so the pickers + model badges resolve a real catalog entry. The
+        // write-through subscription below then persists the corrected values back to main.
         useSettingsStore.setState({
           toggles: { ...store.toggles, ...snapshot.toggles },
-          values: { ...store.values, ...snapshot.values },
+          values: migrateModelIds({ ...store.values, ...snapshot.values }),
         });
       } else {
         void services.settings.patch({ toggles: store.toggles, values: store.values });
