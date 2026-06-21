@@ -40,6 +40,33 @@ function silentWav(samples = 16000, sampleRate = 16000): Uint8Array {
   return new Uint8Array(buffer);
 }
 
+/** Turn a raw provider error (often JSON) into a short, actionable message. */
+export function explainProviderError(raw: string, target: string): string {
+  let code = "";
+  let detail = "";
+  const jsonStart = raw.indexOf("{");
+  if (jsonStart >= 0) {
+    try {
+      const parsed = JSON.parse(raw.slice(jsonStart)) as { error?: { code?: string; message?: string } };
+      code = parsed.error?.code ?? "";
+      detail = parsed.error?.message ?? "";
+    } catch {
+      // not JSON; fall through to pattern matching
+    }
+  }
+  if (/DeploymentNotFound/i.test(raw) || /deployment for this resource does not exist/i.test(raw)) {
+    return `Deployment "${target}" was not found on this resource. In the Azure portal open your resource -> Deployments and use the exact Deployment name (it can differ from the model name); also confirm the base endpoint points at that resource.`;
+  }
+  if (/\b401\b|Unauthorized|invalid api key|access denied|PermissionDenied/i.test(raw)) {
+    return "Authentication failed (401). Check the API key and the authentication mode (Bearer vs api-key header).";
+  }
+  if (/api-version/i.test(raw)) {
+    return detail || "Unsupported api-version. Use a valid Azure API version, e.g. 2025-03-01-preview.";
+  }
+  if (detail) return `${code ? `${code}: ` : ""}${detail}`.slice(0, 300);
+  return raw.slice(0, 300);
+}
+
 export async function testConnection(
   conn: ConnectionProfile | undefined,
   secret: string,
@@ -68,6 +95,6 @@ export async function testConnection(
     }
     return { ok: true };
   } catch (err) {
-    return { ok: false, message: String(err).slice(0, 300) };
+    return { ok: false, message: explainProviderError(String(err), target) };
   }
 }

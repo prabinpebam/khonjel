@@ -74,6 +74,26 @@ describe("testConnection", () => {
     expect(result.message).toContain("404");
   });
 
+  it("explains an Azure DeploymentNotFound with actionable guidance", async () => {
+    const result = await testConnection(
+      conn,
+      "SECRET",
+      "gpt-54-chat",
+      "chat",
+      fakeFetch({
+        json: async () => {
+          throw new Error(
+            'HTTP 404 Not Found: {"error":{"code":"DeploymentNotFound","message":"The API deployment for this resource does not exist."}}',
+          );
+        },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("gpt-54-chat");
+    expect(result.message).toMatch(/Deployments/i);
+    expect(result.message).not.toContain("{");
+  });
+
   it("guards a missing connection or target", async () => {
     expect((await testConnection(undefined, "", "x", "chat", fakeFetch())).ok).toBe(false);
     expect((await testConnection(conn, "", "", "chat", fakeFetch())).ok).toBe(false);
