@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Copy, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { useServices } from "@services";
 import type { HistoryEntry } from "@services/ports";
+import { useAsync } from "@hooks/useAsync";
+import { EMPTY_INSIGHTS } from "@lib/defaults";
 import { PageHeader } from "@components/common/PageHeader";
 import { StatCard } from "@components/common/StatCard";
 import { Badge } from "@components/ui/badge";
@@ -23,8 +25,8 @@ export function Home() {
     };
   }, [profile]);
 
-  const history = content.history();
-  const insights = content.insights();
+  const history = useAsync(() => content.history(), [] as HistoryEntry[]);
+  const insights = useAsync(() => content.insights(), EMPTY_INSIGHTS);
 
   const groups = useMemo(() => {
     const map = new Map<string, HistoryEntry[]>();

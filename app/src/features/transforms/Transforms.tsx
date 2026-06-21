@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Info, Pencil, Plus, Trash2 } from "lucide-react";
 import { useServices } from "@services";
 import type { Transform } from "@services/ports";
@@ -12,9 +12,19 @@ import { Switch } from "@components/ui/switch";
 
 export function Transforms() {
   const { content } = useServices();
-  const [transforms, setTransforms] = useState<Transform[]>(() => content.transforms());
+  const [transforms, setTransforms] = useState<Transform[]>([]);
   const optIn = useSettingsStore((s) => s.toggles["transforms.optIn"] ?? false);
   const setToggle = useSettingsStore((s) => s.setToggle);
+
+  useEffect(() => {
+    let live = true;
+    void content.transforms().then((t) => {
+      if (live) setTransforms(t);
+    });
+    return () => {
+      live = false;
+    };
+  }, [content]);
 
   function toggleEnabled(id: string) {
     setTransforms((prev) => prev.map((t) => (t.id === id ? { ...t, enabled: !t.enabled } : t)));

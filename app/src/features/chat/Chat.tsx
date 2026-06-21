@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Mic, SendHorizontal } from "lucide-react";
 import { useServices } from "@services";
 import type { ChatMessage } from "@services/ports";
@@ -12,8 +12,18 @@ const SUGGESTIONS = ["Rewrite that note", "Plan my day", "Summarize my last meet
 
 export function Chat() {
   const { content } = useServices();
-  const [messages, setMessages] = useState<ChatMessage[]>(() => content.chat());
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+
+  useEffect(() => {
+    let live = true;
+    void content.chat().then((m) => {
+      if (live) setMessages(m);
+    });
+    return () => {
+      live = false;
+    };
+  }, [content]);
 
   function send(text: string) {
     const value = text.trim();

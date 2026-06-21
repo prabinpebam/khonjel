@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Share2 } from "lucide-react";
 import { useServices } from "@services";
 import type { InsightsAggregate } from "@services/ports";
+import { useAsync } from "@hooks/useAsync";
+import { EMPTY_INSIGHTS } from "@lib/defaults";
 import { PageHeader } from "@components/common/PageHeader";
 import { StatCard } from "@components/common/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@components/ui/card";
@@ -13,7 +15,7 @@ type InsightsTab = "usage" | "voice";
 
 export function Insights() {
   const { content } = useServices();
-  const data = content.insights();
+  const data = useAsync(() => content.insights(), EMPTY_INSIGHTS);
   const [tab, setTab] = useState<InsightsTab>("usage");
 
   return (

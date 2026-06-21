@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useServices } from "@services";
+import type { ModelInfo } from "@services/ports";
+import { useAsync } from "@hooks/useAsync";
 import { SettingGroup } from "@components/common/SettingRow";
 import { Tabs } from "@components/ui/tabs";
 import { ToggleRow } from "../controls";
@@ -9,7 +11,7 @@ type SttTab = "dictation" | "note";
 
 export function SpeechToTextSettings() {
   const { content } = useServices();
-  const models = content.sttModels();
+  const models = useAsync(() => content.sttModels(), [] as ModelInfo[]);
   const [tab, setTab] = useState<SttTab>("dictation");
   const prefix = `stt.${tab}`;
 

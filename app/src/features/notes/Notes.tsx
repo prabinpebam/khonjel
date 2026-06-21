@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Mic, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { useServices } from "@services";
-import type { Note } from "@services/ports";
+import type { Folder, Note } from "@services/ports";
+import { useAsync } from "@hooks/useAsync";
 import { PageHeader } from "@components/common/PageHeader";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
@@ -11,11 +12,23 @@ import { cn } from "@lib/utils";
 
 export function Notes() {
   const { content } = useServices();
-  const folders = content.folders();
-  const [notes, setNotes] = useState<Note[]>(() => content.notes());
+  const folders = useAsync(() => content.folders(), [] as Folder[]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [folderId, setFolderId] = useState("all");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(notes[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void content.notes().then((loaded) => {
+      if (!live) return;
+      setNotes(loaded);
+      setSelectedId((cur) => cur ?? loaded[0]?.id ?? null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [content]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

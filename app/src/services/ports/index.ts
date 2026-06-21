@@ -142,22 +142,22 @@ import type {
 } from "./types";
 
 /**
- * Read-only content the views render. Mock adapter returns seed data synchronously;
- * a real adapter can return async and we revisit the call sites then.
+ * Read-only content the views render. Async: the mock resolves immediately; the real ipc adapter
+ * fetches from the main process. Views load via the `useAsync` hook.
  */
 export interface ContentService {
-  history(): HistoryEntry[];
-  insights(): InsightsAggregate;
-  chat(): ChatMessage[];
-  folders(): Folder[];
-  notes(): Note[];
-  uploads(): UploadJob[];
-  dictionary(): DictionaryEntry[];
-  snippets(): Snippet[];
-  transforms(): Transform[];
-  integrations(): Integration[];
-  sttModels(): ModelInfo[];
-  llmModels(): ModelInfo[];
+  history(): Promise<HistoryEntry[]>;
+  insights(): Promise<InsightsAggregate>;
+  chat(): Promise<ChatMessage[]>;
+  folders(): Promise<Folder[]>;
+  notes(): Promise<Note[]>;
+  uploads(): Promise<UploadJob[]>;
+  dictionary(): Promise<DictionaryEntry[]>;
+  snippets(): Promise<Snippet[]>;
+  transforms(): Promise<Transform[]>;
+  integrations(): Promise<Integration[]>;
+  sttModels(): Promise<ModelInfo[]>;
+  llmModels(): Promise<ModelInfo[]>;
 }
 
 /** The full set of ports available to the app at runtime. */

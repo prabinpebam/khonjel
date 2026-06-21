@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Copy, FileAudio, Loader2, RotateCcw, Trash2, UploadCloud } from "lucide-react";
 import { useServices } from "@services";
 import type { UploadJob } from "@services/ports";
@@ -11,9 +11,19 @@ import { cn } from "@lib/utils";
 
 export function Upload() {
   const { content } = useServices();
-  const [jobs, setJobs] = useState<UploadJob[]>(() => content.uploads());
+  const [jobs, setJobs] = useState<UploadJob[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let live = true;
+    void content.uploads().then((u) => {
+      if (live) setJobs(u);
+    });
+    return () => {
+      live = false;
+    };
+  }, [content]);
 
   function addFiles(files: FileList | null) {
     if (!files || files.length === 0) return;

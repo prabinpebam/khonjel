@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useServices } from "@services";
+import type { ModelInfo } from "@services/ports";
+import { useAsync } from "@hooks/useAsync";
 import { useSettingsStore } from "@stores/settings";
 import { SettingGroup } from "@components/common/SettingRow";
 import { Button } from "@components/ui/button";
@@ -13,7 +15,7 @@ type Purpose = "cleanup" | "agent" | "note" | "chat";
 
 export function LanguageModelsSettings() {
   const { content } = useServices();
-  const models = content.llmModels();
+  const models = useAsync(() => content.llmModels(), [] as ModelInfo[]);
   const [tab, setTab] = useState<Purpose>("cleanup");
   const prefix = `llm.${tab}`;
 

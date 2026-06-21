@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { ArrowDownUp, ArrowRight, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useServices } from "@services";
-import type { LibraryScope } from "@services/ports";
+import type { DictionaryEntry, LibraryScope, Snippet } from "@services/ports";
+import { useAsync } from "@hooks/useAsync";
 import { PageHeader } from "@components/common/PageHeader";
 import { PromoBanner } from "@components/common/PromoBanner";
 import { Badge } from "@components/ui/badge";
@@ -27,8 +28,8 @@ export function Dictionary() {
   const [query, setQuery] = useState("");
   const [promoVisible, setPromoVisible] = useState(true);
 
-  const entries = content.dictionary();
-  const snippets = content.snippets();
+  const entries = useAsync(() => content.dictionary(), [] as DictionaryEntry[]);
+  const snippets = useAsync(() => content.snippets(), [] as Snippet[]);
 
   const q = query.trim().toLowerCase();
 

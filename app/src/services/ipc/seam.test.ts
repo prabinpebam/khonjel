@@ -95,7 +95,7 @@ describe.each<[string, Services]>([
     expect((await services.connections.list()).some((c) => c.id === "p1")).toBe(false);
   });
 
-  it("content stays available (mock until Phase 4)", () => {
-    expect(Array.isArray(services.content.notes())).toBe(true);
+  it("content stays available (mock until Phase 4)", async () => {
+    expect(Array.isArray(await services.content.notes())).toBe(true);
   });
 });
