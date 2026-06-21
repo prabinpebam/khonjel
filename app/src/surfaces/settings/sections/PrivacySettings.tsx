@@ -1,15 +1,29 @@
+import { useEffect, useState } from "react";
+import { useServices } from "@services";
 import { SettingGroup, SettingRow } from "@components/common/SettingRow";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { SelectRow, ToggleRow } from "../controls";
 
-const PERMISSIONS: { name: string; status: "granted" | "not-requested" }[] = [
-  { name: "Microphone", status: "granted" },
-  { name: "Accessibility", status: "granted" },
-  { name: "System audio", status: "not-requested" },
-];
-
 export function PrivacySettings() {
+  const { content } = useServices();
+  const [uploadCount, setUploadCount] = useState(0);
+
+  useEffect(() => {
+    let live = true;
+    void content.uploads().then((u) => {
+      if (live) setUploadCount(u.length);
+    });
+    return () => {
+      live = false;
+    };
+  }, [content]);
+
+  async function clearAudio() {
+    await content.saveUploads([]);
+    setUploadCount(0);
+  }
+
   return (
     <div>
       <SettingGroup label="Privacy">
@@ -40,9 +54,19 @@ export function PrivacySettings() {
         />
         <SettingRow
           title="Storage usage"
-          subtitle="42 files, 8.5 MB on disk."
+          subtitle={
+            uploadCount === 0
+              ? "No stored recordings."
+              : `${uploadCount} recording${uploadCount === 1 ? "" : "s"} on device.`
+          }
           control={
-            <Button variant="ghost" size="sm" className="text-danger hover:text-danger">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-danger hover:text-danger"
+              onClick={() => void clearAudio()}
+              disabled={uploadCount === 0}
+            >
               Clear all audio
             </Button>
           }
@@ -59,25 +83,70 @@ export function PrivacySettings() {
       </SettingGroup>
 
       <SettingGroup label="Permissions">
-        {PERMISSIONS.map((permission) => (
-          <SettingRow
-            key={permission.name}
-            title={permission.name}
-            control={
-              permission.status === "granted" ? (
-                <Badge variant="success">Granted</Badge>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Badge variant="neutral">Not requested</Badge>
-                  <Button variant="secondary" size="sm">
-                    Grant
-                  </Button>
-                </div>
-              )
-            }
-          />
-        ))}
+        <MicPermissionRow />
+        <SettingRow
+          title="Accessibility"
+          subtitle="Required to inject text into other apps."
+          control={<Badge variant="neutral">Managed by OS</Badge>}
+        />
+        <SettingRow
+          title="System audio"
+          subtitle="Needed to capture meeting audio."
+          control={<Badge variant="neutral">Managed by OS</Badge>}
+        />
       </SettingGroup>
     </div>
+  );
+}
+
+function MicPermissionRow() {
+  const [state, setState] = useState<"granted" | "prompt" | "denied" | "unknown">("unknown");
+
+  useEffect(() => {
+    let live = true;
+    if (!navigator.permissions?.query) return;
+    void navigator.permissions
+      .query({ name: "microphone" as PermissionName })
+      .then((status) => {
+        if (!live) return;
+        const sync = () => setState(status.state);
+        sync();
+        status.onchange = sync;
+      })
+      .catch(() => {
+        /* permission name unsupported -- leave as unknown */
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  async function grant() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+      setState("granted");
+    } catch {
+      setState("denied");
+    }
+  }
+
+  return (
+    <SettingRow
+      title="Microphone"
+      subtitle="Required to dictate and record."
+      control={
+        state === "granted" ? (
+          <Badge variant="success">Granted</Badge>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Badge variant="neutral">{state === "denied" ? "Denied" : "Not granted"}</Badge>
+            <Button variant="secondary" size="sm" onClick={() => void grant()}>
+              Grant
+            </Button>
+          </div>
+        )
+      }
+    />
   );
 }

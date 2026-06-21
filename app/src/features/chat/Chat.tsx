@@ -3,6 +3,7 @@ import { Loader2, Mic, SendHorizontal } from "lucide-react";
 import { useServices } from "@services";
 import type { ChatMessage } from "@services/ports";
 import { useDictation } from "@hooks/useDictation";
+import { useActiveModel } from "@hooks/useActiveModel";
 import { PageHeader } from "@components/common/PageHeader";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -17,6 +18,7 @@ export function Chat() {
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const dictation = useDictation((text) => setInput((prev) => (prev ? `${prev} ${text}` : text)));
+  const llm = useActiveModel("llm.chat", "llm");
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function Chat() {
     <div className="flex min-h-full flex-col">
       <PageHeader
         title="Chat"
-        actions={<Badge variant="accent">Local · Qwen 3.5 4B</Badge>}
+        actions={<Badge variant="accent">{`${llm.scope} \u00b7 ${llm.model}`}</Badge>}
       />
 
       <div className="flex-1">

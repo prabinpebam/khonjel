@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Blocks, Calendar, Code2, Terminal, type LucideIcon } from "lucide-react";
 import { useServices } from "@services";
 import type { Integration } from "@services/ports";
+import { useUiStore } from "@stores/ui";
 import { PageHeader } from "@components/common/PageHeader";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -23,6 +24,7 @@ const CONNECT_LABEL: Record<string, string> = {
 export function Integrations() {
   const { content } = useServices();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const openSettings = useUiStore((s) => s.openSettings);
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -80,7 +82,14 @@ export function Integrations() {
               <div className="flex shrink-0 items-center gap-2">
                 {connected ? (
                   <>
-                    <Button variant="secondary" size="sm">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        if (item.detail?.startsWith("http")) window.open(item.detail, "_blank");
+                        else openSettings("connections");
+                      }}
+                    >
                       Manage
                     </Button>
                     <Button

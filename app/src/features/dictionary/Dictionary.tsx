@@ -45,6 +45,7 @@ export function Dictionary() {
   const [entries, setEntries] = useState<DictionaryEntry[]>([]);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [sortAsc, setSortAsc] = useState(true);
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -135,27 +136,39 @@ export function Dictionary() {
 
   const visibleEntries = useMemo(
     () =>
-      entries.filter(
-        (e) =>
-          (scope === "all" || e.scope === scope) &&
-          (q === "" ||
-            (e.term ?? "").toLowerCase().includes(q) ||
-            (e.trigger ?? "").toLowerCase().includes(q) ||
-            (e.replacement ?? "").toLowerCase().includes(q)),
-      ),
-    [entries, scope, q],
+      entries
+        .filter(
+          (e) =>
+            (scope === "all" || e.scope === scope) &&
+            (q === "" ||
+              (e.term ?? "").toLowerCase().includes(q) ||
+              (e.trigger ?? "").toLowerCase().includes(q) ||
+              (e.replacement ?? "").toLowerCase().includes(q)),
+        )
+        .sort((a, b) => {
+          const ka = (a.term ?? a.trigger ?? "").toLowerCase();
+          const kb = (b.term ?? b.trigger ?? "").toLowerCase();
+          return sortAsc ? ka.localeCompare(kb) : kb.localeCompare(ka);
+        }),
+    [entries, scope, q, sortAsc],
   );
 
   const visibleSnippets = useMemo(
     () =>
-      snippets.filter(
-        (s) =>
-          (scope === "all" || s.scope === scope) &&
-          (q === "" ||
-            s.trigger.toLowerCase().includes(q) ||
-            s.expansion.toLowerCase().includes(q)),
-      ),
-    [snippets, scope, q],
+      snippets
+        .filter(
+          (s) =>
+            (scope === "all" || s.scope === scope) &&
+            (q === "" ||
+              s.trigger.toLowerCase().includes(q) ||
+              s.expansion.toLowerCase().includes(q)),
+        )
+        .sort((a, b) =>
+          sortAsc
+            ? a.trigger.toLowerCase().localeCompare(b.trigger.toLowerCase())
+            : b.trigger.toLowerCase().localeCompare(a.trigger.toLowerCase()),
+        ),
+    [snippets, scope, q, sortAsc],
   );
 
   return (
@@ -209,10 +222,25 @@ export function Dictionary() {
               className="w-48 ps-8"
             />
           </div>
-          <Button variant="ghost" size="icon" aria-label="Sort">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Sort"
+            title={sortAsc ? "Sort Z to A" : "Sort A to Z"}
+            onClick={() => setSortAsc((v) => !v)}
+          >
             <ArrowDownUp />
           </Button>
-          <Button variant="ghost" size="icon" aria-label="Refresh">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Refresh"
+            title="Reload from store"
+            onClick={() => {
+              void content.dictionary().then(setEntries);
+              void content.snippets().then(setSnippets);
+            }}
+          >
             <RefreshCw />
           </Button>
         </div>

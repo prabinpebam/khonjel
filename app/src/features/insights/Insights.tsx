@@ -24,9 +24,24 @@ export function Insights() {
         title="Insights"
         description="Gamified analytics from your local data."
         actions={
-          <span className="grid size-12 place-items-center rounded-pill bg-dataviz text-primary-foreground">
+          <button
+            type="button"
+            aria-label="Share insights"
+            title="Copy insights summary to clipboard"
+            onClick={() => {
+              const summary = [
+                "Khonjel insights",
+                `Words per minute: ${data.wpm} (top ${(100 - data.wpmPercentile).toFixed(1)}%)`,
+                `Total words dictated: ${data.totalWords}`,
+                `Fixes made: ${data.wordsCorrected + data.dictionaryFixes}`,
+                `Day streak: ${data.streak.current} (longest ${data.streak.longest})`,
+              ].join("\n");
+              void navigator.clipboard.writeText(summary);
+            }}
+            className="grid size-12 place-items-center rounded-pill bg-dataviz text-primary-foreground transition-opacity hover:opacity-90"
+          >
             <Share2 className="size-5" />
-          </span>
+          </button>
         }
       />
 

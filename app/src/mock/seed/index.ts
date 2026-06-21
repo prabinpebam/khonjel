@@ -338,14 +338,20 @@ export const INTEGRATIONS: Integration[] = [
 ];
 
 export const STT_MODELS: ModelInfo[] = [
-  { id: "whisper-large-v3", name: "Whisper Large v3", sizeLabel: "1.5 GB", recommended: true },
-  { id: "whisper-medium", name: "Whisper Medium", sizeLabel: "769 MB", recommended: false },
-  { id: "whisper-base", name: "Whisper Base", sizeLabel: "142 MB", recommended: false },
-  { id: "parakeet-tdt", name: "NVIDIA Parakeet TDT", sizeLabel: "1.1 GB", recommended: false },
+  { id: "ggml-base.en.bin", name: "Whisper Base (English)", sizeLabel: "142 MB", recommended: false },
+  { id: "ggml-small.bin", name: "Whisper Small", sizeLabel: "466 MB", recommended: true },
+  { id: "ggml-large-v3-turbo.bin", name: "Whisper Large v3 Turbo", sizeLabel: "1.5 GB", recommended: false },
+  { id: "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3", name: "Parakeet TDT 0.6B v3", sizeLabel: "0.6 GB", recommended: false },
+  { id: "gpt-4o-mini-transcribe", name: "OpenAI gpt-4o-mini-transcribe (cloud)", sizeLabel: "cloud", recommended: false },
+  { id: "nova-3", name: "Deepgram Nova-3 (cloud)", sizeLabel: "cloud", recommended: false },
 ];
 
 export const LLM_MODELS: ModelInfo[] = [
-  { id: "qwen-3.5-4b", name: "Qwen 3.5 4B", sizeLabel: "2.4 GB", recommended: true },
-  { id: "llama-3.3-8b", name: "Llama 3.3 8B", sizeLabel: "4.7 GB", recommended: false },
-  { id: "phi-4-mini", name: "Phi-4 Mini", sizeLabel: "2.2 GB", recommended: false },
+  { id: "qwen2.5-1.5b-instruct-q4_k_m.gguf", name: "Qwen2.5 1.5B Instruct", sizeLabel: "1.1 GB", recommended: false },
+  { id: "qwen2.5-3b-instruct-q4_k_m.gguf", name: "Qwen2.5 3B Instruct", sizeLabel: "2.0 GB", recommended: true },
+  { id: "llama-3.2-3b-instruct-q4_k_m.gguf", name: "Llama 3.2 3B Instruct", sizeLabel: "2.0 GB", recommended: false },
+  { id: "qwen2.5-7b-instruct-q4_k_m.gguf", name: "Qwen2.5 7B Instruct", sizeLabel: "4.7 GB", recommended: false },
+  { id: "mistral-7b-instruct-v0.3.q4_k_m.gguf", name: "Mistral 7B Instruct v0.3", sizeLabel: "4.4 GB", recommended: false },
+  { id: "gpt-4o-mini", name: "OpenAI gpt-4o-mini (cloud)", sizeLabel: "cloud", recommended: false },
+  { id: "claude-3-5-haiku", name: "Anthropic Claude 3.5 Haiku (cloud)", sizeLabel: "cloud", recommended: false },
 ];

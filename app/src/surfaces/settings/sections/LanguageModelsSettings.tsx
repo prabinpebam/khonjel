@@ -4,7 +4,6 @@ import type { ModelInfo } from "@services/ports";
 import { useAsync } from "@hooks/useAsync";
 import { useSettingsStore } from "@stores/settings";
 import { SettingGroup } from "@components/common/SettingRow";
-import { Button } from "@components/ui/button";
 import { Label } from "@components/ui/label";
 import { Tabs } from "@components/ui/tabs";
 import { Textarea } from "@components/ui/textarea";
@@ -81,16 +80,17 @@ export function LanguageModelsSettings() {
         </SettingGroup>
 
         {tab === "cleanup" ? (
-          <section className="flex items-center justify-between rounded-md border border-border bg-surface px-5 py-4">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-semibold text-foreground">Prompt Studio</span>
-              <span className="text-xs text-muted-foreground">
-                View, customize, and test the cleanup system prompt.
-              </span>
-            </div>
-            <Button variant="secondary" size="sm">
-              Open Prompt Studio
-            </Button>
+          <section className="flex flex-col gap-1.5">
+            <Label>Cleanup system prompt</Label>
+            <Textarea
+              rows={4}
+              value={systemPrompt}
+              placeholder="Fix grammar, punctuation, and filler words without changing meaning."
+              onChange={(e) => setValue(`${prefix}.systemPrompt`, e.target.value)}
+            />
+            <p className="text-xs text-tertiary-foreground">
+              Customize how dictation is polished. Leave blank to use the built-in prompt.
+            </p>
           </section>
         ) : null}
 

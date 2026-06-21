@@ -3,6 +3,7 @@ import { CircleHelp, Search, Settings } from "lucide-react";
 import { NAV_ITEMS } from "@config/nav";
 import { useUiStore } from "@stores/ui";
 import { useServices } from "@services";
+import { useActiveModel } from "@hooks/useActiveModel";
 import { Button } from "@components/ui/button";
 import { cn } from "@lib/utils";
 import khonjelMark from "@/assets/brand/khonjel-mark.svg?raw";
@@ -15,6 +16,7 @@ export function Sidebar() {
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const { profile } = useServices();
+  const llm = useActiveModel("llm.chat", "llm");
   const [name, setName] = useState("You");
 
   useEffect(() => {
@@ -92,15 +94,20 @@ export function Sidebar() {
 
       <div className="mt-auto">
         {!collapsed ? (
-          <div className="mb-2 rounded-md border border-border bg-surface-2 p-3">
-            <div className="flex items-center gap-2">
-              <span className="size-2 rounded-pill bg-success" aria-hidden />
-              <span className="text-xs font-medium text-foreground">Local &middot; Ready</span>
-            </div>
-            <p className="mt-1 text-xs text-tertiary-foreground">
-              whisper-large-v3 &middot; on device
+          <button
+            type="button"
+            onClick={() => openSettings("language-models")}
+            title="Engine status -- open Language Model settings"
+            className="mb-2 block w-full rounded-md border border-border bg-surface-2 p-3 text-left transition-colors hover:border-accent"
+          >
+            <p className="truncate text-xs font-medium text-foreground">
+              {llm.scope} &middot; {llm.model}
             </p>
-          </div>
+            <span className="mt-1 flex items-center gap-1.5">
+              <span className="size-2 rounded-pill bg-success" aria-hidden />
+              <span className="text-xs text-tertiary-foreground">Ready</span>
+            </span>
+          </button>
         ) : null}
 
         <div className={cn("flex items-center", collapsed ? "flex-col gap-1" : "justify-between")}>
@@ -108,7 +115,12 @@ export function Sidebar() {
             <Button variant="ghost" size="icon" aria-label="Settings" onClick={() => openSettings()}>
               <Settings />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Help">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Help"
+              onClick={() => window.open("https://github.com/prabinpebam/khonjel#readme", "_blank")}
+            >
               <CircleHelp />
             </Button>
           </div>

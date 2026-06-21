@@ -1,4 +1,4 @@
-import { Bell, Minus, PanelLeft, Square, X } from "lucide-react";
+import { Minus, PanelLeft, Square, X } from "lucide-react";
 import { useUiStore } from "@stores/ui";
 import { Button } from "@components/ui/button";
 
@@ -22,10 +22,6 @@ export function TitleBar() {
         </Button>
       </div>
       <div className="app-no-drag flex items-center gap-1">
-        <Button variant="ghost" size="icon" aria-label="Notifications">
-          <Bell />
-        </Button>
-        <span className="mx-1 h-5 w-px bg-border" aria-hidden />
         <Button
           variant="ghost"
           size="icon"

@@ -41,6 +41,9 @@ export const mockContentService: ContentService = {
     state.history = [entry, ...state.history];
     return state.history;
   },
+  saveHistory: async (entries) => {
+    state.history = entries;
+  },
   saveNotes: async (notes) => {
     state.notes = notes;
   },

@@ -226,6 +226,7 @@ export interface ContentService {
   /** Append a completed dictation to history (id/createdAt/wordCount are filled by the backend). */
   addHistory(entry: HistoryDraft): Promise<HistoryEntry[]>;
   /** Persist a user-owned collection wholesale (the caller holds the full array). */
+  saveHistory(entries: HistoryEntry[]): Promise<void>;
   saveNotes(notes: Note[]): Promise<void>;
   saveFolders(folders: Folder[]): Promise<void>;
   saveDictionary(entries: DictionaryEntry[]): Promise<void>;

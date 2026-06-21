@@ -83,6 +83,7 @@ export function createIpcServices(invoke: Invoke): Services {
       sttModels: () => invoke(CHANNELS.contentSttModels) as Promise<ModelInfo[]>,
       llmModels: () => invoke(CHANNELS.contentLlmModels) as Promise<ModelInfo[]>,
       addHistory: (entry) => invoke(CHANNELS.contentAddHistory, entry) as Promise<HistoryEntry[]>,
+      saveHistory: (entries) => invoke(CHANNELS.contentReplace, "history", entries) as Promise<void>,
       saveNotes: (notes) => invoke(CHANNELS.contentReplace, "notes", notes) as Promise<void>,
       saveFolders: (folders) => invoke(CHANNELS.contentReplace, "folders", folders) as Promise<void>,
       saveDictionary: (entries) => invoke(CHANNELS.contentReplace, "dictionary", entries) as Promise<void>,

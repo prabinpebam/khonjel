@@ -59,23 +59,34 @@ const DEFAULT_VALUES: Record<string, string> = {
   "hotkey.chatAgent": "",
   "stt.dictation.mode": "local",
   "stt.dictation.localProvider": "whisper",
-  "stt.dictation.model": "whisper-large-v3",
+  "stt.dictation.model": "ggml-base.en.bin",
   "stt.dictation.provider": "deepgram",
   "stt.note.mode": "local",
   "stt.note.localProvider": "whisper",
-  "stt.note.model": "whisper-large-v3",
+  "stt.note.model": "ggml-base.en.bin",
   "llm.cleanup.mode": "local",
-  "llm.cleanup.model": "qwen-3.5-4b",
+  "llm.cleanup.model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
   "llm.cleanup.provider": "openai",
   "llm.agent.mode": "local",
-  "llm.agent.model": "qwen-3.5-4b",
+  "llm.agent.model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
   "llm.agent.provider": "openai",
   "llm.note.mode": "local",
-  "llm.note.model": "qwen-3.5-4b",
+  "llm.note.model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
   "llm.note.provider": "openai",
   "llm.chat.mode": "local",
-  "llm.chat.model": "qwen-3.5-4b",
+  "llm.chat.model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
   "llm.chat.provider": "openai",
+};
+
+/** Old mock model ids -> current catalog ids, applied when loading persisted settings. */
+const LEGACY_MODEL_IDS: Record<string, string> = {
+  "whisper-large-v3": "ggml-base.en.bin",
+  "whisper-medium": "ggml-small.bin",
+  "whisper-base": "ggml-base.en.bin",
+  "parakeet-tdt": "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3",
+  "qwen-3.5-4b": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+  "llama-3.3-8b": "llama-3.2-3b-instruct-q4_k_m.gguf",
+  "phi-4-mini": "qwen2.5-3b-instruct-q4_k_m.gguf",
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -91,10 +102,18 @@ export const useSettingsStore = create<SettingsState>()(
       name: "khonjel.settings",
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<SettingsState>;
+        const values = { ...DEFAULT_VALUES, ...(p.values ?? {}) };
+        // Migrate model ids saved before the catalog ids were unified (keeps pickers + badges resolving).
+        for (const key of Object.keys(values)) {
+          if (key.endsWith(".model")) {
+            const mapped = LEGACY_MODEL_IDS[values[key] ?? ""];
+            if (mapped) values[key] = mapped;
+          }
+        }
         return {
           ...current,
           toggles: { ...DEFAULT_TOGGLES, ...(p.toggles ?? {}) },
-          values: { ...DEFAULT_VALUES, ...(p.values ?? {}) },
+          values,
         };
       },
     },
