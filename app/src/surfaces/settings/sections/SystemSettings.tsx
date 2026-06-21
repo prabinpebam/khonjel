@@ -1,25 +1,14 @@
 import { SettingGroup, SettingRow } from "@components/common/SettingRow";
-import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { SelectRow } from "../controls";
 
 export function SystemSettings() {
+  const version = window.electronAPI?.getVersion?.() ?? "Browser preview";
+
   return (
     <div>
-      <SettingGroup label="Software updates">
-        <SettingRow
-          title="Current version"
-          subtitle="0.1.0-mock"
-          control={<Badge variant="success">Up to date</Badge>}
-        />
-        <SettingRow
-          title="Check for updates"
-          control={
-            <Button variant="secondary" size="sm">
-              Check now
-            </Button>
-          }
-        />
+      <SettingGroup label="About">
+        <SettingRow title="Version" subtitle={`Khonjel ${version}`} />
       </SettingGroup>
 
       <SettingGroup label="Developer tools">
@@ -34,13 +23,17 @@ export function SystemSettings() {
         />
         <SettingRow
           title="Diagnostics"
-          subtitle="Log file: 2.1 MB"
+          subtitle="Open the log folder or the developer tools."
           control={
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={() => window.electronAPI?.openLogs?.()}>
                 Open logs
               </Button>
-              <Button variant="secondary" size="sm">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => window.electronAPI?.openDevTools?.()}
+              >
                 Open DevTools
               </Button>
             </div>
@@ -51,13 +44,22 @@ export function SystemSettings() {
       <SettingGroup label="Data management">
         <SettingRow
           title="Model cache"
-          subtitle="~/.khonjel/models · 3.6 GB"
+          subtitle="Downloaded speech + language models."
           control={
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.electronAPI?.openModelsFolder?.()}
+              >
                 Open
               </Button>
-              <Button variant="ghost" size="sm" className="text-danger hover:text-danger">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-danger hover:text-danger"
+                onClick={() => window.electronAPI?.clearModelCache?.()}
+              >
                 Clear cache
               </Button>
             </div>
@@ -67,7 +69,11 @@ export function SystemSettings() {
           title="Reset all data"
           subtitle="Permanently delete settings, transcripts, audio, and downloaded models."
           control={
-            <Button variant="destructive" size="sm">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => window.electronAPI?.resetAllData?.()}
+            >
               Reset all data
             </Button>
           }

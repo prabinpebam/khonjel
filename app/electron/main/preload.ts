@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   toggleMaximize: () => ipcRenderer.send("window:toggle-maximize"),
   close: () => ipcRenderer.send("window:close"),
   floatingIdle: () => ipcRenderer.send("floating:idle"),
+  getVersion: () => ipcRenderer.sendSync("app:version"),
+  openDevTools: () => ipcRenderer.send("system:open-devtools"),
+  openLogs: () => ipcRenderer.send("system:open-logs"),
+  openModelsFolder: () => ipcRenderer.send("system:open-models"),
+  clearModelCache: () => ipcRenderer.send("system:clear-cache"),
+  resetAllData: () => ipcRenderer.send("system:reset-data"),
 });
 
 // The typed seam the renderer's `ipc` adapter calls. Only a single generic `invoke` crosses the

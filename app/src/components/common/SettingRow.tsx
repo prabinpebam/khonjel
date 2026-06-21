@@ -24,7 +24,7 @@ interface SettingRowProps {
   title: string;
   subtitle?: string;
   badge?: ReactNode;
-  control: ReactNode;
+  control?: ReactNode;
 }
 
 export function SettingRow({ title, subtitle, badge, control }: SettingRowProps) {
@@ -37,7 +37,7 @@ export function SettingRow({ title, subtitle, badge, control }: SettingRowProps)
         </div>
         {subtitle ? <span className="text-xs text-muted-foreground">{subtitle}</span> : null}
       </div>
-      <div className="shrink-0">{control}</div>
+      {control ? <div className="shrink-0">{control}</div> : null}
     </div>
   );
 }

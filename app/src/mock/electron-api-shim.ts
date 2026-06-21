@@ -16,6 +16,12 @@ export interface ElectronAPIShim {
   close?: () => void;
   /** The floating bar signals it returned to idle so the main process can auto-hide it. */
   floatingIdle?: () => void;
+  getVersion?: () => string;
+  openDevTools?: () => void;
+  openLogs?: () => void;
+  openModelsFolder?: () => void;
+  clearModelCache?: () => void;
+  resetAllData?: () => void;
 }
 
 export const electronAPI: ElectronAPIShim = {
@@ -25,6 +31,12 @@ export const electronAPI: ElectronAPIShim = {
   toggleMaximize: () => {},
   close: () => {},
   floatingIdle: () => {},
+  getVersion: () => "0.0.0-browser",
+  openDevTools: () => {},
+  openLogs: () => {},
+  openModelsFolder: () => {},
+  clearModelCache: () => {},
+  resetAllData: () => {},
 };
 
 declare global {

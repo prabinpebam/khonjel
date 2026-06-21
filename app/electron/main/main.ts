@@ -1,8 +1,8 @@
 // Electron main process (TypeScript, bundled to ../main.cjs by scripts/build-electron.mjs).
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
-import { app, BrowserWindow, ipcMain, screen, session, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, screen, session, shell } from "electron";
 import * as path from "node:path";
-import { writeFileSync, unlinkSync } from "node:fs";
+import { writeFileSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
 import type { Platform } from "../../src/services/ports";
 import { checkContractVersion } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
@@ -367,3 +367,55 @@ ipcMain.on("window:toggle-maximize", () => {
   else mainWindow.maximize();
 });
 ipcMain.on("window:close", () => mainWindow?.close());
+
+// System / diagnostics controls (Settings -> System).
+ipcMain.on("app:version", (event) => {
+  event.returnValue = app.getVersion();
+});
+ipcMain.on("system:open-devtools", () => {
+  mainWindow?.webContents.openDevTools({ mode: "detach" });
+});
+ipcMain.on("system:open-logs", () => {
+  void shell.openPath(app.getPath("logs"));
+});
+ipcMain.on("system:open-models", () => {
+  const dir = path.join(app.getPath("userData"), "models");
+  mkdirSync(dir, { recursive: true });
+  void shell.openPath(dir);
+});
+ipcMain.on("system:clear-cache", () => {
+  if (!mainWindow) return;
+  void dialog
+    .showMessageBox(mainWindow, {
+      type: "warning",
+      buttons: ["Cancel", "Delete models"],
+      defaultId: 0,
+      cancelId: 0,
+      message: "Delete all downloaded models?",
+      detail: "You will need to download them again to use local inference.",
+    })
+    .then(({ response }) => {
+      if (response === 1) rmSync(path.join(app.getPath("userData"), "models"), { recursive: true, force: true });
+    });
+});
+ipcMain.on("system:reset-data", () => {
+  if (!mainWindow) return;
+  void dialog
+    .showMessageBox(mainWindow, {
+      type: "warning",
+      buttons: ["Cancel", "Reset everything"],
+      defaultId: 0,
+      cancelId: 0,
+      message: "Reset all Khonjel data?",
+      detail: "Permanently deletes your settings, notes, history, connections, and saved keys, then restarts.",
+    })
+    .then(({ response }) => {
+      if (response !== 1) return;
+      const ud = app.getPath("userData");
+      for (const file of ["settings.json", "content.json", "connections.json", "secrets.json"]) {
+        rmSync(path.join(ud, file), { force: true });
+      }
+      app.relaunch();
+      app.exit(0);
+    });
+});

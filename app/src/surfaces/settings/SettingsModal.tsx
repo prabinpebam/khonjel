@@ -64,7 +64,9 @@ export function SettingsModal() {
               })}
             </div>
           ))}
-          <p className="mt-auto px-2 pt-2 text-xs text-tertiary-foreground">v0.1.0-mock</p>
+          <p className="mt-auto px-2 pt-2 text-xs text-tertiary-foreground">
+            v{window.electronAPI?.getVersion?.() ?? "0.0.0"}
+          </p>
         </nav>
 
         <div className="flex min-w-0 flex-1 flex-col">

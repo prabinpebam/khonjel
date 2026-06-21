@@ -11,7 +11,7 @@ Goal: no UI that lies. Every control must either **do something real** or **not 
 - **REMOVE** — delete/hide the control because the feature needs unbuilt infrastructure (keeps the UI honest).
 - **SOFTEN** — replace a fake indicator with an honest one.
 
-> Progress: **32 / 64 done** (updated as work proceeds).
+> Progress: **39 / 64 done** (updated as work proceeds).
 >
 > **Decisions (from review):**
 > - Cloud/team features (Account, Workspace, cloud backup, Integrations OAuth) -> **REMOVE** the non-functional UI.
@@ -23,12 +23,12 @@ Goal: no UI that lies. Every control must either **do something real** or **not 
 
 ## A. Dead buttons (no handler)
 
-- [ ] **A1** System → "Check now" (updates) — REMOVE (no update server; see C8).
-- [ ] **A2** System → "Open logs" — IMPLEMENT (open log file/folder via main).
-- [ ] **A3** System → "Open DevTools" — IMPLEMENT (main opens webContents devtools).
-- [ ] **A4** System → "Open" (model cache folder) — IMPLEMENT (open userData/models in OS).
-- [ ] **A5** System → "Clear cache" — IMPLEMENT (delete downloaded models, confirm).
-- [ ] **A6** System → "Reset all data" — IMPLEMENT (wipe settings/content/audio + relaunch, confirm).
+- [x] **A1** System → "Check now" (updates) — REMOVE (no update server; see C8).
+- [x] **A2** System → "Open logs" — IMPLEMENT (open log file/folder via main).
+- [x] **A3** System → "Open DevTools" — IMPLEMENT (main opens webContents devtools).
+- [x] **A4** System → "Open" (model cache folder) — IMPLEMENT (open userData/models in OS).
+- [x] **A5** System → "Clear cache" — IMPLEMENT (delete downloaded models, confirm).
+- [x] **A6** System → "Reset all data" — IMPLEMENT (wipe settings/content/audio + relaunch, confirm).
 - [x] **A7** Account → "Delete account" — REMOVE (no cloud account).
 - [x] **A8** Account → "Sign in/out" (fake `useState`) — REMOVE (no auth backend).
 - [x] **A9** Workspace → "Invite" — REMOVE (no team backend).
@@ -38,7 +38,7 @@ Goal: no UI that lies. Every control must either **do something real** or **not 
 
 - [x] **B1** AccountSettings is a fake mock — REMOVE/replace with honest "local-only" copy.
 - [x] **B2** WorkspaceSettings hardcoded members/teams — REMOVE the section + nav entry.
-- [ ] **B3** System fake version/log-size/cache-size — WIRE to real values (app.getVersion, fs sizes).
+- [x] **B3** System fake version/log-size/cache-size — WIRE to real values (app.getVersion, fs sizes).
 - [x] **B4** Integrations fake connect/disconnect (no OAuth) — REMOVE fake status; link to real setup.
 - [ ] **B5** Sidebar "Ready" dot always green — SOFTEN (reflect real model availability or drop the word).
 - [ ] **B6** Insights "Your Voice" placeholder tab — REMOVE tab (re-add when built).
