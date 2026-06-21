@@ -86,6 +86,7 @@ interface ConnectionProfile {
   kind: ConnectionKind;
   baseEndpoint: string;       // base URL, NO path — e.g. https://<resource>.cognitiveservices.azure.com
   apiVersion?: string;        // REQUIRED for azure-openai (query param); unused for most others
+  model?: string;             // default model id / Azure DEPLOYMENT name; a slot may override it
   auth: { mode: "api-key-header" | "bearer-token" | "aad"; headerName?: string };
   // the secret (key / token) lives in the OS keychain keyed by `id` — NEVER in settings/DB
 }
@@ -94,8 +95,11 @@ interface ConnectionProfile {
 - **Endpoint is whatever the user pastes.** We never assume `*.openai.azure.com` vs
   `*.cognitiveservices.azure.com` — both are valid Azure hosts; the user supplies the full base.
 - **`apiVersion`, `deployment`, `model`, and keys are all data**, entered per connection/slot.
-- Stored split: the **non-secret** profile (endpoint, apiVersion, auth.mode, headerName) lives in
-  the store ([09](09-data-and-storage.md)); the **secret** is set via `secrets:set(connectionId, key)`
+- **The connection carries a default `model`** (its Azure deployment / model id) so the common
+  "one connection = one deployment" case is configured in one place; a slot's `target` overrides it
+  when one resource serves several deployments. Effective target = `slot.target || connection.model`.
+- Stored split: the **non-secret** profile (endpoint, apiVersion, model, auth.mode, headerName) lives
+  in the store ([09](09-data-and-storage.md)); the **secret** is set via `secrets:set(connectionId, key)`
   → keychain ([08](08-ipc-and-ports-contracts.md), [11](11-privacy-security-and-packaging.md)).
 
 A slot points at a connection and names *what to run*:

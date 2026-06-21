@@ -141,6 +141,8 @@ export interface ConnectionProfile {
   authMode: ConnectionAuthMode;
   /** Header name for api-key-header mode (Azure uses "api-key"). */
   headerName?: string;
+  /** Default model id / Azure deployment name for this connection; a slot may override it. */
+  model?: string;
 }
 
 export interface ConnectionService {

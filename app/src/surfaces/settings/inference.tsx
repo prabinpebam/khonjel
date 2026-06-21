@@ -230,6 +230,8 @@ function ConnectionSlotConfig({ prefix, kind }: { prefix: string; kind: "stt" | 
     );
   }
 
+  const selected = list.find((c) => c.id === connectionId);
+
   return (
     <div className="flex flex-col gap-4">
       <Field label="Connection">
@@ -245,10 +247,14 @@ function ConnectionSlotConfig({ prefix, kind }: { prefix: string; kind: "stt" | 
           placeholder="Select a connection"
         />
       </Field>
-      <Field label="Model / deployment">
+      <Field label="Model / deployment (optional override)">
         <ValueInput
           valueKey={`${prefix}.target`}
-          placeholder="e.g. gpt-4o-transcribe, or your Azure deployment name"
+          placeholder={
+            selected?.model
+              ? `Uses "${selected.model}" from the connection`
+              : "Set a model on the connection, or override it here"
+          }
         />
       </Field>
       <div className="flex items-center gap-3">

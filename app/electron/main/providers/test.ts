@@ -75,19 +75,22 @@ export async function testConnection(
   fetch: ProxyFetch,
 ): Promise<ConnectionTestResult> {
   if (!conn) return { ok: false, message: "Connection not found." };
-  if (!target) return { ok: false, message: "Enter a model / deployment to test." };
+  const effectiveTarget = target || conn.model || "";
+  if (!effectiveTarget) {
+    return { ok: false, message: "Set a model / deployment (on the connection or this slot)." };
+  }
   if (conn.kind === "azure-openai" && !conn.apiVersion?.trim()) {
     return { ok: false, message: "Azure needs an API version (set it on the connection)." };
   }
   try {
     if (operation === "transcription") {
-      const req = buildTranscriptionRequest(conn, target, secret);
+      const req = buildTranscriptionRequest(conn, effectiveTarget, secret);
       await fetch.transcription(req, silentWav(), "test.wav", {
-        model: target,
+        model: effectiveTarget,
         response_format: "json",
       });
     } else {
-      const req = buildChatRequest(conn, target, secret, {
+      const req = buildChatRequest(conn, effectiveTarget, secret, {
         messages: [{ role: "user", content: "ping" }],
         maxTokens: 1,
       });
@@ -95,6 +98,6 @@ export async function testConnection(
     }
     return { ok: true };
   } catch (err) {
-    return { ok: false, message: explainProviderError(String(err), target) };
+    return { ok: false, message: explainProviderError(String(err), effectiveTarget) };
   }
 }

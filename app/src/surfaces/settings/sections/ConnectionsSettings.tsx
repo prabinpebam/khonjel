@@ -75,6 +75,7 @@ export function ConnectionsSettings() {
       ...draft,
       id,
       baseEndpoint,
+      model: draft.model?.trim() || undefined,
       headerName: draft.authMode === "api-key-header" ? draft.headerName?.trim() || "api-key" : undefined,
       apiVersion: isAzure ? draft.apiVersion?.trim() || undefined : undefined,
     };
@@ -117,7 +118,8 @@ export function ConnectionsSettings() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{profile.id}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {profile.kind} · {profile.baseEndpoint}
+                    {profile.kind}
+                    {profile.model ? ` · ${profile.model}` : ""} · {profile.baseEndpoint}
                   </p>
                 </div>
                 <span
@@ -174,6 +176,20 @@ export function ConnectionsSettings() {
                 onChange={(e) => setDraft({ ...draft, baseEndpoint: e.target.value })}
                 placeholder={isAzure ? "https://<resource>.cognitiveservices.azure.com" : "https://api.openai.com"}
               />
+            </div>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label htmlFor="conn-model">Model / deployment</Label>
+              <Input
+                id="conn-model"
+                value={draft.model ?? ""}
+                onChange={(e) => setDraft({ ...draft, model: e.target.value })}
+                placeholder={isAzure ? "exact Azure deployment name (e.g. gpt-4o)" : "model id (e.g. gpt-4o-mini)"}
+              />
+              <p className="text-xs text-muted-foreground">
+                {isAzure
+                  ? "Use the exact Deployment name from the Azure portal (Resource -> Deployments), not the model family name."
+                  : "The model id the provider expects. A slot can override this."}
+              </p>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>Authentication</Label>

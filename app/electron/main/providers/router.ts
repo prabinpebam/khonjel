@@ -90,7 +90,8 @@ export function createProviderRouter(deps: ProviderRouterDeps): ProviderRouter {
     if (!isRoutedSlot(slot) || !slot.connectionId) return undefined;
     const conn = deps.getConnection(slot.connectionId);
     if (!conn) return undefined;
-    return { conn, secret: deps.getSecret(slot.connectionId) ?? "", target: slot.target ?? "" };
+    // The slot's target overrides the connection's default model/deployment.
+    return { conn, secret: deps.getSecret(slot.connectionId) ?? "", target: slot.target || conn.model || "" };
   }
 
   return {

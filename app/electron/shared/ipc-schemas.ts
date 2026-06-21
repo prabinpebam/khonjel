@@ -89,6 +89,7 @@ const ConnectionProfileSchema = z.object({
   apiVersion: z.string().optional(),
   authMode: z.enum(["api-key-header", "bearer-token", "aad"]),
   headerName: z.string().optional(),
+  model: z.string().optional(),
 });
 
 const ConnectionListSchema = z.array(ConnectionProfileSchema);
