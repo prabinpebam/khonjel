@@ -24,16 +24,18 @@ export interface NavItem {
   id: NavId;
   label: string;
   icon: LucideIcon;
+  /** The domain's signature hue (text color utility) per the color strategy. */
+  color: string;
 }
 
 /** Control Panel primary navigation (data, not markup — design-system P12). */
 export const NAV_ITEMS: NavItem[] = [
-  { id: "home", label: "Home", icon: Home },
-  { id: "insights", label: "Insights", icon: BarChart3 },
-  { id: "chat", label: "Chat", icon: MessageSquare },
-  { id: "notes", label: "Notes", icon: NotebookPen },
-  { id: "upload", label: "Upload", icon: Upload },
-  { id: "dictionary", label: "Dictionary", icon: BookOpen },
-  { id: "transforms", label: "Transforms", icon: Shuffle },
-  { id: "integrations", label: "Integrations", icon: Blocks },
+  { id: "home", label: "Home", icon: Home, color: "text-cat-home" },
+  { id: "insights", label: "Insights", icon: BarChart3, color: "text-cat-insights" },
+  { id: "chat", label: "Chat", icon: MessageSquare, color: "text-cat-chat" },
+  { id: "notes", label: "Notes", icon: NotebookPen, color: "text-cat-notes" },
+  { id: "upload", label: "Upload", icon: Upload, color: "text-cat-upload" },
+  { id: "dictionary", label: "Dictionary", icon: BookOpen, color: "text-cat-dictionary" },
+  { id: "transforms", label: "Transforms", icon: Shuffle, color: "text-cat-transforms" },
+  { id: "integrations", label: "Integrations", icon: Blocks, color: "text-cat-integrations" },
 ];

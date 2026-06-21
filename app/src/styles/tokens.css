@@ -30,6 +30,23 @@
   --danger-foreground: #ffffff;
   --success: #1f9d57;
   --warning: #c9821a;
+  --info: #3b7df0;
+
+  /*
+   * Category hues — the cheerful palette (COLOR STRATEGY).
+   * One vivid hue per primary domain. Used for that domain's nav icon, hero/
+   * empty-state accent, badges, and its data viz, so each area is recognizable.
+   * Brand violet (--accent) stays for global actions/links/focus; the feedback
+   * colors above stay for status only. Soft fills come from these via opacity.
+   */
+  --cat-home: #6c5ce7; /* violet (brand) */
+  --cat-insights: #0da2c7; /* cyan */
+  --cat-chat: #18a25c; /* green */
+  --cat-notes: #c2870d; /* amber */
+  --cat-upload: #3b7df0; /* blue */
+  --cat-dictionary: #e0478c; /* rose */
+  --cat-transforms: #ed6a2c; /* orange */
+  --cat-integrations: #0fa396; /* teal */
 
   --sidebar: #f2f1ee;
   --sidebar-selected: #ffffff;
@@ -67,6 +84,16 @@
   --accent-soft: #241f3d;
   --dataviz: #36c2a8;
   --ring: #8b7cf6;
+
+  --info: #76a6f7;
+  --cat-home: #9d90f4;
+  --cat-insights: #3cc3e0;
+  --cat-chat: #45c07e;
+  --cat-notes: #e5b454;
+  --cat-upload: #76a6f7;
+  --cat-dictionary: #f081b5;
+  --cat-transforms: #f69568;
+  --cat-integrations: #34c4b4;
 
   --sidebar: #15161a;
   --sidebar-selected: #24252b;

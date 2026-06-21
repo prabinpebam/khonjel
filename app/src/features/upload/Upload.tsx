@@ -55,7 +55,7 @@ export function Upload() {
           dragOver ? "border-accent bg-surface-2" : "border-border bg-surface",
         )}
       >
-        <span className="grid size-12 place-items-center rounded-pill bg-accent-soft text-accent">
+        <span className="grid size-12 place-items-center rounded-pill bg-cat-upload/12 text-cat-upload">
           <UploadCloud className="size-6" />
         </span>
         <span className="text-sm font-medium text-foreground">

@@ -10,6 +10,7 @@ interface Command {
   label: string;
   icon: LucideIcon;
   hint: string;
+  color: string;
   run: () => void;
 }
 
@@ -28,11 +29,19 @@ export function CommandPalette() {
       label: item.label,
       icon: item.icon,
       hint: `Ctrl+${i + 1}`,
+      color: item.color,
       run: () => setActiveView(item.id),
     }));
     return [
       ...nav,
-      { id: "settings", label: "Settings", icon: SettingsIcon, hint: "Ctrl+,", run: () => openSettings() },
+      {
+        id: "settings",
+        label: "Settings",
+        icon: SettingsIcon,
+        hint: "Ctrl+,",
+        color: "text-accent",
+        run: () => openSettings(),
+      },
     ];
   }, [setActiveView, openSettings]);
 
@@ -121,7 +130,7 @@ export function CommandPalette() {
                       active ? "bg-accent-soft text-foreground" : "text-muted-foreground",
                     )}
                   >
-                    <Icon className="size-4" />
+                    <Icon className={cn("size-4", command.color)} />
                     <span className="flex-1 text-left">{command.label}</span>
                     <span className="text-xs text-tertiary-foreground">{command.hint}</span>
                   </button>

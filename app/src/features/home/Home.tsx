@@ -57,16 +57,22 @@ export function Home() {
 
         <aside className="hidden flex-col gap-4 xl:flex">
           <div className="sticky top-0 flex flex-col gap-4">
-            <StatCard value={formatNumber(insights.totalWords)} label="Total words" />
+            <StatCard
+              value={formatNumber(insights.totalWords)}
+              label="Total words"
+              valueClassName="text-cat-home"
+            />
             <StatCard
               value={formatNumber(insights.wpm)}
               label="Words / minute"
               sub={`Top ${(100 - insights.wpmPercentile).toFixed(1)}%`}
+              valueClassName="text-cat-insights"
             />
             <StatCard
               value={String(insights.streak.current)}
               label="Day streak"
               sub={`Longest ${insights.streak.longest} days`}
+              valueClassName="text-cat-chat"
             />
             <Card className="p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-tertiary-foreground">

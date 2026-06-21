@@ -45,13 +45,20 @@ export function Insights() {
               value={formatNumber(data.wpm)}
               label="Words / minute"
               sub={`Top ${(100 - data.wpmPercentile).toFixed(1)}%`}
+              valueClassName="text-cat-insights"
             />
             <StatCard
               value={formatNumber(data.wordsCorrected + data.dictionaryFixes)}
               label="Fixes made"
               sub={`${data.wordsCorrected} corrected · ${data.dictionaryFixes} dictionary`}
+              valueClassName="text-cat-transforms"
             />
-            <StatCard value={formatNumber(data.totalWords)} label="Total words dictated" sub="Desktop" />
+            <StatCard
+              value={formatNumber(data.totalWords)}
+              label="Total words dictated"
+              sub="Desktop"
+              valueClassName="text-cat-home"
+            />
           </div>
 
           <Card>
@@ -59,13 +66,16 @@ export function Insights() {
               <CardTitle>Desktop usage</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              {data.appUsage.map((row) => (
+              {data.appUsage.map((row, index) => (
                 <div key={row.category} className="flex items-center gap-3">
                   <span className="w-36 shrink-0 truncate text-sm text-foreground">
                     {row.category}
                   </span>
                   <div className="h-6 flex-1 overflow-hidden rounded-sm bg-surface-2">
-                    <div className="h-full rounded-sm bg-dataviz" style={{ width: `${row.pct}%` }} />
+                    <div
+                      className={cn("h-full rounded-sm", BAR_COLORS[index % BAR_COLORS.length])}
+                      style={{ width: `${row.pct}%` }}
+                    />
                   </div>
                   <span className="w-16 shrink-0 text-right text-xs text-tertiary-foreground">
                     {row.pct}% · {row.count}
@@ -89,6 +99,14 @@ export function Insights() {
     </div>
   );
 }
+
+const BAR_COLORS = [
+  "bg-cat-home",
+  "bg-cat-insights",
+  "bg-cat-chat",
+  "bg-cat-notes",
+  "bg-cat-transforms",
+];
 
 const MONTHS = [
   "Jan",

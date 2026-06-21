@@ -11,7 +11,7 @@ interface PromoBannerProps {
 /** Dismissible promo banner with a serif headline (library pages). */
 export function PromoBanner({ headline, supporting, chips, onDismiss }: PromoBannerProps) {
   return (
-    <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-accent to-primary p-6 text-primary-foreground">
+    <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-accent to-cat-dictionary p-6 text-primary-foreground">
       {onDismiss ? (
         <button
           type="button"

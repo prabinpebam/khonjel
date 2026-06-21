@@ -31,6 +31,16 @@
   --color-danger-foreground: var(--danger-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  --color-cat-home: var(--cat-home);
+  --color-cat-insights: var(--cat-insights);
+  --color-cat-chat: var(--cat-chat);
+  --color-cat-notes: var(--cat-notes);
+  --color-cat-upload: var(--cat-upload);
+  --color-cat-dictionary: var(--cat-dictionary);
+  --color-cat-transforms: var(--cat-transforms);
+  --color-cat-integrations: var(--cat-integrations);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-selected: var(--sidebar-selected);

@@ -28,7 +28,7 @@ export function Sidebar() {
   return (
     <aside className="flex w-[var(--sidebar-width)] shrink-0 flex-col bg-sidebar ps-3 pe-2 pb-3">
       <div className="flex items-center gap-2 px-2 py-2">
-        <span className="size-6 rounded-md bg-primary" aria-hidden />
+        <span className="size-6 rounded-md bg-gradient-to-br from-cat-home to-cat-dictionary" aria-hidden />
         <span className="text-sm font-semibold text-foreground">Khonjel</span>
       </div>
 
@@ -59,7 +59,7 @@ export function Sidebar() {
                   : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
               )}
             >
-              <Icon className={cn("size-4", selected && "text-accent")} />
+              <Icon className={cn("size-4", item.color)} />
               <span>{item.label}</span>
             </button>
           );
