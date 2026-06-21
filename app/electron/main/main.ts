@@ -8,6 +8,9 @@ import { createDispatch } from "../shared/dispatch";
 import { createSettingsStore, fileSettingsIO } from "./services/settings";
 import { createInferenceService, stubInferenceEngine } from "./services/inference";
 import { createConnectionStore } from "./services/connections";
+import { createContentStore } from "./services/content";
+import { listModels } from "./models/catalog";
+import { computeInsights } from "./insights/compute";
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -32,6 +35,10 @@ function buildDispatch() {
     inference: createInferenceService(stubInferenceEngine),
     connections: createConnectionStore(
       fileSettingsIO(path.join(app.getPath("userData"), "connections.json")),
+    ),
+    content: createContentStore(
+      fileSettingsIO(path.join(app.getPath("userData"), "content.json")),
+      { listModels, computeInsights },
     ),
   });
 }

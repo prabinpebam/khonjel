@@ -11,13 +11,24 @@
 import { CHANNELS, type Channel, ipcError } from "./ipc-contract";
 import { RequestSchemas } from "./ipc-schemas";
 import type {
+  ChatMessage,
   CleanupOptions,
   CleanupResult,
   ConnectionProfile,
+  DictionaryEntry,
+  Folder,
+  HistoryEntry,
+  InsightsAggregate,
+  Integration,
+  ModelInfo,
+  Note,
   Platform,
   Profile,
   SettingsPatch,
   SettingsSnapshot,
+  Snippet,
+  Transform,
+  UploadJob,
 } from "../../src/services/ports";
 
 export interface DispatchDeps {
@@ -38,7 +49,21 @@ export interface DispatchDeps {
     upsert: (profile: ConnectionProfile) => ConnectionProfile[] | Promise<ConnectionProfile[]>;
     remove: (id: string) => ConnectionProfile[] | Promise<ConnectionProfile[]>;
   };
-  // Grows one slice per phase (db-backed content, models, meetings, …).
+  content: {
+    history: () => HistoryEntry[] | Promise<HistoryEntry[]>;
+    insights: () => InsightsAggregate | Promise<InsightsAggregate>;
+    chat: () => ChatMessage[] | Promise<ChatMessage[]>;
+    folders: () => Folder[] | Promise<Folder[]>;
+    notes: () => Note[] | Promise<Note[]>;
+    uploads: () => UploadJob[] | Promise<UploadJob[]>;
+    dictionary: () => DictionaryEntry[] | Promise<DictionaryEntry[]>;
+    snippets: () => Snippet[] | Promise<Snippet[]>;
+    transforms: () => Transform[] | Promise<Transform[]>;
+    integrations: () => Integration[] | Promise<Integration[]>;
+    sttModels: () => ModelInfo[] | Promise<ModelInfo[]>;
+    llmModels: () => ModelInfo[] | Promise<ModelInfo[]>;
+  };
+  // Grows one slice per phase (meetings, transcription, agent, ...).
 }
 
 export type Dispatch = (channel: string, ...args: unknown[]) => Promise<unknown>;
@@ -54,6 +79,18 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.connectionsList]: () => deps.connections.list(),
     [CHANNELS.connectionsUpsert]: (args) => deps.connections.upsert(args[0] as ConnectionProfile),
     [CHANNELS.connectionsRemove]: (args) => deps.connections.remove(args[0] as string),
+    [CHANNELS.contentHistory]: () => deps.content.history(),
+    [CHANNELS.contentInsights]: () => deps.content.insights(),
+    [CHANNELS.contentChat]: () => deps.content.chat(),
+    [CHANNELS.contentFolders]: () => deps.content.folders(),
+    [CHANNELS.contentNotes]: () => deps.content.notes(),
+    [CHANNELS.contentUploads]: () => deps.content.uploads(),
+    [CHANNELS.contentDictionary]: () => deps.content.dictionary(),
+    [CHANNELS.contentSnippets]: () => deps.content.snippets(),
+    [CHANNELS.contentTransforms]: () => deps.content.transforms(),
+    [CHANNELS.contentIntegrations]: () => deps.content.integrations(),
+    [CHANNELS.contentSttModels]: () => deps.content.sttModels(),
+    [CHANNELS.contentLlmModels]: () => deps.content.llmModels(),
   };
 
   return async function dispatch(channel: string, ...args: unknown[]): Promise<unknown> {

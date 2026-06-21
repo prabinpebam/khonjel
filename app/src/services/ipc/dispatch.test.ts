@@ -21,6 +21,29 @@ const deps: DispatchDeps = {
     upsert: (profile) => [profile],
     remove: () => [],
   },
+  content: {
+    history: () => [],
+    insights: () => ({
+      wpm: 0,
+      wpmPercentile: 0,
+      wordsCorrected: 0,
+      dictionaryFixes: 0,
+      totalWords: 0,
+      appUsage: [],
+      streak: { current: 0, longest: 0 },
+      heatmap: [],
+    }),
+    chat: () => [],
+    folders: () => [],
+    notes: () => [],
+    uploads: () => [],
+    dictionary: () => [],
+    snippets: () => [],
+    transforms: () => [],
+    integrations: () => [],
+    sttModels: () => [],
+    llmModels: () => [],
+  },
 };
 
 describe("createDispatch", () => {

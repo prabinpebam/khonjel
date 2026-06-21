@@ -1,10 +1,21 @@
 import type {
+  ChatMessage,
   CleanupResult,
   ConnectionProfile,
+  DictionaryEntry,
+  Folder,
+  HistoryEntry,
+  InsightsAggregate,
+  Integration,
+  ModelInfo,
+  Note,
   Platform,
   Profile,
   Services,
   SettingsSnapshot,
+  Snippet,
+  Transform,
+  UploadJob,
 } from "@services/ports";
 import { CHANNELS } from "@ipc/ipc-contract";
 
@@ -14,13 +25,12 @@ import { CHANNELS } from "@ipc/ipc-contract";
  * never the dispatch/handlers/zod — so no main-process or node code reaches the renderer bundle.
  *
  * `invoke` is provided by the preload bridge (`window.khonjel.invoke`) under Electron, and by an
- * in-memory loopback in tests. Ports not yet implemented in the backend fall back to the provided
- * `fallback` services (the mock), so the app keeps working under Electron before later phases land
- * (e.g. `content` stays mock until Phase 4). See backend/08 + 14 (T0.4).
+ * in-memory loopback in tests. Every port is now backed by the main-process dispatch, so this
+ * adapter routes the whole `Services` contract over IPC. See backend/08 + 14 (T0.4).
  */
 export type Invoke = (channel: string, ...args: unknown[]) => Promise<unknown>;
 
-export function createIpcServices(invoke: Invoke, fallback: Services): Services {
+export function createIpcServices(invoke: Invoke): Services {
   return {
     profile: {
       get: () => invoke(CHANNELS.profileGet) as Promise<Profile>,
@@ -41,7 +51,19 @@ export function createIpcServices(invoke: Invoke, fallback: Services): Services 
       upsert: (profile) => invoke(CHANNELS.connectionsUpsert, profile) as Promise<ConnectionProfile[]>,
       remove: (id) => invoke(CHANNELS.connectionsRemove, id) as Promise<ConnectionProfile[]>,
     },
-    // Not yet backed by the backend — keep the mock until its phase implements it.
-    content: fallback.content,
+    content: {
+      history: () => invoke(CHANNELS.contentHistory) as Promise<HistoryEntry[]>,
+      insights: () => invoke(CHANNELS.contentInsights) as Promise<InsightsAggregate>,
+      chat: () => invoke(CHANNELS.contentChat) as Promise<ChatMessage[]>,
+      folders: () => invoke(CHANNELS.contentFolders) as Promise<Folder[]>,
+      notes: () => invoke(CHANNELS.contentNotes) as Promise<Note[]>,
+      uploads: () => invoke(CHANNELS.contentUploads) as Promise<UploadJob[]>,
+      dictionary: () => invoke(CHANNELS.contentDictionary) as Promise<DictionaryEntry[]>,
+      snippets: () => invoke(CHANNELS.contentSnippets) as Promise<Snippet[]>,
+      transforms: () => invoke(CHANNELS.contentTransforms) as Promise<Transform[]>,
+      integrations: () => invoke(CHANNELS.contentIntegrations) as Promise<Integration[]>,
+      sttModels: () => invoke(CHANNELS.contentSttModels) as Promise<ModelInfo[]>,
+      llmModels: () => invoke(CHANNELS.contentLlmModels) as Promise<ModelInfo[]>,
+    },
   };
 }

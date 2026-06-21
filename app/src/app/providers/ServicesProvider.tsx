@@ -21,7 +21,7 @@ declare global {
 function resolveServices(): Services {
   const bridge = typeof window !== "undefined" ? window.khonjel : undefined;
   if (bridge && typeof bridge.invoke === "function") {
-    return createIpcServices((channel, ...args) => bridge.invoke(channel, ...args), mockServices);
+    return createIpcServices((channel, ...args) => bridge.invoke(channel, ...args));
   }
   return mockServices;
 }

@@ -73,6 +73,91 @@ const ConnectionProfileSchema = z.object({
 
 const ConnectionListSchema = z.array(ConnectionProfileSchema);
 
+const HistoryEntrySchema = z
+  .object({
+    id: z.string(),
+    createdAt: z.string(),
+    finalText: z.string(),
+    wordCount: z.number(),
+    durationSec: z.number(),
+  })
+  .passthrough();
+
+const InsightsAggregateSchema = z
+  .object({
+    wpm: z.number(),
+    wpmPercentile: z.number(),
+    wordsCorrected: z.number(),
+    dictionaryFixes: z.number(),
+    totalWords: z.number(),
+    appUsage: z.array(
+      z.object({ category: z.string(), count: z.number(), pct: z.number() }).passthrough(),
+    ),
+    streak: z.object({ current: z.number(), longest: z.number() }),
+    heatmap: z.array(z.object({ date: z.string(), count: z.number() })),
+  })
+  .passthrough();
+
+const ChatMessageSchema = z
+  .object({
+    id: z.string(),
+    role: z.enum(["user", "assistant"]),
+    content: z.string(),
+    createdAt: z.string(),
+  })
+  .passthrough();
+
+const FolderSchema = z.object({ id: z.string(), name: z.string(), count: z.number() }).passthrough();
+
+const NoteSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    preview: z.string(),
+    body: z.string(),
+    folderId: z.string(),
+    updatedAt: z.string(),
+    fromRecording: z.boolean(),
+  })
+  .passthrough();
+
+const UploadJobSchema = z
+  .object({
+    id: z.string(),
+    filename: z.string(),
+    durationSec: z.number(),
+    format: z.string(),
+    state: z.enum(["queued", "transcribing", "done", "error"]),
+    progress: z.number(),
+  })
+  .passthrough();
+
+const TransformSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    hotkey: z.string(),
+    builtin: z.boolean(),
+    enabled: z.boolean(),
+  })
+  .passthrough();
+
+const IntegrationSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    icon: z.enum(["calendar", "code", "blocks", "terminal"]),
+    status: z.enum(["connected", "disconnected"]),
+    detail: z.string().optional(),
+  })
+  .passthrough();
+
+const ModelInfoSchema = z
+  .object({ id: z.string(), name: z.string(), sizeLabel: z.string(), recommended: z.boolean() })
+  .passthrough();
+
 /** Request argument tuples (Phase 0 channels take no arguments; settings:patch takes a patch). */
 export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.profileGet]: z.tuple([]),
@@ -84,6 +169,18 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.connectionsList]: z.tuple([]),
   [CHANNELS.connectionsUpsert]: z.tuple([ConnectionProfileSchema]),
   [CHANNELS.connectionsRemove]: z.tuple([z.string()]),
+  [CHANNELS.contentHistory]: z.tuple([]),
+  [CHANNELS.contentInsights]: z.tuple([]),
+  [CHANNELS.contentChat]: z.tuple([]),
+  [CHANNELS.contentFolders]: z.tuple([]),
+  [CHANNELS.contentNotes]: z.tuple([]),
+  [CHANNELS.contentUploads]: z.tuple([]),
+  [CHANNELS.contentDictionary]: z.tuple([]),
+  [CHANNELS.contentSnippets]: z.tuple([]),
+  [CHANNELS.contentTransforms]: z.tuple([]),
+  [CHANNELS.contentIntegrations]: z.tuple([]),
+  [CHANNELS.contentSttModels]: z.tuple([]),
+  [CHANNELS.contentLlmModels]: z.tuple([]),
 };
 
 /** Response payload schemas. */
@@ -97,4 +194,16 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.connectionsList]: ConnectionListSchema,
   [CHANNELS.connectionsUpsert]: ConnectionListSchema,
   [CHANNELS.connectionsRemove]: ConnectionListSchema,
+  [CHANNELS.contentHistory]: z.array(HistoryEntrySchema),
+  [CHANNELS.contentInsights]: InsightsAggregateSchema,
+  [CHANNELS.contentChat]: z.array(ChatMessageSchema),
+  [CHANNELS.contentFolders]: z.array(FolderSchema),
+  [CHANNELS.contentNotes]: z.array(NoteSchema),
+  [CHANNELS.contentUploads]: z.array(UploadJobSchema),
+  [CHANNELS.contentDictionary]: z.array(DictionaryEntrySchema),
+  [CHANNELS.contentSnippets]: z.array(SnippetSchema),
+  [CHANNELS.contentTransforms]: z.array(TransformSchema),
+  [CHANNELS.contentIntegrations]: z.array(IntegrationSchema),
+  [CHANNELS.contentSttModels]: z.array(ModelInfoSchema),
+  [CHANNELS.contentLlmModels]: z.array(ModelInfoSchema),
 };

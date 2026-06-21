@@ -40,6 +40,24 @@ test("electron seam: real system info + settings persist across restart", async 
   expect(typeof cleanup.text).toBe("string");
   expect(cleanup.text.length).toBeGreaterThan(0);
 
+  // Content flows from the REAL main-process store/catalog, not the renderer mock seed.
+  const sttModels = await page.evaluate(() => window.khonjel.invoke("content:sttModels"));
+  expect(Array.isArray(sttModels)).toBe(true);
+  expect(
+    sttModels.some((m) => m.id === "ggml-small.bin"),
+    "real STT catalog over IPC, not the mock seed",
+  ).toBe(true);
+
+  const history = await page.evaluate(() => window.khonjel.invoke("content:history"));
+  expect(Array.isArray(history)).toBe(true);
+  expect(history.length, "fresh install: real content store starts empty (no mock seed)").toBe(0);
+
+  const transforms = await page.evaluate(() => window.khonjel.invoke("content:transforms"));
+  expect(
+    transforms.length > 0 && transforms.every((t) => t.builtin),
+    "ships builtin transforms on a fresh install",
+  ).toBe(true);
+
   await page.evaluate(() => window.khonjel.invoke("settings:patch", { values: { "eval.persist": "yes" } }));
   await app.close();
 

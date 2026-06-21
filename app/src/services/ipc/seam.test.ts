@@ -44,8 +44,31 @@ const dispatch = createDispatch({
       return [...connectionState];
     },
   },
+  content: {
+    history: () => [],
+    insights: () => ({
+      wpm: 0,
+      wpmPercentile: 0,
+      wordsCorrected: 0,
+      dictionaryFixes: 0,
+      totalWords: 0,
+      appUsage: [],
+      streak: { current: 0, longest: 0 },
+      heatmap: [],
+    }),
+    chat: () => [],
+    folders: () => [],
+    notes: () => [],
+    uploads: () => [],
+    dictionary: () => [],
+    snippets: () => [],
+    transforms: () => [],
+    integrations: () => [],
+    sttModels: () => [],
+    llmModels: () => [],
+  },
 });
-const ipcServices = createIpcServices((channel, ...args) => dispatch(channel, ...args), mockServices);
+const ipcServices = createIpcServices((channel, ...args) => dispatch(channel, ...args));
 
 const PLATFORMS = ["win32", "darwin", "linux", "web"];
 
@@ -95,7 +118,8 @@ describe.each<[string, Services]>([
     expect((await services.connections.list()).some((c) => c.id === "p1")).toBe(false);
   });
 
-  it("content stays available (mock until Phase 4)", async () => {
+  it("content routes through the seam and resolves an array", async () => {
     expect(Array.isArray(await services.content.notes())).toBe(true);
+    expect(Array.isArray(await services.content.sttModels())).toBe(true);
   });
 });

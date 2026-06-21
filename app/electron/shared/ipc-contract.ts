@@ -10,13 +10,24 @@
  * See docs/product-spec/04-architecture-and-delivery/backend/08-ipc-and-ports-contracts.md.
  */
 import type {
+  ChatMessage,
   CleanupOptions,
   CleanupResult,
   ConnectionProfile,
+  DictionaryEntry,
+  Folder,
+  HistoryEntry,
+  InsightsAggregate,
+  Integration,
+  ModelInfo,
+  Note,
   Platform,
   Profile,
   SettingsPatch,
   SettingsSnapshot,
+  Snippet,
+  Transform,
+  UploadJob,
 } from "../../src/services/ports";
 
 /** Bumped only on breaking channel changes; preload sends it, main rejects mismatches. */
@@ -33,6 +44,18 @@ export const CHANNELS = {
   connectionsList: "connections:list",
   connectionsUpsert: "connections:upsert",
   connectionsRemove: "connections:remove",
+  contentHistory: "content:history",
+  contentInsights: "content:insights",
+  contentChat: "content:chat",
+  contentFolders: "content:folders",
+  contentNotes: "content:notes",
+  contentUploads: "content:uploads",
+  contentDictionary: "content:dictionary",
+  contentSnippets: "content:snippets",
+  contentTransforms: "content:transforms",
+  contentIntegrations: "content:integrations",
+  contentSttModels: "content:sttModels",
+  contentLlmModels: "content:llmModels",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -48,6 +71,18 @@ export interface ChannelContract {
   "connections:list": { request: []; response: ConnectionProfile[] };
   "connections:upsert": { request: [ConnectionProfile]; response: ConnectionProfile[] };
   "connections:remove": { request: [string]; response: ConnectionProfile[] };
+  "content:history": { request: []; response: HistoryEntry[] };
+  "content:insights": { request: []; response: InsightsAggregate };
+  "content:chat": { request: []; response: ChatMessage[] };
+  "content:folders": { request: []; response: Folder[] };
+  "content:notes": { request: []; response: Note[] };
+  "content:uploads": { request: []; response: UploadJob[] };
+  "content:dictionary": { request: []; response: DictionaryEntry[] };
+  "content:snippets": { request: []; response: Snippet[] };
+  "content:transforms": { request: []; response: Transform[] };
+  "content:integrations": { request: []; response: Integration[] };
+  "content:sttModels": { request: []; response: ModelInfo[] };
+  "content:llmModels": { request: []; response: ModelInfo[] };
 }
 
 export type RequestOf<C extends Channel> = ChannelContract[C]["request"];
