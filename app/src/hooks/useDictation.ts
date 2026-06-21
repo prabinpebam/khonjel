@@ -6,7 +6,8 @@
  */
 import { useRef, useState } from "react";
 import { useServices } from "@services";
-import { startRecording, type Recorder } from "@lib/audio/recorder";
+import { useSettingsStore } from "@stores/settings";
+import { startRecording, resolveMicDeviceId, type Recorder } from "@lib/audio/recorder";
 
 export type DictationStatus = "idle" | "recording" | "transcribing" | "error";
 
@@ -17,8 +18,15 @@ export interface UseDictation {
   toggle: () => void;
 }
 
-export function useDictation(onResult: (text: string) => void): UseDictation {
+export function useDictation(
+  onResult: (text: string) => void,
+  opts: { onLevel?: (level: number) => void } = {},
+): UseDictation {
   const { transcription, inference, content } = useServices();
+  const micDevice = useSettingsStore((s) => s.values["micDevice"] ?? "default");
+  const preferBuiltIn = useSettingsStore((s) => s.toggles["preferBuiltInMic"] ?? false);
+  const saveHistory = useSettingsStore((s) => s.toggles["saveHistory"] ?? true);
+  const cleanupEnabled = useSettingsStore((s) => s.toggles["llm.cleanup.enabled"] ?? true);
   const [status, setStatus] = useState<DictationStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const recorderRef = useRef<Recorder | null>(null);
@@ -27,7 +35,8 @@ export function useDictation(onResult: (text: string) => void): UseDictation {
   const start = async () => {
     setError(null);
     try {
-      recorderRef.current = await startRecording();
+      const deviceId = await resolveMicDeviceId(micDevice, preferBuiltIn);
+      recorderRef.current = await startRecording({ deviceId, onLevel: opts.onLevel });
       startedAtRef.current = Date.now();
       setStatus("recording");
     } catch (e) {
@@ -52,16 +61,19 @@ export function useDictation(onResult: (text: string) => void): UseDictation {
       }
       // Apply the user's dictionary + snippets during cleanup (spoken terms, substitutions).
       const [dictionary, snippets] = await Promise.all([content.dictionary(), content.snippets()]);
-      const cleaned = await inference.cleanup(trimmed, { dictionary, snippets });
-      void content.addHistory({
-        finalText: cleaned.text,
-        app: "Khonjel",
-        language: "auto",
-        durationSec,
-        mode: "dictation",
-        hasAudio: false,
-        cleanupApplied: cleaned.cleaned,
-      });
+      const cleaned = await inference.cleanup(trimmed, { dictionary, snippets, cleanupEnabled });
+      // Honor the "Save transcription history" privacy setting.
+      if (saveHistory) {
+        void content.addHistory({
+          finalText: cleaned.text,
+          app: "Khonjel",
+          language: "auto",
+          durationSec,
+          mode: "dictation",
+          hasAudio: false,
+          cleanupApplied: cleaned.cleaned,
+        });
+      }
       onResult(cleaned.text);
       setStatus("idle");
     } catch (e) {

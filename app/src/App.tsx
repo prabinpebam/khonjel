@@ -5,9 +5,29 @@ import { MockStudio } from "@app/devtools/MockStudio";
 import { EvalBridge } from "@app/devtools/EvalBridge";
 import { SettingsSync } from "@app/devtools/SettingsSync";
 import { GlobalDictation } from "@app/system/GlobalDictation";
+import { FloatingBar } from "@surfaces/floating-bar/FloatingBar";
 
 export function App() {
   const underElectron = typeof window !== "undefined" && Boolean(window.khonjel);
+  const surface =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("surface")
+      : null;
+
+  // The floating dictation bar runs in its own always-on-top window (?surface=floating-bar). It
+  // needs settings (mic/cleanup) but not the control-panel chrome, dev tools, or the global hotkey
+  // controller (the bar owns dictation itself).
+  if (surface === "floating-bar") {
+    return (
+      <ThemeProvider>
+        <ServicesProvider>
+          {underElectron ? <SettingsSync /> : null}
+          <FloatingBar />
+        </ServicesProvider>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider>
       <ServicesProvider>

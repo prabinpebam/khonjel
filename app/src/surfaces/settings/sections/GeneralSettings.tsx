@@ -1,8 +1,57 @@
+import { useEffect, useState } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useThemeStore, type Theme } from "@stores/theme";
+import { useSettingsStore } from "@stores/settings";
 import { SettingGroup, SettingRow } from "@components/common/SettingRow";
 import { Segmented } from "@components/ui/segmented";
+import { Select } from "@components/ui/select";
 import { SelectRow, ToggleRow } from "../controls";
+
+/** Input-device picker backed by the real list of microphones (navigator.mediaDevices). */
+function MicDeviceRow() {
+  const value = useSettingsStore((s) => s.values["micDevice"] ?? "default");
+  const setValue = useSettingsStore((s) => s.setValue);
+  const [devices, setDevices] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    let live = true;
+    const load = async () => {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      try {
+        const inputs = (await navigator.mediaDevices.enumerateDevices()).filter(
+          (d) => d.kind === "audioinput" && d.deviceId && d.deviceId !== "default",
+        );
+        if (live) setDevices(inputs.map((d, i) => ({ value: d.deviceId, label: d.label || `Microphone ${i + 1}` })));
+      } catch {
+        /* permission not granted yet -> only the system default is offered */
+      }
+    };
+    void load();
+    navigator.mediaDevices?.addEventListener?.("devicechange", load);
+    return () => {
+      live = false;
+      navigator.mediaDevices?.removeEventListener?.("devicechange", load);
+    };
+  }, []);
+
+  return (
+    <SettingRow
+      title="Input device"
+      subtitle={
+        devices.length === 0 ? "Grant microphone access to choose a specific device." : undefined
+      }
+      control={
+        <Select
+          aria-label="Input device"
+          value={value}
+          onValueChange={(v) => setValue("micDevice", v)}
+          options={[{ value: "default", label: "System default" }, ...devices]}
+          className="min-w-44"
+        />
+      }
+    />
+  );
+}
 
 const LOCALES = [
   { value: "en", label: "English" },
@@ -106,15 +155,7 @@ export function GeneralSettings() {
 
       <SettingGroup label="Microphone">
         <ToggleRow title="Prefer built-in microphone" settingKey="preferBuiltInMic" />
-        <SelectRow
-          title="Input device"
-          settingKey="micDevice"
-          options={[
-            { value: "default", label: "System default" },
-            { value: "builtin", label: "Built-in microphone" },
-            { value: "usb", label: "USB microphone" },
-          ]}
-        />
+        <MicDeviceRow />
       </SettingGroup>
 
       <SettingGroup label="Dictionary">

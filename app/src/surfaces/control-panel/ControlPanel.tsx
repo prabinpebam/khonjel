@@ -1,5 +1,5 @@
 import { useEffect, type ComponentType } from "react";
-import type { NavId } from "@config/nav";
+import { NAV_ITEMS, type NavId } from "@config/nav";
 import { useUiStore } from "@stores/ui";
 import { Home } from "@features/home/Home";
 import { Insights } from "@features/insights/Insights";
@@ -33,10 +33,21 @@ export function ControlPanel() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const state = useUiStore.getState();
+      const key = e.key.toLowerCase();
+      if (key === "k") {
         e.preventDefault();
-        const state = useUiStore.getState();
         state.setPaletteOpen(!state.paletteOpen);
+      } else if (key === ",") {
+        e.preventDefault();
+        state.openSettings();
+      } else if (/^[1-9]$/.test(e.key)) {
+        const item = NAV_ITEMS[Number(e.key) - 1];
+        if (item) {
+          e.preventDefault();
+          state.setActiveView(item.id);
+        }
       }
     };
     window.addEventListener("keydown", onKey);

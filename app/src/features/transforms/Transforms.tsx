@@ -19,6 +19,7 @@ export function Transforms() {
   const setToggle = useSettingsStore((s) => s.setToggle);
   const loadedRef = useRef(false);
   const [draft, setDraft] = useState<Transform | null>(null);
+  const [promoVisible, setPromoVisible] = useState(true);
 
   useEffect(() => {
     let live = true;
@@ -92,16 +93,19 @@ export function Transforms() {
       />
 
       <p className="mb-4 text-xs text-tertiary-foreground">
-        View changes: <Keycap>Win+Alt+O</Keycap>
+        Select text in any app, then press a transform's hotkey to rewrite it in place.
       </p>
 
-      <div className="mb-6">
-        <PromoBanner
-          headline="Transforms work anywhere you write."
-          supporting="Select text, press a hotkey, and Khonjel rewrites it in place."
-          chips={["Polish", "Prompt Engineer", "Custom"]}
-        />
-      </div>
+      {promoVisible ? (
+        <div className="mb-6">
+          <PromoBanner
+            headline="Transforms work anywhere you write."
+            supporting="Select text, press a hotkey, and Khonjel rewrites it in place."
+            chips={["Polish", "Prompt Engineer", "Custom"]}
+            onDismiss={() => setPromoVisible(false)}
+          />
+        </div>
+      ) : null}
 
       {draft ? (
         <TransformEditor draft={draft} onChange={setDraft} onSave={saveDraft} onCancel={() => setDraft(null)} />

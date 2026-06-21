@@ -14,6 +14,8 @@ export interface ElectronAPIShim {
   minimize?: () => void;
   toggleMaximize?: () => void;
   close?: () => void;
+  /** The floating bar signals it returned to idle so the main process can auto-hide it. */
+  floatingIdle?: () => void;
 }
 
 export const electronAPI: ElectronAPIShim = {
@@ -22,6 +24,7 @@ export const electronAPI: ElectronAPIShim = {
   minimize: () => {},
   toggleMaximize: () => {},
   close: () => {},
+  floatingIdle: () => {},
 };
 
 declare global {

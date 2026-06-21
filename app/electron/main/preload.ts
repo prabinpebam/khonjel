@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   minimize: () => ipcRenderer.send("window:minimize"),
   toggleMaximize: () => ipcRenderer.send("window:toggle-maximize"),
   close: () => ipcRenderer.send("window:close"),
+  floatingIdle: () => ipcRenderer.send("floating:idle"),
 });
 
 // The typed seam the renderer's `ipc` adapter calls. Only a single generic `invoke` crosses the

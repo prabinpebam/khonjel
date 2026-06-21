@@ -1,6 +1,6 @@
 // Electron main process (TypeScript, bundled to ../main.cjs by scripts/build-electron.mjs).
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, screen, session, shell } from "electron";
 import * as path from "node:path";
 import { writeFileSync, unlinkSync } from "node:fs";
 import type { Platform } from "../../src/services/ports";
@@ -25,8 +25,16 @@ import { listModels } from "./models/catalog";
 import { computeInsights } from "./insights/compute";
 
 let mainWindow: BrowserWindow | null = null;
+let floatingBarWindow: BrowserWindow | null = null;
 let inferenceRuntime: InferenceRuntime | null = null;
 let hotkeyManager: HotkeyManager | null = null;
+
+// Eval harness only: provide a fake microphone so getUserMedia resolves headlessly (no real device
+// or user gesture needed). Must be set before the app is ready. Never enabled in normal runs.
+if (process.env.KHONJEL_EVAL === "1") {
+  app.commandLine.appendSwitch("use-fake-ui-for-media-stream");
+  app.commandLine.appendSwitch("use-fake-device-for-media-stream");
+}
 
 /**
  * Composition root: construct the real dependencies and the pure dispatch layer. Built after the
@@ -134,7 +142,7 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onTransformsChanged: 
   return { dispatch, contentStore, settingsStore };
 }
 
-function createWindow(): void {
+function createWindow(startMinimized = false): void {
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 760,
@@ -152,7 +160,14 @@ function createWindow(): void {
     },
   });
 
-  mainWindow.once("ready-to-show", () => mainWindow?.show());
+  mainWindow.once("ready-to-show", () => {
+    if (startMinimized) {
+      mainWindow?.showInactive();
+      mainWindow?.minimize();
+    } else {
+      mainWindow?.show();
+    }
+  });
 
   // Load the built renderer by default (works for `npm run electron` and the packaged app).
   // Opt into the Vite dev server for HMR with `electron . --dev-server` (see `npm run electron:dev`)
@@ -192,10 +207,118 @@ void app.whenReady().then(() => {
     return built.dispatch(channel, ...(Array.isArray(args) ? args : []));
   });
 
-  createWindow();
+  // Live mic capture (dictation + the floating bar) issues a getUserMedia permission request. This
+  // is a local, on-device dictation app, so grant microphone/media access; deny everything else.
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(permission === "media");
+  });
+  session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === "media");
+
+  // Apply OS startup preferences from settings. Only meaningful for the packaged app (in dev the
+  // executable is electron.exe, so registering a login item would point at the wrong binary).
+  const boot = built.settingsStore.get();
+  const startMinimized = boot.toggles.startMinimized ?? false;
+  if (app.isPackaged) {
+    app.setLoginItemSettings({
+      openAtLogin: boot.toggles.launchAtLogin ?? true,
+      openAsHidden: startMinimized,
+    });
+  }
+
+  createWindow(startMinimized);
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  // ---- Floating dictation bar (the core capture surface) ----
+  // A frameless, transparent, always-on-top, non-focusable window so it never steals focus from the
+  // app you are typing into. Created hidden; the dictation hotkey shows it (when the HUD preview is
+  // on) and drives record -> transcribe -> clean -> inject. Honors floatingStartPosition / autoHide.
+  createFloatingBar();
+
+  function createFloatingBar(): void {
+    floatingBarWindow = new BrowserWindow({
+      width: 360,
+      height: 72,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      maximizable: false,
+      minimizable: false,
+      fullscreenable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      focusable: false,
+      show: false,
+      backgroundColor: "#00000000",
+      webPreferences: {
+        preload: path.join(__dirname, "preload.cjs"),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    });
+    floatingBarWindow.setAlwaysOnTop(true, "screen-saver");
+    const useDevServer = !app.isPackaged && process.argv.includes("--dev-server");
+    if (useDevServer) {
+      void floatingBarWindow.loadURL("http://localhost:5173/?surface=floating-bar");
+    } else {
+      void floatingBarWindow.loadFile(path.join(__dirname, "..", "dist", "index.html"), {
+        query: { surface: "floating-bar" },
+      });
+    }
+    floatingBarWindow.on("closed", () => {
+      floatingBarWindow = null;
+    });
+    // If the bar is pinned (preview on + auto-hide off), show it once it has loaded.
+    floatingBarWindow.webContents.once("did-finish-load", () => {
+      const s = built.settingsStore.get();
+      if ((s.toggles["stt.dictation.preview"] ?? true) && !(s.toggles.floatingAutoHide ?? true)) {
+        showFloatingBar();
+      }
+    });
+  }
+
+  function positionFloatingBar(): void {
+    if (!floatingBarWindow) return;
+    const position = built.settingsStore.get().values.floatingStartPosition ?? "bottom-right";
+    const { workArea } = screen.getPrimaryDisplay();
+    const size = floatingBarWindow.getSize();
+    const w = size[0] ?? 360;
+    const h = size[1] ?? 72;
+    const margin = 24;
+    let x = workArea.x + workArea.width - w - margin;
+    const y = workArea.y + workArea.height - h - margin;
+    if (position === "center") x = workArea.x + Math.round((workArea.width - w) / 2);
+    else if (position === "bottom-left") x = workArea.x + margin;
+    floatingBarWindow.setPosition(x, y);
+  }
+
+  function showFloatingBar(): void {
+    if (!floatingBarWindow) return;
+    positionFloatingBar();
+    floatingBarWindow.showInactive();
+  }
+
+  // The dictation hotkey: show the bar (when the HUD is enabled) and tell it to toggle recording.
+  function triggerDictation(): void {
+    const preview = built.settingsStore.get().toggles["stt.dictation.preview"] ?? true;
+    if (preview) showFloatingBar();
+    floatingBarWindow?.webContents.send("khonjel:hotkey", "dictation");
+  }
+
+  // The bar reports returning to idle (after injecting); auto-hide it if enabled.
+  ipcMain.on("floating:idle", () => {
+    const autoHide = built.settingsStore.get().toggles.floatingAutoHide ?? true;
+    if (autoHide) floatingBarWindow?.hide();
+  });
+
+  // Eval-only hook: Playwright can't press a global shortcut, so the EDD harness calls this to
+  // exercise the real hotkey -> show-bar -> record path. Never installed outside the eval.
+  if (process.env.KHONJEL_EVAL === "1") {
+    (globalThis as unknown as { __khonjelTriggerDictation?: () => void }).__khonjelTriggerDictation =
+      () => triggerDictation();
+  }
 
   // Register the global dictation hotkey + each opted-in transform hotkey. Re-runs whenever the
   // renderer edits transforms (content:replace -> onTransformsChanged). register() clears all
@@ -205,7 +328,7 @@ void app.whenReady().then(() => {
     const snapshot = built.settingsStore.get();
     const dictationSetting = snapshot.values["hotkey.dictation"] ?? "Ctrl+Shift+D";
     const live = hotkeyManager.register(dictationSetting, () => {
-      mainWindow?.webContents.send("khonjel:hotkey", "dictation");
+      triggerDictation();
     });
     console.log(`[khonjel] dictation hotkey: ${live ?? "none (registration failed)"}`);
     if (snapshot.toggles["transforms.optIn"]) {
@@ -229,6 +352,7 @@ void app.whenReady().then(() => {
 app.on("before-quit", () => {
   inferenceRuntime?.stop();
   hotkeyManager?.unregisterAll();
+  floatingBarWindow?.destroy();
 });
 
 app.on("window-all-closed", () => {
