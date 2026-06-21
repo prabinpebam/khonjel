@@ -90,9 +90,11 @@ export async function testConnection(
         response_format: "json",
       });
     } else {
+      // No max_completion_tokens cap: reasoning models (o-series, gpt-5.x) spend tokens on
+      // internal reasoning before any output, so a tight cap fails with "max_tokens reached".
+      // The "ping" response is tiny regardless.
       const req = buildChatRequest(conn, effectiveTarget, secret, {
         messages: [{ role: "user", content: "ping" }],
-        maxTokens: 1,
       });
       await fetch.json(req);
     }

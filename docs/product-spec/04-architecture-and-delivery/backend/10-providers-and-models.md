@@ -239,8 +239,10 @@ flowchart TB
 ```
 
 - **Prompt** assembled in main ([05](05-prompt-library.md)); placeholders/dictionary/language applied here.
-- **maxTokens** = `clamp(len*2, 100, 2048)` for cleanup (`len` = input length in characters);
-  larger for chat/agent.
+- **maxTokens** = `clamp(len*4, 1024, 8192)` for cleanup (`len` = input length in characters);
+  chat uses ~16384. Budgets are deliberately generous: on **reasoning models** (o-series, gpt-5.x)
+  the internal reasoning tokens count against `max_completion_tokens`, so a tight cap returns an
+  empty result with "max_tokens reached". The **connection test** sends no cap at all.
 - **disableThinking** strips reasoning tokens on cleanup/format slots.
 
 ## 5. STT model catalog

@@ -21,8 +21,9 @@ function fakeFetch(over: Partial<ProxyFetch> = {}): ProxyFetch {
 }
 
 describe("testConnection", () => {
-  it("chat: pings /chat/completions and returns ok", async () => {
+  it("chat: pings /chat/completions without a tight token cap and returns ok", async () => {
     let url = "";
+    let body: Record<string, unknown> | undefined;
     const result = await testConnection(
       conn,
       "SECRET",
@@ -31,12 +32,15 @@ describe("testConnection", () => {
       fakeFetch({
         json: async (req) => {
           url = req.url;
+          body = req.body as Record<string, unknown>;
           return { choices: [{ message: { content: "pong" } }] };
         },
       }),
     );
     expect(result.ok).toBe(true);
     expect(url).toContain("/chat/completions");
+    // No max_completion_tokens: reasoning models would exhaust a tiny cap on reasoning alone.
+    expect(body?.max_completion_tokens).toBeUndefined();
   });
 
   it("transcription: pings /audio/transcriptions (not chat) and returns ok", async () => {

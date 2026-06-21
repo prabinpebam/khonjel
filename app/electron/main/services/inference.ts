@@ -31,9 +31,10 @@ export interface InferenceServiceImpl {
   chat: (messages: { role: "user" | "assistant"; content: string }[]) => Promise<{ text: string }>;
 }
 
-/** Cleanup token budget: ~2x the input, clamped (backend/10 SS4). */
+/** Cleanup token budget: generous so reasoning models (whose reasoning tokens count against the
+ *  budget) are not truncated to nothing; still bounded (backend/10 SS4). */
 function cleanupMaxTokens(text: string): number {
-  return Math.min(2048, Math.max(100, text.length * 2));
+  return Math.min(8192, Math.max(1024, text.length * 4));
 }
 
 export function createInferenceService(
@@ -87,7 +88,8 @@ export function createInferenceService(
         ...messages.map((m) => ({ role: m.role, content: m.content })),
       ];
       // A cloud-bound `llm.chat` slot answers remotely (errors surface as IpcError); else local.
-      const cloud = await router?.completeForSlot("llm.chat", full, { maxTokens: 2048 });
+      // 16384 matches Microsoft's gpt-5.x example and leaves room for reasoning tokens.
+      const cloud = await router?.completeForSlot("llm.chat", full, { maxTokens: 16384 });
       if (cloud != null) return { text: cloud };
       if (!engine.chat) {
         return {
