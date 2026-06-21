@@ -98,11 +98,26 @@ export const INSIGHTS: InsightsAggregate = {
 };
 
 function buildHeatmap(): { date: string; count: number }[] {
+  const WEEKS = 17;
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  // Anchor to a fixed recent Saturday so the calendar is deterministic (mock data).
+  const end = new Date(2026, 5, 20);
+  end.setDate(end.getDate() + (6 - end.getDay()));
+  const start = new Date(end);
+  start.setDate(end.getDate() - (WEEKS * 7 - 1));
   const cells: { date: string; count: number }[] = [];
-  const counts = [0, 1, 0, 2, 3, 1, 0, 0, 2, 4, 1, 3, 0, 1, 2, 0, 0, 1, 3, 2, 4, 1, 0, 2, 3, 1, 0, 1];
-  for (let i = 0; i < counts.length; i += 1) {
-    const day = String((i % 28) + 1).padStart(2, "0");
-    cells.push({ date: `2026-06-${day}`, count: counts[i] ?? 0 });
+  let i = 0;
+  for (const day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
+    const noise = Math.sin((i + 1) * 12.9898) * 43758.5453;
+    const r = Math.floor((noise - Math.floor(noise)) * 100);
+    let count = 0;
+    if (r >= 97) count = 4;
+    else if (r >= 94) count = 3;
+    else if (r >= 90) count = 2;
+    else if (r >= 85) count = 1;
+    cells.push({ date: fmt(day), count });
+    i += 1;
   }
   return cells;
 }
