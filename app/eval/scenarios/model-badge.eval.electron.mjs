@@ -111,3 +111,32 @@ test("model badge: a routed (Azure) chat slot shows in the chat badge AND the si
   await app.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });
 });
+
+test("model badge: 'Apply to all language model tasks' routes the chat slot too", async () => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-applyall-"));
+
+  const app = await electron.launch(launchOpts(userDataDir));
+  const page = await app.firstWindow();
+  await waitReady(page);
+
+  await page.locator('button[aria-label="Settings"]').first().click();
+  const modal = page.locator('[data-eval="settings-modal"]');
+  await modal.waitFor();
+  await createAzureConnection(page, modal, { id: "azure-gpt54-chat", model: "gpt-5.4" });
+  // Configure ONLY the Dictation Cleanup tab (as the user did), then fan it out to every LLM task.
+  await bindLlmSlot(page, modal, { tab: "Dictation Cleanup", connectionId: "azure-gpt54-chat", target: "gpt-5.4" });
+  await modal.getByRole("button", { name: "Apply to all language model tasks" }).click();
+  await page.waitForTimeout(300);
+  await page.keyboard.press("Escape");
+
+  // The chat slot -- never touched directly -- now resolves to the Azure connection.
+  const card = await engineCard(page);
+  const chat = await chatHeader(page);
+  expect(chat, "chat badge follows the applied cloud connection").toMatch(/gpt-5\.4/);
+  expect(chat.toLowerCase(), "chat badge is not a local model").not.toMatch(/qwen/);
+  expect(card, "sidebar LLM line follows the applied cloud connection").toMatch(/gpt-5\.4/);
+  expect(card.toLowerCase(), "sidebar LLM line is not a local model").not.toMatch(/qwen/);
+
+  await app.close();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+});

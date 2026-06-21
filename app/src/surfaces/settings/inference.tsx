@@ -196,9 +196,22 @@ function ConnectionSlotConfig({ prefix, kind }: { prefix: string; kind: "stt" | 
   const [list, setList] = useState<ConnectionProfile[]>([]);
   const connectionId = useSettingsStore((s) => s.values[`${prefix}.connectionId`] ?? "");
   const target = useSettingsStore((s) => s.values[`${prefix}.target`] ?? "");
+  const mode = useSettingsStore((s) => s.values[`${prefix}.mode`] ?? "local");
   const setValue = useSettingsStore((s) => s.setValue);
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<ConnectionTestResult | null>(null);
+  const [applied, setApplied] = useState(false);
+
+  // Route every language-model task (cleanup, agent, note, chat) to this slot's connection in one
+  // click -- so picking a cloud model for one task doesn't require repeating it on every tab.
+  function applyToAllLlm() {
+    for (const slot of ["llm.cleanup", "llm.agent", "llm.note", "llm.chat"]) {
+      setValue(`${slot}.mode`, mode);
+      setValue(`${slot}.connectionId`, connectionId);
+      setValue(`${slot}.target`, target);
+    }
+    setApplied(true);
+  }
 
   useEffect(() => {
     let live = true;
@@ -257,7 +270,7 @@ function ConnectionSlotConfig({ prefix, kind }: { prefix: string; kind: "stt" | 
           }
         />
       </Field>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="secondary"
           size="sm"
@@ -267,6 +280,18 @@ function ConnectionSlotConfig({ prefix, kind }: { prefix: string; kind: "stt" | 
         >
           {testing ? "Testing connection" : "Test connection"}
         </Button>
+        {kind === "llm" ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!connectionId}
+            onClick={applyToAllLlm}
+            title="Use this connection + deployment for Dictation Cleanup, Voice Agent, Note Formatting, and Chat"
+          >
+            Apply to all language model tasks
+          </Button>
+        ) : null}
+        {applied ? <span className="text-sm text-accent">Applied to all tasks</span> : null}
         {result ? (
           <span className={cn("text-sm", result.ok ? "text-accent" : "text-danger")}>
             {result.ok ? "Connected" : (result.message ?? "Failed")}
