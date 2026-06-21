@@ -68,7 +68,7 @@ async function bindLlmSlot(page, modal, { tab, connectionId, target }) {
   await page.waitForTimeout(300);
 }
 
-test("model badge: routed (Azure) LLM slots render in the sidebar (cleanup) + chat badge (chat), live and after restart", async () => {
+test("model badge: a routed (Azure) chat slot shows in the chat badge AND the sidebar, live and after restart", async () => {
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-badge-"));
 
   let app = await electron.launch(launchOpts(userDataDir));
@@ -80,30 +80,31 @@ test("model badge: routed (Azure) LLM slots render in the sidebar (cleanup) + ch
   const modal = page.locator('[data-eval="settings-modal"]');
   await modal.waitFor();
   await createAzureConnection(page, modal, { id: "azure-gpt54-chat", model: "gpt-5.4" });
-  // The sidebar reflects the dictation-cleanup LLM; the chat badge reflects the chat LLM.
-  await bindLlmSlot(page, modal, { tab: "Dictation Cleanup", connectionId: "azure-gpt54-chat", target: "gpt-5.4" });
+  // Only the Chat LLM is routed to Azure; the cleanup slot stays local. Both the chat badge AND the
+  // sidebar LLM line must reflect the chat slot -- if the sidebar read a different slot it would show
+  // the local model and this test would fail.
   await bindLlmSlot(page, modal, { tab: "Chat", connectionId: "azure-gpt54-chat", target: "gpt-5.4" });
   await page.keyboard.press("Escape");
 
   // ---- Assert the live displays reflect the Azure deployment, not a local model ----
   const cardLive = await engineCard(page);
   const chatLive = await chatHeader(page);
-  expect(cardLive, "[live] sidebar (cleanup) LLM shows the Azure deployment").toMatch(/gpt-5\.4/);
-  expect(cardLive.toLowerCase(), "[live] sidebar LLM is not a local model").not.toMatch(/qwen/);
+  expect(cardLive, "[live] sidebar LLM line shows the Azure deployment").toMatch(/gpt-5\.4/);
+  expect(cardLive.toLowerCase(), "[live] sidebar LLM line is not a local model").not.toMatch(/qwen/);
   expect(chatLive, "[live] chat badge shows the Azure deployment").toMatch(/gpt-5\.4/);
   expect(chatLive.toLowerCase(), "[live] chat badge is not a local model").not.toMatch(/qwen/);
 
   await app.close();
 
-  // ---- Relaunch: the persisted routed slots must still render correctly ----
+  // ---- Relaunch: the persisted routed slot must still render correctly in both places ----
   app = await electron.launch(launchOpts(userDataDir));
   page = await app.firstWindow();
   await waitReady(page);
 
   const cardAfter = await engineCard(page);
   const chatAfter = await chatHeader(page);
-  expect(cardAfter, "[restart] sidebar (cleanup) LLM shows the Azure deployment").toMatch(/gpt-5\.4/);
-  expect(cardAfter.toLowerCase(), "[restart] sidebar LLM is not a local model").not.toMatch(/qwen/);
+  expect(cardAfter, "[restart] sidebar LLM line shows the Azure deployment").toMatch(/gpt-5\.4/);
+  expect(cardAfter.toLowerCase(), "[restart] sidebar LLM line is not a local model").not.toMatch(/qwen/);
   expect(chatAfter, "[restart] chat badge shows the Azure deployment").toMatch(/gpt-5\.4/);
   expect(chatAfter.toLowerCase(), "[restart] chat badge is not a local model").not.toMatch(/qwen/);
 
