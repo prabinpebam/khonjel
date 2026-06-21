@@ -64,15 +64,7 @@ function InlineSelect({
 }) {
   const value = useSettingsStore((s) => s.values[settingKey] ?? options[0]?.value ?? "");
   const setValue = useSettingsStore((s) => s.setValue);
-  return (
-    <Select value={value} onChange={(e) => setValue(settingKey, e.target.value)}>
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </Select>
-  );
+  return <Select value={value} onValueChange={(v) => setValue(settingKey, v)} options={options} />;
 }
 
 function HotkeyRow({

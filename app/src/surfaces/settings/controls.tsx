@@ -54,13 +54,13 @@ export function SelectRow({
       title={title}
       subtitle={subtitle}
       control={
-        <Select value={value} onChange={(e) => setValue(settingKey, e.target.value)}>
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
+        <Select
+          aria-label={title}
+          value={value}
+          onValueChange={(v) => setValue(settingKey, v)}
+          options={options}
+          className="min-w-44"
+        />
       }
     />
   );

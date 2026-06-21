@@ -105,13 +105,12 @@ function ValueSelect({
   const value = useSettingsStore((s) => s.values[valueKey] ?? options[0]?.value ?? "");
   const setValue = useSettingsStore((s) => s.setValue);
   return (
-    <Select value={value} onChange={(e) => setValue(valueKey, e.target.value)}>
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </Select>
+    <Select
+      value={value}
+      onValueChange={(v) => setValue(valueKey, v)}
+      options={options}
+      className="w-full"
+    />
   );
 }
 

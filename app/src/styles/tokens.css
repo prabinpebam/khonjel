@@ -34,6 +34,9 @@
   --sidebar: #f2f1ee;
   --sidebar-selected: #ffffff;
 
+  --scrollbar-thumb: rgba(40, 40, 38, 0.18);
+  --scrollbar-thumb-hover: rgba(40, 40, 38, 0.34);
+
   /* ===== Motion durations (P9) ===== */
   --duration-fast: 120ms;
   --duration-base: 180ms;
@@ -67,6 +70,9 @@
 
   --sidebar: #15161a;
   --sidebar-selected: #24252b;
+
+  --scrollbar-thumb: rgba(255, 255, 255, 0.16);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
 }
 
 /* ===== Reduced motion collapses durations at the token layer (P9) ===== */
