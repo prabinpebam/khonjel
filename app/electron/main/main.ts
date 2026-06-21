@@ -102,10 +102,14 @@ function createWindow(): void {
 
   mainWindow.once("ready-to-show", () => mainWindow?.show());
 
-  if (app.isPackaged || process.env.KHONJEL_LOAD_DIST === "1") {
-    void mainWindow.loadFile(path.join(__dirname, "..", "dist", "index.html"));
-  } else {
+  // Load the built renderer by default (works for `npm run electron` and the packaged app).
+  // Opt into the Vite dev server for HMR with `electron . --dev-server` (see `npm run electron:dev`)
+  // while `npm run dev` is running.
+  const useDevServer = !app.isPackaged && process.argv.includes("--dev-server");
+  if (useDevServer) {
     void mainWindow.loadURL("http://localhost:5173");
+  } else {
+    void mainWindow.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }
 
   // External links open in the OS browser, never inside the app window.

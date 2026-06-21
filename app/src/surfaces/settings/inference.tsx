@@ -13,12 +13,15 @@ import { cn } from "@lib/utils";
 export type InferenceMode = "cloud" | "providers" | "local" | "self-hosted" | "enterprise";
 
 const MODE_META: Record<InferenceMode, { label: string; description: string }> = {
-  cloud: { label: "Khonjel Cloud", description: "Managed, no setup. Needs a free account." },
+  cloud: { label: "Khonjel Cloud", description: "Managed cloud service. Coming soon." },
   providers: { label: "Providers", description: "Bring your own API key." },
   local: { label: "Local", description: "On-device models, fully private." },
   "self-hosted": { label: "Self-Hosted", description: "OpenAI-compatible server on your network." },
   enterprise: { label: "Enterprise", description: "AWS Bedrock, Azure OpenAI, or Google Vertex." },
 };
+
+/** Modes shown as non-selectable placeholders (planned, not yet available). */
+const PLACEHOLDER_MODES = new Set<InferenceMode>(["cloud"]);
 
 const STT_PROVIDERS = ["Deepgram", "AssemblyAI", "ElevenLabs", "Speechmatics", "Mistral Voxtral", "xAI", "Custom"];
 const LLM_PROVIDERS = [
@@ -53,14 +56,17 @@ export function InferenceModeSelector({ modeKey, modes }: { modeKey: string; mod
       {modes.map((mode) => {
         const meta = MODE_META[mode];
         const active = value === mode;
+        const isPlaceholder = PLACEHOLDER_MODES.has(mode);
         return (
           <button
             key={mode}
             type="button"
+            disabled={isPlaceholder}
             onClick={() => setValue(modeKey, mode)}
             className={cn(
               "flex items-start gap-3 rounded-md border p-3 text-left transition-colors",
               active ? "border-accent bg-accent-soft" : "border-border bg-surface hover:bg-surface-2",
+              isPlaceholder && "cursor-not-allowed opacity-60 hover:bg-surface",
             )}
           >
             <span
@@ -72,7 +78,14 @@ export function InferenceModeSelector({ modeKey, modes }: { modeKey: string; mod
               {active ? <Check className="size-3" /> : null}
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold text-foreground">{meta.label}</span>
+              <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                {meta.label}
+                {isPlaceholder ? (
+                  <span className="rounded-pill border border-border px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Soon
+                  </span>
+                ) : null}
+              </span>
               <span className="block text-xs text-muted-foreground">{meta.description}</span>
             </span>
           </button>
@@ -164,7 +177,7 @@ export function InferenceConfigBlock({
   if (mode === "cloud") {
     return (
       <p className="text-sm text-muted-foreground">
-        Processing happens on Khonjel&apos;s managed servers. Sign in to enable.
+        Khonjel Cloud is coming soon. Use Local, Providers, Self-Hosted, or Enterprise for now.
       </p>
     );
   }
