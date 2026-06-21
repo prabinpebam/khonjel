@@ -10,9 +10,18 @@ import { createDispatch } from "@ipc/dispatch";
  * routes straight to the pure dispatch layer), so the whole seam -- adapter, channel,
  * validation, handler, response -- is exercised deterministically without launching Electron.
  */
+const settingsState = { toggles: {} as Record<string, boolean>, values: {} as Record<string, string> };
 const dispatch = createDispatch({
   profile: { get: () => ({ id: "local", name: "You" }) },
   system: { getAppVersion: () => "9.9.9", getPlatform: () => "linux" as const },
+  settings: {
+    get: () => ({ toggles: { ...settingsState.toggles }, values: { ...settingsState.values } }),
+    patch: (patch) => {
+      Object.assign(settingsState.toggles, patch.toggles ?? {});
+      Object.assign(settingsState.values, patch.values ?? {});
+      return { toggles: { ...settingsState.toggles }, values: { ...settingsState.values } };
+    },
+  },
 });
 const ipcServices = createIpcServices((channel, ...args) => dispatch(channel, ...args), mockServices);
 
@@ -36,6 +45,12 @@ describe.each<[string, Services]>([
 
   it("system.getPlatform resolves a known platform", async () => {
     expect(PLATFORMS).toContain(await services.system.getPlatform());
+  });
+
+  it("settings.patch then get round-trips a flat-map value", async () => {
+    await services.settings.patch({ values: { "stt.dictation.mode": "providers" } });
+    const snapshot = await services.settings.get();
+    expect(snapshot.values["stt.dictation.mode"]).toBe("providers");
   });
 
   it("content stays available (mock until Phase 4)", () => {

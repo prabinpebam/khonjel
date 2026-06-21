@@ -28,6 +28,28 @@ export interface SystemService {
   getPlatform(): Promise<Platform>;
 }
 
+/**
+ * Settings: the renderer's two flat dotted-key maps. The backend owns the durable copy
+ * (SQLite, main process); the mock backs it with local state. Shape mirrors
+ * `src/stores/settings.ts` exactly. See backend/08 §3.4 + 09 §4.
+ */
+export interface SettingsSnapshot {
+  toggles: Record<string, boolean>;
+  values: Record<string, string>;
+}
+
+export interface SettingsPatch {
+  toggles?: Record<string, boolean>;
+  values?: Record<string, string>;
+}
+
+export interface SettingsService {
+  /** The current settings (both flat maps). */
+  get(): Promise<SettingsSnapshot>;
+  /** Shallow-merge the provided toggles/values, persist, and return the new snapshot. */
+  patch(patch: SettingsPatch): Promise<SettingsSnapshot>;
+}
+
 export type {
   CaptureMode,
   HistoryEntry,
@@ -84,4 +106,5 @@ export interface Services {
   profile: ProfileService;
   system: SystemService;
   content: ContentService;
+  settings: SettingsService;
 }

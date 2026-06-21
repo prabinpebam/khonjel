@@ -75,8 +75,12 @@ EDD scenario. `Sx` scenarios are defined in the
 | T0.4 | Renderer **`ipc` adapter set** + `useServices()` env switch (mock↔ipc) | BE3: mock and ipc satisfy the same `Services` interface (type + shared behavioral suite) | — | — |
 | T0.5 | **Seam proof**: `profile:get`, `system:getAppVersion/getPlatform` end-to-end | BE1 handlers · BE2 contract · BE3 parity | **S1** extended: real profile/version read via bridge under Electron | ProfileService, SystemService ✅ |
 | T0.6 | **SQLite store** init + **migrations** runner (better-sqlite3 + kysely) | BE1: forward-only, idempotent, version tracked; WAL on | — | — |
-| T0.7 | **Settings source-of-truth in main** (flat maps) + `settings:get/patch` + secrets→keychain | BE1 merge/validate · BE2 contract · BE3 parity with the renderer store | **S3** under Electron: toggle persists across restart | SettingsService (J/K rows) ✅ |
-| T0.8 | **Electron eval runner**: switch Playwright to launch the Electron main process | harness smoke (launches packaged app) | S1/S2/S3 run against Electron, not just Vite | — |
+| T0.7 | **Settings source-of-truth in main** (flat maps) + `settings:get/patch` | BE1 merge/validate · BE2 contract · BE3 parity with the renderer store | **S3** under Electron: toggle persists across restart (gated with T0.8) | SettingsService |
+| T0.8 | **Electron eval runner**: switch Playwright to launch the Electron main process; wire durable DB settings into live boot (better-sqlite3 native rebuild) + renderer adoption | harness smoke (launches packaged app) | S1/S2/S3 run against Electron, not just Vite | ProfileService, SystemService, SettingsService ✅ |
+
+> **Plan refinement (T0.7):** `secrets→keychain` moves to **Phase 2** (provider connection
+> profiles), where keys are first used (`secrets:set` / `connections:test`, S8/Azure) — building
+> the native keychain with no consumer in T0.7 would be premature.
 
 > Phase 0 output: the **seam is real** end-to-end with TS, a typed IPC contract, a migrated DB,
 > main-owned settings, and both test lanes running against the actual Electron app.

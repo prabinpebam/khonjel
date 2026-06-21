@@ -9,7 +9,7 @@
  *
  * See docs/product-spec/04-architecture-and-delivery/backend/08-ipc-and-ports-contracts.md.
  */
-import type { Platform, Profile } from "../../src/services/ports";
+import type { Platform, Profile, SettingsPatch, SettingsSnapshot } from "../../src/services/ports";
 
 /** Bumped only on breaking channel changes; preload sends it, main rejects mismatches. */
 export const CONTRACT_VERSION = 1;
@@ -19,6 +19,8 @@ export const CHANNELS = {
   profileGet: "profile:get",
   systemGetAppVersion: "system:getAppVersion",
   systemGetPlatform: "system:getPlatform",
+  settingsGet: "settings:get",
+  settingsPatch: "settings:patch",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -28,6 +30,8 @@ export interface ChannelContract {
   "profile:get": { request: []; response: Profile };
   "system:getAppVersion": { request: []; response: string };
   "system:getPlatform": { request: []; response: Platform };
+  "settings:get": { request: []; response: SettingsSnapshot };
+  "settings:patch": { request: [SettingsPatch]; response: SettingsSnapshot };
 }
 
 export type RequestOf<C extends Channel> = ChannelContract[C]["request"];

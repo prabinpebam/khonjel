@@ -184,10 +184,12 @@ rules in [11](11-privacy-security-and-packaging.md).
 > `CONTRACT_VERSION` enforcement), the pure dispatch layer, the renderer `ipc` adapter (with the
 > mock↔ipc switch in `ServicesProvider`), and the TypeScript Electron main/preload (esbuild build)
 > are wired and **green**. `profile:get` + `system:getAppVersion/getPlatform` run over real IPC
-> under Electron (mock in the browser). **T0.6 done:** the SQLite migration runner (forward-only,
-> idempotent, version-tracked, WAL) + initial `settings` schema, BE1-tested against in-memory SQLite
-> ([app/electron/store/](../../../../app/electron/store/)). Covered by `app/src/services/ipc/*.test.ts`
-> + `app/electron/store/migrate.test.ts` (**33 unit tests**), with **zero frontend regression**
-> (`npm run verify` + `npm run eval` clean). Remaining Phase 0: settings-in-main + keychain (T0.7,
-> introduces the `SettingsService` port), Electron eval runner (T0.8). See
-> [14-implementation-plan §4](14-implementation-plan.md).
+> under Electron (mock in the browser). **T0.6 + T0.7 backend done:** the SQLite migration runner
+> (forward-only, idempotent, version-tracked, WAL) + initial `settings` schema, and the
+> **`SettingsService` port** with a DB-backed main settings store (`settings:get/patch`, shallow-merge)
+> + mock + ipc adapters — all BE1/BE2/BE3-tested ([app/electron/](../../../../app/electron/),
+> `app/src/services/ipc/*.test.ts`; **37 unit tests**), with **zero frontend regression**
+> (`npm run verify` + `npm run eval` clean). Remaining Phase 0: **T0.8** — Electron eval runner
+> (Playwright-Electron), wire the durable DB settings into live boot (better-sqlite3 native
+> rebuild) + renderer adoption + the S3 "persists across restart" gate. `secrets→keychain` moves
+> to Phase 2 (connections). See [14-implementation-plan §4](14-implementation-plan.md).

@@ -2,15 +2,33 @@
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import * as path from "node:path";
-import type { Platform } from "../../src/services/ports";
+import type { Platform, SettingsPatch, SettingsSnapshot } from "../../src/services/ports";
 import { checkContractVersion } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
 
 let mainWindow: BrowserWindow | null = null;
 
 /**
+ * In-memory settings used by the live composition root for now. The durable, SQLite-backed store
+ * is built and BE1-tested in electron/main/services/settings.ts; it is wired into live boot under
+ * Electron (with the better-sqlite3 native rebuild) in T0.8, alongside the renderer adoption and
+ * the S3 "persists across restart" EDD gate.
+ */
+function createMemorySettings() {
+  const snapshot: SettingsSnapshot = { toggles: {}, values: {} };
+  return {
+    get: (): SettingsSnapshot => ({ toggles: { ...snapshot.toggles }, values: { ...snapshot.values } }),
+    patch: (patch: SettingsPatch): SettingsSnapshot => {
+      Object.assign(snapshot.toggles, patch.toggles ?? {});
+      Object.assign(snapshot.values, patch.values ?? {});
+      return { toggles: { ...snapshot.toggles }, values: { ...snapshot.values } };
+    },
+  };
+}
+
+/**
  * Composition root: construct the real dependencies and the pure dispatch layer.
- * Phase 0 wires profile + system; later phases inject the db, keychain, inference, etc.
+ * Phase 0 wires profile + system + settings; later phases inject the db, keychain, inference, etc.
  */
 const dispatch = createDispatch({
   profile: {
@@ -23,6 +41,7 @@ const dispatch = createDispatch({
       return (plat === "win32" || plat === "darwin" || plat === "linux" ? plat : "web") as Platform;
     },
   },
+  settings: createMemorySettings(),
 });
 
 function createWindow(): void {

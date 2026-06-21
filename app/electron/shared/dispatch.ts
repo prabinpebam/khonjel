@@ -10,7 +10,7 @@
  */
 import { CHANNELS, type Channel, ipcError } from "./ipc-contract";
 import { RequestSchemas } from "./ipc-schemas";
-import type { Platform, Profile } from "../../src/services/ports";
+import type { Platform, Profile, SettingsPatch, SettingsSnapshot } from "../../src/services/ports";
 
 export interface DispatchDeps {
   profile: { get: () => Profile | Promise<Profile> };
@@ -18,7 +18,11 @@ export interface DispatchDeps {
     getAppVersion: () => string | Promise<string>;
     getPlatform: () => Platform | Promise<Platform>;
   };
-  // Grows one slice per phase (settings, db-backed content, inference, …).
+  settings: {
+    get: () => SettingsSnapshot | Promise<SettingsSnapshot>;
+    patch: (patch: SettingsPatch) => SettingsSnapshot | Promise<SettingsSnapshot>;
+  };
+  // Grows one slice per phase (db-backed content, inference, …).
 }
 
 export type Dispatch = (channel: string, ...args: unknown[]) => Promise<unknown>;
@@ -28,6 +32,8 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.profileGet]: () => deps.profile.get(),
     [CHANNELS.systemGetAppVersion]: () => deps.system.getAppVersion(),
     [CHANNELS.systemGetPlatform]: () => deps.system.getPlatform(),
+    [CHANNELS.settingsGet]: () => deps.settings.get(),
+    [CHANNELS.settingsPatch]: (args) => deps.settings.patch(args[0] as SettingsPatch),
   };
 
   return async function dispatch(channel: string, ...args: unknown[]): Promise<unknown> {

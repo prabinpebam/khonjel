@@ -1,14 +1,18 @@
 import { describe, it, expect } from "vitest";
-import { createDispatch } from "@ipc/dispatch";
+import { createDispatch, type DispatchDeps } from "@ipc/dispatch";
 import { isIpcError } from "@ipc/ipc-contract";
 
 /**
  * BE1/BE2 — the pure dispatch layer (Phase 0, T0.5). Deps are injected so handlers stay pure
  * and node-free (the real db/keychain are constructed in the electron composition root later).
  */
-const deps = {
+const deps: DispatchDeps = {
   profile: { get: () => ({ id: "local", name: "You" }) },
-  system: { getAppVersion: () => "1.2.3", getPlatform: () => "win32" as const },
+  system: { getAppVersion: () => "1.2.3", getPlatform: () => "win32" },
+  settings: {
+    get: () => ({ toggles: {}, values: {} }),
+    patch: (patch) => ({ toggles: { ...(patch.toggles ?? {}) }, values: { ...(patch.values ?? {}) } }),
+  },
 };
 
 describe("createDispatch", () => {
