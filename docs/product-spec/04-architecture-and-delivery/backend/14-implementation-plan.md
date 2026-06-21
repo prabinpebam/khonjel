@@ -23,6 +23,22 @@
 > ordered path. The hard *unknowns* are tracked in [13](13-open-questions-and-risks.md) and must
 > be resolved at the phase that first needs them — they do not block starting Phase 0.
 
+> **Build progress (autonomous run).** Implemented + verified (BE1/BE2/BE3 unit + BE4 Electron eval):
+> **Phase 0** seam — TS main, versioned typed IPC, durable JSON settings — Electron-gated;
+> **Phase 1** the pure text pipeline + `InferenceService.cleanup` (injected stub LLM engine) — the
+> pipeline runs end-to-end through the live seam under Electron; **Phase 2** provider connections +
+> the Azure request builder; plus pure **prompt resolution** (P5), **insights aggregation** (P4),
+> the **model catalog** (P3), and **notes search** (P7). **101 unit tests**; zero frontend regression.
+>
+> **Boundary (needs the runtime/native env — not buildable/verifiable in a headless dev box):** the
+> real STT/LLM binaries (whisper.cpp / llama.cpp), audio capture, OS text injection + global hotkeys,
+> model download, integration OAuth, and sync are **native/network** edges. Their contracts are
+> specified ([08](08-ipc-and-ports-contracts.md)/[10](10-providers-and-models.md)/[12](12-audio-capture-and-os-integration.md))
+> and the logic behind them is dependency-injected/stubbed, so the real binaries plug into the same
+> interfaces with no change to the tested logic. The full **content read surfaces** (P4) require
+> flipping `ContentService` sync->async across renderer call sites — a **supervised** change (it
+> touches the finished frontend), deferred to avoid unsupervised regression.
+
 ## 2. The per-task loop (strict TDD ↔ EDD)
 
 Every task follows this cycle. **Tests are written before implementation.**
