@@ -51,6 +51,8 @@
   --sidebar: #f2f1ee;
   --sidebar-selected: #ffffff;
 
+  --scrim: rgba(245, 244, 241, 0.62); /* light smoke veil behind overlays */
+
   --scrollbar-thumb: rgba(40, 40, 38, 0.18);
   --scrollbar-thumb-hover: rgba(40, 40, 38, 0.34);
 
@@ -97,6 +99,8 @@
 
   --sidebar: #15161a;
   --sidebar-selected: #24252b;
+
+  --scrim: rgba(8, 9, 11, 0.6); /* dark smoke veil behind overlays */
 
   --scrollbar-thumb: rgba(255, 255, 255, 0.16);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);

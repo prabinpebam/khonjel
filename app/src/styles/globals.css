@@ -44,6 +44,7 @@
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-selected: var(--sidebar-selected);
+  --color-scrim: var(--scrim);
 
   /* Radius scale (UI Design Spec) */
   --radius-xs: 4px;

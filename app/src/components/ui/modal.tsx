@@ -32,7 +32,7 @@ export function Modal({ open, onClose, children, className, labelledBy }: ModalP
         type="button"
         aria-label="Close dialog"
         onClick={onClose}
-        className="absolute inset-0 bg-foreground/40"
+        className="absolute inset-0 bg-scrim backdrop-blur-sm"
       />
       <div
         ref={panelRef}

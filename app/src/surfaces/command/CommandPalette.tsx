@@ -90,7 +90,7 @@ export function CommandPalette() {
         type="button"
         aria-label="Close command palette"
         onClick={() => setOpen(false)}
-        className="absolute inset-0 bg-foreground/40"
+        className="absolute inset-0 bg-scrim backdrop-blur-sm"
       />
       <div
         role="dialog"
