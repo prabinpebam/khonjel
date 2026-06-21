@@ -15,6 +15,7 @@ const deps: DispatchDeps = {
   },
   inference: {
     cleanup: (input) => ({ text: input, cleaned: false, mode: "dictation" }),
+    chat: (messages) => ({ text: `reply:${messages.length}` }),
   },
   transcription: {
     transcribe: (req) => ({ text: `heard:${req.audioBase64}` }),

@@ -19,4 +19,10 @@ export const mockInferenceService: InferenceService = {
     }
     return { text, cleaned: true, mode: "dictation" } satisfies CleanupResult;
   },
+  async chat(messages) {
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    return {
+      text: `This is a mock reply. Connect a real model in Settings -> Language Models -> Chat. You said: "${lastUser?.content ?? ""}"`,
+    };
+  },
 };

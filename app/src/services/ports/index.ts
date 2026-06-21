@@ -81,6 +81,14 @@ export interface CleanupResult {
 
 export interface InferenceService {
   cleanup(input: string, options?: CleanupOptions): Promise<CleanupResult>;
+  /** Multi-turn chat against the local (or configured) LLM. Returns the assistant reply text. */
+  chat(messages: ChatTurn[]): Promise<{ text: string }>;
+}
+
+/** A single conversation turn for {@link InferenceService.chat}. */
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
 }
 
 /**

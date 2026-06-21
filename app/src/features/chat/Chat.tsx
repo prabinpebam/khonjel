@@ -12,9 +12,10 @@ import { cn } from "@lib/utils";
 const SUGGESTIONS = ["Rewrite that note", "Plan my day", "Summarize my last meeting", "Draft a reply"];
 
 export function Chat() {
-  const { content } = useServices();
+  const { content, inference } = useServices();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [pending, setPending] = useState(false);
   const dictation = useDictation((text) => setInput((prev) => (prev ? `${prev} ${text}` : text)));
 
   useEffect(() => {
@@ -27,19 +28,29 @@ export function Chat() {
     };
   }, [content]);
 
-  function send(text: string) {
+  async function send(text: string) {
     const value = text.trim();
-    if (!value) return;
+    if (!value || pending) return;
     const now = new Date().toISOString();
     const user: ChatMessage = { id: crypto.randomUUID(), role: "user", content: value, createdAt: now };
-    const reply: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content: "This is a mock reply. Connect a real model in Settings -> Language Models -> Chat.",
-      createdAt: now,
-    };
-    setMessages((prev) => [...prev, user, reply]);
+    const pendingId = crypto.randomUUID();
+    const placeholder: ChatMessage = { id: pendingId, role: "assistant", content: "\u2026", createdAt: now };
+    const conversation = [...messages, user].map((m) => ({ role: m.role, content: m.content }));
+    setMessages((prev) => [...prev, user, placeholder]);
     setInput("");
+    setPending(true);
+    try {
+      const { text: reply } = await inference.chat(conversation);
+      setMessages((prev) => prev.map((m) => (m.id === pendingId ? { ...m, content: reply } : m)));
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === pendingId ? { ...m, content: "Sorry, I could not reach the model." } : m,
+        ),
+      );
+    } finally {
+      setPending(false);
+    }
   }
 
   return (

@@ -8,16 +8,26 @@
 import type { CleanupOptions, CleanupResult } from "../../../src/services/ports";
 import { runPipeline } from "../pipeline/index";
 import type { DictionaryRule, SnippetRule } from "../pipeline/types";
+import { resolvePrompt } from "../inference/prompts";
+
+/** A single chat message at the engine layer (includes the system role). */
+export interface EngineMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
 
 export interface InferenceEngine {
   /** STAGE 3 LLM cleanup. */
   refine: (text: string) => Promise<string>;
   /** Instruction-mode agent (Phase 5 wires the real tool-calling agent). */
   runAgent?: (instruction: string) => Promise<string>;
+  /** Multi-turn chat completion (optional; absent on minimal engines). */
+  chat?: (messages: EngineMessage[]) => Promise<string>;
 }
 
 export interface InferenceServiceImpl {
   cleanup: (input: string, options?: CleanupOptions) => Promise<CleanupResult>;
+  chat: (messages: { role: "user" | "assistant"; content: string }[]) => Promise<{ text: string }>;
 }
 
 export function createInferenceService(engine: InferenceEngine): InferenceServiceImpl {
@@ -45,6 +55,19 @@ export function createInferenceService(engine: InferenceEngine): InferenceServic
 
       return { text: result.text, cleaned: result.cleaned, mode: result.mode };
     },
+    chat: async (messages) => {
+      if (!engine.chat) {
+        return {
+          text: "No chat model is configured. Connect one in Settings -> Language Models -> Chat, or download a local model.",
+        };
+      }
+      const full: EngineMessage[] = [
+        { role: "system", content: resolvePrompt("chat") },
+        ...messages.map((m) => ({ role: m.role, content: m.content })),
+      ];
+      const text = await engine.chat(full);
+      return { text };
+    },
   };
 }
 
@@ -68,4 +91,8 @@ export const stubInferenceEngine: InferenceEngine = {
     return cleaned;
   },
   runAgent: async (instruction) => `(stub agent) You said: ${instruction}`,
+  chat: async (messages) => {
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    return `(local stub reply) ${lastUser?.content ?? ""}`.trim();
+  },
 };

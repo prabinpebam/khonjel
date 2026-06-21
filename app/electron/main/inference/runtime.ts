@@ -89,6 +89,7 @@ export function createInferenceRuntime(cfg: InferenceRuntimeConfig): InferenceRu
     refine: (text) => backing.refine(text),
     runAgent: (instruction) =>
       backing.runAgent ? backing.runAgent(instruction) : Promise.resolve(instruction),
+    chat: (messages) => (backing.chat ? backing.chat(messages) : Promise.resolve("")),
   };
 
   const start = async (): Promise<InferenceMode> => {

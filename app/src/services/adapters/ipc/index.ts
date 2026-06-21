@@ -49,6 +49,7 @@ export function createIpcServices(invoke: Invoke): Services {
     },
     inference: {
       cleanup: (input, options) => invoke(CHANNELS.inferenceCleanup, input, options ?? {}) as Promise<CleanupResult>,
+      chat: (messages) => invoke(CHANNELS.inferenceChat, messages) as Promise<{ text: string }>,
     },
     transcription: {
       transcribe: (req: TranscriptionRequest) =>

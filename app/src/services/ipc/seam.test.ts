@@ -30,6 +30,7 @@ const dispatch = createDispatch({
       const cleaned = options.cleanupEnabled !== false && !looksClean;
       return { text: trimmed, cleaned, mode: "dictation" };
     },
+    chat: (messages) => ({ text: `echo:${messages.at(-1)?.content ?? ""}` }),
   },
   transcription: {
     transcribe: (req) => ({ text: req.audioBase64.length > 0 ? "sample transcript" : "" }),

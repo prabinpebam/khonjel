@@ -12,6 +12,7 @@ import { CHANNELS, type Channel, ipcError } from "./ipc-contract";
 import { RequestSchemas } from "./ipc-schemas";
 import type {
   ChatMessage,
+  ChatTurn,
   CleanupOptions,
   CleanupResult,
   ConnectionProfile,
@@ -47,6 +48,7 @@ export interface DispatchDeps {
   };
   inference: {
     cleanup: (input: string, options: CleanupOptions) => CleanupResult | Promise<CleanupResult>;
+    chat: (messages: ChatTurn[]) => { text: string } | Promise<{ text: string }>;
   };
   transcription: {
     transcribe: (req: TranscriptionRequest) => TranscriptionResult | Promise<TranscriptionResult>;
@@ -84,6 +86,7 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.settingsGet]: () => deps.settings.get(),
     [CHANNELS.settingsPatch]: (args) => deps.settings.patch(args[0] as SettingsPatch),
     [CHANNELS.inferenceCleanup]: (args) => deps.inference.cleanup(args[0] as string, args[1] as CleanupOptions),
+    [CHANNELS.inferenceChat]: (args) => deps.inference.chat(args[0] as ChatTurn[]),
     [CHANNELS.transcriptionTranscribe]: (args) =>
       deps.transcription.transcribe(args[0] as TranscriptionRequest),
     [CHANNELS.connectionsList]: () => deps.connections.list(),

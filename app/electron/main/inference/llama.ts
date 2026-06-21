@@ -11,7 +11,7 @@
  * deterministic fallback so a missing/down model never blocks the user (the pipeline also guards).
  * See backend/03 SS4 + 10 (local inference) and inference/prompts.ts for the system prompts.
  */
-import type { InferenceEngine } from "../services/inference";
+import type { EngineMessage, InferenceEngine } from "../services/inference";
 import { resolvePrompt } from "./prompts";
 
 export interface LlamaChatOptions {
@@ -22,18 +22,29 @@ export interface LlamaChatOptions {
   model?: string;
 }
 
-/** PURE: the OpenAI-compatible chat body llama-server accepts at /v1/chat/completions. */
-export function buildLlamaChatBody(opts: LlamaChatOptions): Record<string, unknown> {
+/** PURE: the OpenAI-compatible body llama-server accepts at /v1/chat/completions. */
+export function buildLlamaBody(
+  messages: EngineMessage[],
+  opts: { model?: string; temperature?: number; maxTokens?: number } = {},
+): Record<string, unknown> {
   return {
     model: opts.model ?? "local",
-    messages: [
-      { role: "system", content: opts.systemPrompt },
-      { role: "user", content: opts.userText },
-    ],
+    messages,
     temperature: opts.temperature ?? 0.2,
     max_tokens: opts.maxTokens ?? 512,
     stream: false,
   };
+}
+
+/** PURE: a single-turn system+user chat body (used by refine/runAgent). */
+export function buildLlamaChatBody(opts: LlamaChatOptions): Record<string, unknown> {
+  return buildLlamaBody(
+    [
+      { role: "system", content: opts.systemPrompt },
+      { role: "user", content: opts.userText },
+    ],
+    { model: opts.model, temperature: opts.temperature, maxTokens: opts.maxTokens },
+  );
 }
 
 /** PURE: extract the assistant message text from a llama-server chat completion response. */
@@ -70,16 +81,14 @@ export interface LlamaEngineOptions {
   resolvePromptFn?: typeof resolvePrompt;
 }
 
-async function chat(opts: LlamaEngineOptions, systemPrompt: string, userText: string): Promise<string> {
+async function complete(opts: LlamaEngineOptions, messages: EngineMessage[]): Promise<string> {
   const fetchFn = opts.fetchFn ?? (globalThis as unknown as { fetch: HttpFetch }).fetch;
   const url = `${opts.endpoint.replace(/\/+$/, "")}/v1/chat/completions`;
   const res = await fetchFn(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(
-      buildLlamaChatBody({
-        systemPrompt,
-        userText,
+      buildLlamaBody(messages, {
         model: opts.model,
         temperature: opts.temperature,
         maxTokens: opts.maxTokens,
@@ -92,12 +101,19 @@ async function chat(opts: LlamaEngineOptions, systemPrompt: string, userText: st
   return parseLlamaChatResponse(await res.json());
 }
 
-/** A real LLM engine backed by a local llama-server. `refine`/`runAgent` use Khonjel's prompts. */
+/** A real LLM engine backed by a local llama-server. `refine`/`runAgent`/`chat` use Khonjel's prompts. */
 export function createLlamaEngine(opts: LlamaEngineOptions): InferenceEngine {
   const resolve = opts.resolvePromptFn ?? resolvePrompt;
   return {
-    refine: (text) => chat(opts, resolve("cleanup"), text),
-    runAgent: (instruction) => chat(opts, resolve("voiceAgent"), instruction),
+    refine: (text) => complete(opts, [
+      { role: "system", content: resolve("cleanup") },
+      { role: "user", content: text },
+    ]),
+    runAgent: (instruction) => complete(opts, [
+      { role: "system", content: resolve("voiceAgent") },
+      { role: "user", content: instruction },
+    ]),
+    chat: (messages) => complete(opts, messages),
   };
 }
 
@@ -123,6 +139,14 @@ export function withFallback(primary: InferenceEngine, fallback: InferenceEngine
         // fall through to the fallback engine
       }
       return fallback.runAgent ? fallback.runAgent(instruction) : instruction;
+    },
+    chat: async (messages) => {
+      try {
+        if (primary.chat) return await primary.chat(messages);
+      } catch {
+        // fall through to the fallback engine
+      }
+      return fallback.chat ? fallback.chat(messages) : "";
     },
   };
 }

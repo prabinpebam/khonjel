@@ -11,6 +11,7 @@
  */
 import type {
   ChatMessage,
+  ChatTurn,
   CleanupOptions,
   CleanupResult,
   ConnectionProfile,
@@ -45,6 +46,7 @@ export const CHANNELS = {
   settingsGet: "settings:get",
   settingsPatch: "settings:patch",
   inferenceCleanup: "inference:cleanup",
+  inferenceChat: "inference:chat",
   transcriptionTranscribe: "transcription:transcribe",
   connectionsList: "connections:list",
   connectionsUpsert: "connections:upsert",
@@ -74,6 +76,7 @@ export interface ChannelContract {
   "settings:get": { request: []; response: SettingsSnapshot };
   "settings:patch": { request: [SettingsPatch]; response: SettingsSnapshot };
   "inference:cleanup": { request: [string, CleanupOptions]; response: CleanupResult };
+  "inference:chat": { request: [ChatTurn[]]; response: { text: string } };
   "transcription:transcribe": { request: [TranscriptionRequest]; response: TranscriptionResult };
   "connections:list": { request: []; response: ConnectionProfile[] };
   "connections:upsert": { request: [ConnectionProfile]; response: ConnectionProfile[] };
