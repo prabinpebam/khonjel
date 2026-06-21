@@ -14,7 +14,7 @@ const settingsState = { toggles: {} as Record<string, boolean>, values: {} as Re
 let connectionState: ConnectionProfile[] = [];
 const dispatch = createDispatch({
   profile: { get: () => ({ id: "local", name: "You" }) },
-  system: { getAppVersion: () => "9.9.9", getPlatform: () => "linux" as const, injectText: () => ({ strategy: "paste" as const, app: "notepad.exe" }) },
+  system: { getAppVersion: () => "9.9.9", getPlatform: () => "linux" as const, injectText: () => ({ strategy: "paste" as const, app: "notepad.exe" }), captureSelection: () => "selected" },
   settings: {
     get: () => ({ toggles: { ...settingsState.toggles }, values: { ...settingsState.values } }),
     patch: (patch) => {

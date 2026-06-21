@@ -84,6 +84,10 @@ const DEFAULT_TRANSFORMS: Transform[] = [
     hotkey: "Win+Alt+1",
     builtin: true,
     enabled: true,
+    prompt:
+      "You are an editing assistant. Rewrite the user's text to improve clarity and conciseness " +
+      "while preserving its meaning and tone. Return only the rewritten text, with no preamble, " +
+      "explanation, or surrounding quotes.",
   },
   {
     id: "prompt-engineer",
@@ -92,6 +96,10 @@ const DEFAULT_TRANSFORMS: Transform[] = [
     hotkey: "Win+Alt+2",
     builtin: true,
     enabled: true,
+    prompt:
+      "You are a prompt-engineering assistant. Turn the user's rough idea into a clear, " +
+      "well-structured prompt for an AI assistant. Return only the improved prompt, with no " +
+      "preamble, explanation, or surrounding quotes.",
   },
 ];
 

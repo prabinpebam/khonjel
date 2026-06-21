@@ -17,4 +17,9 @@ export const mockSystemService: SystemService = {
     await delay(10);
     return { strategy: "clipboard" as const };
   },
+  async captureSelection() {
+    // Browser/dev cannot read another app's selection.
+    await delay(10);
+    return "";
+  },
 };

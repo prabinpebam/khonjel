@@ -61,3 +61,26 @@ export async function typeText(text: string): Promise<void> {
     `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${keys}')`,
   );
 }
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Copy the focused app's current selection and return it. Sends Ctrl+C, then polls the clipboard
+ * until it changes (the target app handles the keystroke asynchronously). OS edge -- verified
+ * manually, like the rest of win32.ts; non-Windows resolves to an empty string.
+ */
+export async function captureSelection(): Promise<string> {
+  if (!isWindows) return "";
+  const before = clipboard.readText();
+  await powershell(
+    "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^c')",
+  );
+  for (let i = 0; i < 10; i++) {
+    await delay(30);
+    const now = clipboard.readText();
+    if (now && now !== before) return now;
+  }
+  return clipboard.readText();
+}

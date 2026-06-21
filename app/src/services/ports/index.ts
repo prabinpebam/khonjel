@@ -37,6 +37,8 @@ export interface SystemService {
   getPlatform(): Promise<Platform>;
   /** Inject text into the currently focused app (clipboard/paste/type per the app table). */
   injectText(text: string): Promise<InjectionOutcome>;
+  /** Copy the current selection from the focused app and return it (for hotkey-bound transforms). */
+  captureSelection(): Promise<string>;
 }
 
 /**

@@ -41,6 +41,8 @@ export function isModifierOnly(accelerator: string): boolean {
 export interface HotkeyManager {
   /** Register `setting` (falling back to `fallback` if it is modifier-only or fails). Returns the live accelerator or null. */
   register: (setting: string, onTrigger: () => void, fallback?: string) => string | null;
+  /** Register an additional shortcut without clearing existing ones (no fallback). Returns the live accelerator or null. */
+  registerExtra: (setting: string, onTrigger: () => void) => string | null;
   unregisterAll: () => void;
 }
 
@@ -58,6 +60,15 @@ export function createHotkeyManager(): HotkeyManager {
         }
       }
       return null;
+    },
+    registerExtra: (setting, onTrigger) => {
+      const accel = normalizeAccelerator(setting);
+      if (isModifierOnly(accel)) return null;
+      try {
+        return globalShortcut.register(accel, onTrigger) ? accel : null;
+      } catch {
+        return null;
+      }
     },
     unregisterAll: () => globalShortcut.unregisterAll(),
   };

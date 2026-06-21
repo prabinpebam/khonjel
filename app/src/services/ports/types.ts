@@ -88,6 +88,8 @@ export interface Transform {
   hotkey: string;
   builtin: boolean;
   enabled: boolean;
+  /** System instruction sent to the LLM with the selected text when the hotkey fires. */
+  prompt: string;
 }
 
 export type IntegrationStatus = "connected" | "disconnected";

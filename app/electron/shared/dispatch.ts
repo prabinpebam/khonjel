@@ -43,6 +43,7 @@ export interface DispatchDeps {
     getAppVersion: () => string | Promise<string>;
     getPlatform: () => Platform | Promise<Platform>;
     injectText: (text: string) => InjectionOutcome | Promise<InjectionOutcome>;
+    captureSelection: () => string | Promise<string>;
   };
   settings: {
     get: () => SettingsSnapshot | Promise<SettingsSnapshot>;
@@ -97,6 +98,7 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.systemGetAppVersion]: () => deps.system.getAppVersion(),
     [CHANNELS.systemGetPlatform]: () => deps.system.getPlatform(),
     [CHANNELS.systemInjectText]: (args) => deps.system.injectText(args[0] as string),
+    [CHANNELS.systemCaptureSelection]: () => deps.system.captureSelection(),
     [CHANNELS.settingsGet]: () => deps.settings.get(),
     [CHANNELS.settingsPatch]: (args) => deps.settings.patch(args[0] as SettingsPatch),
     [CHANNELS.inferenceCleanup]: (args) => deps.inference.cleanup(args[0] as string, args[1] as CleanupOptions),

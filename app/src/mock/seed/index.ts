@@ -266,6 +266,9 @@ export const TRANSFORMS: Transform[] = [
     hotkey: "Win+Alt+1",
     builtin: true,
     enabled: true,
+    prompt:
+      "You are an editing assistant. Rewrite the user's text to improve clarity and conciseness " +
+      "while preserving its meaning and tone. Return only the rewritten text.",
   },
   {
     id: "t2",
@@ -274,6 +277,9 @@ export const TRANSFORMS: Transform[] = [
     hotkey: "Win+Alt+2",
     builtin: true,
     enabled: true,
+    prompt:
+      "You are a prompt-engineering assistant. Turn the user's rough idea into a clear, " +
+      "well-structured prompt for an AI assistant. Return only the improved prompt.",
   },
   {
     id: "t3",
@@ -282,6 +288,9 @@ export const TRANSFORMS: Transform[] = [
     hotkey: "Win+Alt+3",
     builtin: false,
     enabled: true,
+    prompt:
+      "Rewrite the user's text in a professional, formal tone while preserving its meaning. " +
+      "Return only the rewritten text.",
   },
   {
     id: "t4",
@@ -290,6 +299,8 @@ export const TRANSFORMS: Transform[] = [
     hotkey: "Win+Alt+4",
     builtin: false,
     enabled: false,
+    prompt:
+      "Summarize the user's text into a few concise key points. Return only the summary.",
   },
 ];
 

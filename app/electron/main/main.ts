@@ -33,7 +33,7 @@ let hotkeyManager: HotkeyManager | null = null;
  * app is ready so `userData` paths resolve. Phase 0 wires profile + system + durable settings
  * (JSON file); later phases inject the db, keychain, inference, etc.
  */
-function buildDispatch(inferenceRuntime: InferenceRuntime) {
+function buildDispatch(inferenceRuntime: InferenceRuntime, onTransformsChanged: () => void) {
   const userData = app.getPath("userData");
   const injector = createInjector({
     writeClipboard: win32.writeClipboard,
@@ -55,7 +55,14 @@ function buildDispatch(inferenceRuntime: InferenceRuntime) {
     fetch: proxyFetch,
   });
 
-  return createDispatch({
+  // Hoisted so the composition root can read transforms for hotkey registration and re-register
+  // when the renderer edits them (content:replace -> onTransformsChanged).
+  const contentStore = createContentStore(fileSettingsIO(path.join(userData, "content.json")), {
+    listModels,
+    computeInsights,
+  });
+
+  const dispatch = createDispatch({
     profile: {
       get: () => ({ id: "local", name: "You" }),
     },
@@ -66,6 +73,7 @@ function buildDispatch(inferenceRuntime: InferenceRuntime) {
         return (plat === "win32" || plat === "darwin" || plat === "linux" ? plat : "web") as Platform;
       },
       injectText: (text) => injector.inject(text),
+      captureSelection: () => win32.captureSelection(),
     },
     settings: settingsStore,
     inference: createInferenceService(inferenceRuntime.engine, router),
@@ -114,11 +122,16 @@ function buildDispatch(inferenceRuntime: InferenceRuntime) {
       has: (id) => secretStore.has(id),
       remove: (id) => secretStore.remove(id),
     },
-    content: createContentStore(
-      fileSettingsIO(path.join(userData, "content.json")),
-      { listModels, computeInsights },
-    ),
+    content: {
+      ...contentStore,
+      replace: (collection: string, items: unknown[]) => {
+        contentStore.replace(collection, items);
+        if (collection === "transforms") onTransformsChanged();
+      },
+    },
   });
+
+  return { dispatch, contentStore, settingsStore };
 }
 
 function createWindow(): void {
@@ -169,13 +182,14 @@ void app.whenReady().then(() => {
     isWindows: process.platform === "win32",
     env: process.env,
   });
-  const dispatch = buildDispatch(inferenceRuntime);
+  hotkeyManager = createHotkeyManager();
+  const built = buildDispatch(inferenceRuntime, () => registerHotkeys());
   // The single allow-listed request/response bridge. The preload sends the contract version on
   // every call (rejected on mismatch); `dispatch` then validates channel + payload (unknown
   // channel -> not_found; bad payload -> validation). Together these are the allow-list.
   ipcMain.handle("khonjel:invoke", (_event, version: unknown, channel: string, args: unknown[]) => {
     checkContractVersion(version);
-    return dispatch(channel, ...(Array.isArray(args) ? args : []));
+    return built.dispatch(channel, ...(Array.isArray(args) ? args : []));
   });
 
   createWindow();
@@ -183,16 +197,28 @@ void app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
-  // Register the global dictation hotkey from settings; a press toggles the renderer's dictation.
-  hotkeyManager = createHotkeyManager();
-  const settingsStore = createSettingsStore(
-    fileSettingsIO(path.join(app.getPath("userData"), "settings.json")),
-  );
-  const hotkeySetting = settingsStore.get().values["hotkey.dictation"] ?? "Ctrl+Shift+D";
-  const liveAccelerator = hotkeyManager.register(hotkeySetting, () => {
-    mainWindow?.webContents.send("khonjel:hotkey", "dictation");
-  });
-  console.log(`[khonjel] dictation hotkey: ${liveAccelerator ?? "none (registration failed)"}`);
+  // Register the global dictation hotkey + each opted-in transform hotkey. Re-runs whenever the
+  // renderer edits transforms (content:replace -> onTransformsChanged). register() clears all
+  // shortcuts first, so dictation is rebound before the transforms are layered on via registerExtra.
+  function registerHotkeys(): void {
+    if (!hotkeyManager) return;
+    const snapshot = built.settingsStore.get();
+    const dictationSetting = snapshot.values["hotkey.dictation"] ?? "Ctrl+Shift+D";
+    const live = hotkeyManager.register(dictationSetting, () => {
+      mainWindow?.webContents.send("khonjel:hotkey", "dictation");
+    });
+    console.log(`[khonjel] dictation hotkey: ${live ?? "none (registration failed)"}`);
+    if (snapshot.toggles["transforms.optIn"]) {
+      for (const transform of built.contentStore.transforms()) {
+        if (!transform.enabled || transform.hotkey.length === 0) continue;
+        const accel = hotkeyManager.registerExtra(transform.hotkey, () => {
+          mainWindow?.webContents.send("khonjel:hotkey", `transform:${transform.id}`);
+        });
+        if (accel) console.log(`[khonjel] transform ${transform.id} hotkey: ${accel}`);
+      }
+    }
+  }
+  registerHotkeys();
 
   // Upgrade from the deterministic stub to the local LLM in the background (never blocks startup).
   void inferenceRuntime.start().then((mode) => {

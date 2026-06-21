@@ -163,6 +163,7 @@ const TransformSchema = z
     hotkey: z.string(),
     builtin: z.boolean(),
     enabled: z.boolean(),
+    prompt: z.string().default(""),
   })
   .passthrough();
 
@@ -209,6 +210,7 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.systemGetAppVersion]: z.tuple([]),
   [CHANNELS.systemGetPlatform]: z.tuple([]),
   [CHANNELS.systemInjectText]: z.tuple([z.string()]),
+  [CHANNELS.systemCaptureSelection]: z.tuple([]),
   [CHANNELS.settingsGet]: z.tuple([]),
   [CHANNELS.settingsPatch]: z.tuple([SettingsPatchSchema]),
   [CHANNELS.inferenceCleanup]: z.tuple([z.string(), CleanupOptionsSchema]),
@@ -243,6 +245,7 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.systemGetAppVersion]: z.string(),
   [CHANNELS.systemGetPlatform]: PlatformSchema,
   [CHANNELS.systemInjectText]: InjectionOutcomeSchema,
+  [CHANNELS.systemCaptureSelection]: z.string(),
   [CHANNELS.settingsGet]: SettingsSnapshotSchema,
   [CHANNELS.settingsPatch]: SettingsSnapshotSchema,
   [CHANNELS.inferenceCleanup]: CleanupResultSchema,
