@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Mic, SendHorizontal } from "lucide-react";
+import { Loader2, Mic, SendHorizontal } from "lucide-react";
 import { useServices } from "@services";
 import type { ChatMessage } from "@services/ports";
+import { useDictation } from "@hooks/useDictation";
 import { PageHeader } from "@components/common/PageHeader";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -14,6 +15,7 @@ export function Chat() {
   const { content } = useServices();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const dictation = useDictation((text) => setInput((prev) => (prev ? `${prev} ${text}` : text)));
 
   useEffect(() => {
     let live = true;
@@ -89,8 +91,20 @@ export function Chat() {
 
       <div className="sticky bottom-0 -mx-8 mt-6 border-t border-border bg-surface px-8 py-4">
         <div className="flex items-end gap-2">
-          <Button variant="ghost" size="icon" aria-label="Voice input">
-            <Mic />
+          <Button
+            variant={dictation.status === "recording" ? "destructive" : "ghost"}
+            size="icon"
+            aria-label={
+              dictation.status === "recording"
+                ? "Stop dictation"
+                : dictation.status === "transcribing"
+                  ? "Transcribing"
+                  : "Voice input"
+            }
+            disabled={dictation.status === "transcribing"}
+            onClick={dictation.toggle}
+          >
+            {dictation.status === "transcribing" ? <Loader2 className="animate-spin" /> : <Mic />}
           </Button>
           <Textarea
             rows={1}
