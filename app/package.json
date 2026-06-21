@@ -23,6 +23,7 @@
     "package:dir": "npm run build && electron-builder --dir"
   },
   "dependencies": {
+    "@lobehub/icons-static-svg": "^1.91.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.21.0",

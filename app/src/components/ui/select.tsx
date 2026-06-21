@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@lib/utils";
@@ -6,6 +6,7 @@ import { cn } from "@lib/utils";
 export interface SelectOption {
   value: string;
   label: string;
+  icon?: ReactNode;
 }
 
 interface SelectProps {
@@ -124,8 +125,11 @@ export function Select({
         onKeyDown={onTriggerKeyDown}
         className="inline-flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border bg-surface ps-3 pe-2 text-sm text-foreground transition-colors hover:bg-surface-2"
       >
-        <span className={cn("truncate", !selected && "text-tertiary-foreground")}>
-          {selected ? selected.label : (placeholder ?? "Select")}
+        <span className="flex min-w-0 items-center gap-2">
+          {selected?.icon}
+          <span className={cn("truncate", !selected && "text-tertiary-foreground")}>
+            {selected ? selected.label : (placeholder ?? "Select")}
+          </span>
         </span>
         <ChevronDown
           className={cn(
@@ -159,7 +163,10 @@ export function Select({
                       isSelected ? "text-foreground" : "text-muted-foreground hover:bg-accent-soft",
                     )}
                   >
-                    <span className="truncate">{opt.label}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      {opt.icon}
+                      <span className="truncate">{opt.label}</span>
+                    </span>
                     {isSelected ? <Check className="size-4 shrink-0 text-accent" /> : null}
                   </button>
                 );

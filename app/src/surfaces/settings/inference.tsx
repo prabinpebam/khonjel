@@ -7,6 +7,7 @@ import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 import { Label } from "@components/ui/label";
 import { Select } from "@components/ui/select";
+import { ProviderIcon } from "@components/brand/provider-icon";
 import { cn } from "@lib/utils";
 
 export type InferenceMode = "cloud" | "providers" | "local" | "self-hosted" | "enterprise";
@@ -38,7 +39,10 @@ const HELPERS = ["Ollama", "LM Studio", "vLLM", "llama-server"];
 const ENTERPRISE = ["AWS Bedrock", "Azure OpenAI", "Google Vertex"];
 
 function toOptions(values: string[]) {
-  return values.map((v) => ({ value: v.toLowerCase().replace(/\s+/g, "-"), label: v }));
+  return values.map((v) => {
+    const value = v.toLowerCase().replace(/\s+/g, "-");
+    return { value, label: v, icon: <ProviderIcon provider={value} /> };
+  });
 }
 
 export function InferenceModeSelector({ modeKey, modes }: { modeKey: string; modes: InferenceMode[] }) {
@@ -256,12 +260,13 @@ function LocalProviderPicker({ valueKey }: { valueKey: string }) {
             type="button"
             onClick={() => setValue(valueKey, opt.value)}
             className={cn(
-              "rounded-pill border px-3 py-1.5 text-sm transition-colors",
+              "inline-flex items-center gap-2 rounded-pill border px-3 py-1.5 text-sm transition-colors",
               active
                 ? "border-accent bg-accent-soft text-accent"
                 : "border-border text-muted-foreground hover:text-foreground",
             )}
           >
+            <ProviderIcon provider={opt.value} />
             {opt.label}
           </button>
         );
