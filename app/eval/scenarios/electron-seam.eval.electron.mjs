@@ -32,6 +32,14 @@ test("electron seam: real system info + settings persist across restart", async 
   expect(version, "real app version over IPC, not the mock").not.toBe("0.0.0-mock");
   expect(typeof version).toBe("string");
 
+  // The dictation pipeline runs end-to-end through the live seam (BE4 for Phase 1 logic).
+  const cleanup = await page.evaluate(() =>
+    window.khonjel.invoke("inference:cleanup", "um so like the the thing", {}),
+  );
+  expect(cleanup.cleaned, "messy text is cleaned by the pipeline").toBe(true);
+  expect(typeof cleanup.text).toBe("string");
+  expect(cleanup.text.length).toBeGreaterThan(0);
+
   await page.evaluate(() => window.khonjel.invoke("settings:patch", { values: { "eval.persist": "yes" } }));
   await app.close();
 
