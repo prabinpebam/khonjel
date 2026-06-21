@@ -144,6 +144,22 @@ app/electron/                      (built to main.cjs by electron-builder)
 Each `handlers/*` file registers only its own channels; `router.ts` composes them. Adding a
 feature = add a handler module + a contract entry + a renderer adapter method.
 
+> **Realized structure (Phase 0, as built)** — a *testable refinement* of the target above:
+> - **`electron/shared/`** holds the **pure** seam: `ipc-contract.ts` (channel registry,
+>   `CONTRACT_VERSION`, `IpcError`, `checkContractVersion`), `ipc-schemas.ts` (zod — main+tests
+>   only, so zod stays out of the renderer bundle), and `dispatch.ts` (the typed router: channel
+>   → injected handler, with payload validation). Pure + dependency-injected, so the whole seam
+>   is unit-testable from the renderer test lane (BE1/BE2/BE3) without launching Electron, and
+>   node deps never reach the renderer.
+> - **`electron/main/`** is the **composition root**: `main.ts` (window lifecycle + the single
+>   allow-listed `khonjel:invoke` binding + constructs real deps) and `preload.ts` (sends
+>   `CONTRACT_VERSION` per call; exposes `window.khonjel.invoke`). esbuild
+>   ([`scripts/build-electron.mjs`](../../../../app/scripts/build-electron.mjs)) compiles these to
+>   the generated, git-ignored `electron/main.cjs`/`preload.cjs`.
+> - Per-domain handler **modules** (`profile.ts`, `system.ts`, …) are extracted from the
+>   composition root as each domain gains real logic (from settings at T0.7), so `main.ts` never
+>   becomes the monolith.
+
 ## 4. The text pipeline (ported from FreeFlow, multi-purpose)
 
 `pipeline/index.ts` is the single entry the capture flow calls. Stages, in order:

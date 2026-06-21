@@ -19,5 +19,5 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true
   },
-  "include": ["electron/main", "electron/shared"]
+  "include": ["electron/main", "electron/shared", "electron/store"]
 }

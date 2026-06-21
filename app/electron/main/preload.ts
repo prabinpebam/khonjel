@@ -12,8 +12,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 });
 
 // The typed seam the renderer's `ipc` adapter calls. Only a single generic `invoke` crosses the
-// bridge; the main-process dispatch validates channel + payload (the allow-list lives there).
+// bridge; it sends the contract version on every call (main rejects a mismatch), then the
+// main-process dispatch validates channel + payload (the allow-list lives there).
 contextBridge.exposeInMainWorld("khonjel", {
-  invoke: (channel: string, ...args: unknown[]) => ipcRenderer.invoke("khonjel:invoke", channel, args),
+  invoke: (channel: string, ...args: unknown[]) =>
+    ipcRenderer.invoke("khonjel:invoke", CONTRACT_VERSION, channel, args),
   contractVersion: CONTRACT_VERSION,
 });

@@ -180,11 +180,14 @@ rules in [11](11-privacy-security-and-packaging.md).
 > (in 08–12) passes, and its required BE test levels ([06 §3a](06-feature-coverage-framework.md))
 > are green — with the dictation hot path verified fully offline.**
 
-> **Phase 0 status (seam proof, in progress):** the typed IPC contract, the pure dispatch layer,
-> the renderer `ipc` adapter (with the mock↔ipc switch in `ServicesProvider`), and the TypeScript
-> Electron main/preload (esbuild build) are wired and **green**. `profile:get` +
-> `system:getAppVersion/getPlatform` run over real IPC under Electron (mock in the browser),
-> covered by `app/src/services/ipc/*.test.ts` (BE1/BE2/BE3) with **zero frontend regression**
-> (`npm run verify` + `npm run eval` clean). Remaining Phase 0: SQLite + migrations (T0.6),
-> settings-in-main (T0.7), Electron eval runner (T0.8). See
+> **Phase 0 status (seam proof, in progress):** the typed IPC contract (with per-call
+> `CONTRACT_VERSION` enforcement), the pure dispatch layer, the renderer `ipc` adapter (with the
+> mock↔ipc switch in `ServicesProvider`), and the TypeScript Electron main/preload (esbuild build)
+> are wired and **green**. `profile:get` + `system:getAppVersion/getPlatform` run over real IPC
+> under Electron (mock in the browser). **T0.6 done:** the SQLite migration runner (forward-only,
+> idempotent, version-tracked, WAL) + initial `settings` schema, BE1-tested against in-memory SQLite
+> ([app/electron/store/](../../../../app/electron/store/)). Covered by `app/src/services/ipc/*.test.ts`
+> + `app/electron/store/migrate.test.ts` (**33 unit tests**), with **zero frontend regression**
+> (`npm run verify` + `npm run eval` clean). Remaining Phase 0: settings-in-main + keychain (T0.7,
+> introduces the `SettingsService` port), Electron eval runner (T0.8). See
 > [14-implementation-plan §4](14-implementation-plan.md).

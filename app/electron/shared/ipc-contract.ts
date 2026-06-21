@@ -59,3 +59,17 @@ export function ipcError(code: IpcErrorCode, message: string, detail?: unknown):
 export function isIpcError(value: unknown): value is IpcError {
   return typeof value === "object" && value !== null && (value as { __ipcError?: unknown }).__ipcError === true;
 }
+
+/**
+ * Boundary guard: the preload sends `CONTRACT_VERSION` on every call and the main process calls
+ * this to reject a renderer/main contract mismatch (08 §1). Pure + testable; the electron binding
+ * invokes it before dispatch.
+ */
+export function checkContractVersion(received: unknown): void {
+  if (received !== CONTRACT_VERSION) {
+    throw ipcError(
+      "validation",
+      `IPC contract version mismatch: renderer sent ${String(received)}, main expects ${CONTRACT_VERSION}`,
+    );
+  }
+}

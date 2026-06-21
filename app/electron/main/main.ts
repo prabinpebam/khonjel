@@ -3,6 +3,7 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import * as path from "node:path";
 import type { Platform } from "../../src/services/ports";
+import { checkContractVersion } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
 
 let mainWindow: BrowserWindow | null = null;
@@ -62,11 +63,13 @@ function createWindow(): void {
 }
 
 void app.whenReady().then(() => {
-  // The single allow-listed request/response bridge. `dispatch` validates the channel + payload
-  // (unknown channel -> not_found; bad payload -> validation) so this is the allow-list.
-  ipcMain.handle("khonjel:invoke", (_event, channel: string, args: unknown[]) =>
-    dispatch(channel, ...(Array.isArray(args) ? args : [])),
-  );
+  // The single allow-listed request/response bridge. The preload sends the contract version on
+  // every call (rejected on mismatch); `dispatch` then validates channel + payload (unknown
+  // channel -> not_found; bad payload -> validation). Together these are the allow-list.
+  ipcMain.handle("khonjel:invoke", (_event, version: unknown, channel: string, args: unknown[]) => {
+    checkContractVersion(version);
+    return dispatch(channel, ...(Array.isArray(args) ? args : []));
+  });
 
   createWindow();
   app.on("activate", () => {

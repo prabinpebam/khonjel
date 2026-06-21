@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CHANNELS, CONTRACT_VERSION, ipcError, isIpcError } from "@ipc/ipc-contract";
+import { CHANNELS, CONTRACT_VERSION, ipcError, isIpcError, checkContractVersion } from "@ipc/ipc-contract";
 import { RequestSchemas, ResponseSchemas } from "@ipc/ipc-schemas";
 
 /**
@@ -33,5 +33,21 @@ describe("ipc contract", () => {
     const err = ipcError("validation", "bad input");
     expect(isIpcError(err)).toBe(true);
     expect(isIpcError(new Error("x"))).toBe(false);
+  });
+
+  it("checkContractVersion passes for the current version", () => {
+    expect(() => checkContractVersion(CONTRACT_VERSION)).not.toThrow();
+  });
+
+  it("checkContractVersion throws a structured validation IpcError on mismatch", () => {
+    expect(() => checkContractVersion(CONTRACT_VERSION + 1)).toThrow();
+    let caught: unknown;
+    try {
+      checkContractVersion(CONTRACT_VERSION + 1);
+    } catch (error) {
+      caught = error;
+    }
+    expect(isIpcError(caught)).toBe(true);
+    expect((caught as { code?: string }).code).toBe("validation");
   });
 });

@@ -36,9 +36,12 @@ telemetry).
 
 ## 2. Non-negotiables (the contracts — never violate)
 
-1. **This phase = the complete FINAL frontend with ZERO backend.** No server, no Electron
-   IPC implementation, no DB, no network. Only **mock adapters** (in-memory + localStorage)
-   + a mock `window.electronAPI` shim. *(Do not write a backend. At all.)*
+1. **The FINAL frontend is complete and must not regress.** It depends only on service ports
+   and runs on **mock adapters** by default. The **backend phase is now active** — built behind
+   the seam per the [Backend Implementation Plan](04-architecture-and-delivery/backend/14-implementation-plan.md)
+   with a **strict TDD + EDD** gate. Real `ipc` adapters are **additive** and chosen at runtime
+   (mock in the browser, real under Electron); the renderer never changes. *(Never break the
+   frontend: `npm run verify` + `npm run eval` stay green.)*
 2. **Final UI, not throwaway.** UI/components depend **only on service ports** (interfaces),
    never on adapters. A real backend later is just `adapters/real/` selected by config —
    **zero UI changes**. Lint boundaries enforce this.
