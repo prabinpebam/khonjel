@@ -17,7 +17,8 @@ export function Sidebar() {
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const { profile } = useServices();
   const stt = useActiveModel("stt.dictation", "stt");
-  const llm = useActiveModel("llm.chat", "llm");
+  // The sidebar reflects the dictation pipeline: speech-to-text + the cleanup LLM that polishes it.
+  const llm = useActiveModel("llm.cleanup", "llm");
   const [name, setName] = useState("You");
 
   useEffect(() => {
