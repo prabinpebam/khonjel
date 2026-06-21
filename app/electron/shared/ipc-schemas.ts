@@ -10,6 +10,11 @@ import { CHANNELS, type Channel } from "./ipc-contract";
 
 const PlatformSchema = z.enum(["win32", "darwin", "linux", "web"]);
 
+const InjectionOutcomeSchema = z.object({
+  strategy: z.enum(["paste", "type", "clipboard"]),
+  app: z.string().optional(),
+});
+
 const ProfileSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -171,6 +176,7 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.profileGet]: z.tuple([]),
   [CHANNELS.systemGetAppVersion]: z.tuple([]),
   [CHANNELS.systemGetPlatform]: z.tuple([]),
+  [CHANNELS.systemInjectText]: z.tuple([z.string()]),
   [CHANNELS.settingsGet]: z.tuple([]),
   [CHANNELS.settingsPatch]: z.tuple([SettingsPatchSchema]),
   [CHANNELS.inferenceCleanup]: z.tuple([z.string(), CleanupOptionsSchema]),
@@ -197,6 +203,7 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.profileGet]: ProfileSchema,
   [CHANNELS.systemGetAppVersion]: z.string(),
   [CHANNELS.systemGetPlatform]: PlatformSchema,
+  [CHANNELS.systemInjectText]: InjectionOutcomeSchema,
   [CHANNELS.settingsGet]: SettingsSnapshotSchema,
   [CHANNELS.settingsPatch]: SettingsSnapshotSchema,
   [CHANNELS.inferenceCleanup]: CleanupResultSchema,

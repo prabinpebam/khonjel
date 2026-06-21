@@ -8,7 +8,7 @@ import { isIpcError } from "@ipc/ipc-contract";
  */
 const deps: DispatchDeps = {
   profile: { get: () => ({ id: "local", name: "You" }) },
-  system: { getAppVersion: () => "1.2.3", getPlatform: () => "win32" },
+  system: { getAppVersion: () => "1.2.3", getPlatform: () => "win32", injectText: () => ({ strategy: "paste" }) },
   settings: {
     get: () => ({ toggles: {}, values: {} }),
     patch: (patch) => ({ toggles: { ...(patch.toggles ?? {}) }, values: { ...(patch.values ?? {}) } }),

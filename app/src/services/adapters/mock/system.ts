@@ -12,4 +12,9 @@ export const mockSystemService: SystemService = {
     await delay(10);
     return (electronAPI.getPlatform?.() ?? "web") as Platform;
   },
+  async injectText() {
+    // Browser/dev has no OS injection; report a clipboard outcome for the same shape.
+    await delay(10);
+    return { strategy: "clipboard" as const };
+  },
 };

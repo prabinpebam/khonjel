@@ -11,6 +11,15 @@
 
 export type Platform = "win32" | "darwin" | "linux" | "web";
 
+/** How dictated text was delivered to the focused app (see backend injection table). */
+export type InjectionStrategy = "paste" | "type" | "clipboard";
+
+export interface InjectionOutcome {
+  strategy: InjectionStrategy;
+  /** Lowercased executable that had focus, when detectable. */
+  app?: string;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -26,6 +35,8 @@ export interface ProfileService {
 export interface SystemService {
   getAppVersion(): Promise<string>;
   getPlatform(): Promise<Platform>;
+  /** Inject text into the currently focused app (clipboard/paste/type per the app table). */
+  injectText(text: string): Promise<InjectionOutcome>;
 }
 
 /**

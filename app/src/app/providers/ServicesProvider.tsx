@@ -10,6 +10,8 @@ declare global {
     khonjel?: {
       invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
       contractVersion?: number;
+      /** Subscribe to global-hotkey relays from main; returns an unsubscribe fn. */
+      onHotkey?: (callback: (action: string) => void) => () => void;
     };
   }
 }

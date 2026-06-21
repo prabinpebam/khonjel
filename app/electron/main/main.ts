@@ -11,6 +11,9 @@ import { createInferenceService } from "./services/inference";
 import { createInferenceRuntime, type InferenceRuntime } from "./inference/runtime";
 import { createTranscriptionService } from "./services/transcription";
 import { resolveTranscriber } from "./stt/runtime";
+import { createInjector } from "./injection/injector";
+import * as win32 from "./injection/win32";
+import { createHotkeyManager, type HotkeyManager } from "./hotkeys";
 import { createConnectionStore } from "./services/connections";
 import { createContentStore } from "./services/content";
 import { listModels } from "./models/catalog";
@@ -18,6 +21,7 @@ import { computeInsights } from "./insights/compute";
 
 let mainWindow: BrowserWindow | null = null;
 let inferenceRuntime: InferenceRuntime | null = null;
+let hotkeyManager: HotkeyManager | null = null;
 
 /**
  * Composition root: construct the real dependencies and the pure dispatch layer. Built after the
@@ -25,6 +29,12 @@ let inferenceRuntime: InferenceRuntime | null = null;
  * (JSON file); later phases inject the db, keychain, inference, etc.
  */
 function buildDispatch(inferenceRuntime: InferenceRuntime) {
+  const injector = createInjector({
+    writeClipboard: win32.writeClipboard,
+    paste: win32.paste,
+    typeText: win32.typeText,
+    getForegroundApp: win32.getForegroundApp,
+  });
   return createDispatch({
     profile: {
       get: () => ({ id: "local", name: "You" }),
@@ -35,6 +45,7 @@ function buildDispatch(inferenceRuntime: InferenceRuntime) {
         const plat = process.platform;
         return (plat === "win32" || plat === "darwin" || plat === "linux" ? plat : "web") as Platform;
       },
+      injectText: (text) => injector.inject(text),
     },
     settings: createSettingsStore(fileSettingsIO(path.join(app.getPath("userData"), "settings.json"))),
     inference: createInferenceService(inferenceRuntime.engine),
@@ -129,6 +140,17 @@ void app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
+  // Register the global dictation hotkey from settings; a press toggles the renderer's dictation.
+  hotkeyManager = createHotkeyManager();
+  const settingsStore = createSettingsStore(
+    fileSettingsIO(path.join(app.getPath("userData"), "settings.json")),
+  );
+  const hotkeySetting = settingsStore.get().values["hotkey.dictation"] ?? "Ctrl+Shift+D";
+  const liveAccelerator = hotkeyManager.register(hotkeySetting, () => {
+    mainWindow?.webContents.send("khonjel:hotkey", "dictation");
+  });
+  console.log(`[khonjel] dictation hotkey: ${liveAccelerator ?? "none (registration failed)"}`);
+
   // Upgrade from the deterministic stub to the local LLM in the background (never blocks startup).
   void inferenceRuntime.start().then((mode) => {
     console.log(`[khonjel] inference engine: ${mode}`);
@@ -137,6 +159,7 @@ void app.whenReady().then(() => {
 
 app.on("before-quit", () => {
   inferenceRuntime?.stop();
+  hotkeyManager?.unregisterAll();
 });
 
 app.on("window-all-closed", () => {

@@ -5,6 +5,7 @@ import type {
   DictionaryEntry,
   Folder,
   HistoryEntry,
+  InjectionOutcome,
   InsightsAggregate,
   Integration,
   ModelInfo,
@@ -40,6 +41,7 @@ export function createIpcServices(invoke: Invoke): Services {
     system: {
       getAppVersion: () => invoke(CHANNELS.systemGetAppVersion) as Promise<string>,
       getPlatform: () => invoke(CHANNELS.systemGetPlatform) as Promise<Platform>,
+      injectText: (text) => invoke(CHANNELS.systemInjectText, text) as Promise<InjectionOutcome>,
     },
     settings: {
       get: () => invoke(CHANNELS.settingsGet) as Promise<SettingsSnapshot>,

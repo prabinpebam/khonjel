@@ -18,4 +18,10 @@ contextBridge.exposeInMainWorld("khonjel", {
   invoke: (channel: string, ...args: unknown[]) =>
     ipcRenderer.invoke("khonjel:invoke", CONTRACT_VERSION, channel, args),
   contractVersion: CONTRACT_VERSION,
+  // Global hotkey relay: main sends "khonjel:hotkey" with an action; returns an unsubscribe fn.
+  onHotkey: (callback: (action: string) => void) => {
+    const listener = (_event: unknown, action: string) => callback(action);
+    ipcRenderer.on("khonjel:hotkey", listener);
+    return () => ipcRenderer.removeListener("khonjel:hotkey", listener);
+  },
 });

@@ -14,7 +14,7 @@ const settingsState = { toggles: {} as Record<string, boolean>, values: {} as Re
 let connectionState: ConnectionProfile[] = [];
 const dispatch = createDispatch({
   profile: { get: () => ({ id: "local", name: "You" }) },
-  system: { getAppVersion: () => "9.9.9", getPlatform: () => "linux" as const },
+  system: { getAppVersion: () => "9.9.9", getPlatform: () => "linux" as const, injectText: () => ({ strategy: "paste" as const, app: "notepad.exe" }) },
   settings: {
     get: () => ({ toggles: { ...settingsState.toggles }, values: { ...settingsState.values } }),
     patch: (patch) => {
@@ -129,5 +129,10 @@ describe.each<[string, Services]>([
   it("transcription returns text through the seam", async () => {
     const result = await services.transcription.transcribe({ audioBase64: "Zm9v" });
     expect(typeof result.text).toBe("string");
+  });
+
+  it("system.injectText returns a valid injection outcome", async () => {
+    const outcome = await services.system.injectText("hello world");
+    expect(["paste", "type", "clipboard"]).toContain(outcome.strategy);
   });
 });

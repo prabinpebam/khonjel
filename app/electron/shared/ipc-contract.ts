@@ -17,6 +17,7 @@ import type {
   DictionaryEntry,
   Folder,
   HistoryEntry,
+  InjectionOutcome,
   InsightsAggregate,
   Integration,
   ModelInfo,
@@ -40,6 +41,7 @@ export const CHANNELS = {
   profileGet: "profile:get",
   systemGetAppVersion: "system:getAppVersion",
   systemGetPlatform: "system:getPlatform",
+  systemInjectText: "system:injectText",
   settingsGet: "settings:get",
   settingsPatch: "settings:patch",
   inferenceCleanup: "inference:cleanup",
@@ -68,6 +70,7 @@ export interface ChannelContract {
   "profile:get": { request: []; response: Profile };
   "system:getAppVersion": { request: []; response: string };
   "system:getPlatform": { request: []; response: Platform };
+  "system:injectText": { request: [string]; response: InjectionOutcome };
   "settings:get": { request: []; response: SettingsSnapshot };
   "settings:patch": { request: [SettingsPatch]; response: SettingsSnapshot };
   "inference:cleanup": { request: [string, CleanupOptions]; response: CleanupResult };
