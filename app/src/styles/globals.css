@@ -76,6 +76,14 @@
     @apply bg-canvas text-foreground font-sans antialiased;
   }
 
+  /* Floating dictation bar surface: the window is transparent, so the page must not paint a fill
+     behind the bar pill. Scoped to the floating-bar document only (set in main.tsx). */
+  html.surface-floating-bar,
+  html.surface-floating-bar body,
+  html.surface-floating-bar #root {
+    background: transparent;
+  }
+
   /* Token-driven focus ring (P7). */
   :focus-visible {
     outline: 2px solid var(--ring);

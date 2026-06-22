@@ -64,6 +64,24 @@ test("floating bar: an always-on-top, non-focusable capture window exists and th
   expect(props.alwaysOnTop, "bar floats above other windows").toBe(true);
   expect(props.focusable, "bar never takes focus (so injection targets the real app)").toBe(false);
 
+  // ---- The bar surface is transparent: no opaque page fill paints behind the pill ----
+  const pageBg = await bar.evaluate(() => {
+    const rgba = (el) => getComputedStyle(el).backgroundColor;
+    const isClear = (c) => c === "rgba(0, 0, 0, 0)" || c === "transparent";
+    return {
+      html: rgba(document.documentElement),
+      body: rgba(document.body),
+      root: rgba(document.getElementById("root")),
+      allClear: [document.documentElement, document.body, document.getElementById("root")].every(
+        (el) => isClear(rgba(el)),
+      ),
+    };
+  });
+  expect(
+    pageBg.allClear,
+    `bar page layers must be transparent so the window's transparency shows through — got ${JSON.stringify(pageBg)}`,
+  ).toBe(true);
+
   // ---- The dictation hotkey path shows the bar and starts recording ----
   // (Equivalent to pressing the global shortcut; a fake mic makes getUserMedia resolve.)
   await app.evaluate(() => globalThis.__khonjelTriggerDictation?.());

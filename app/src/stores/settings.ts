@@ -51,7 +51,10 @@ const DEFAULT_VALUES: Record<string, string> = {
   micDevice: "default",
   audioRetentionDays: "30",
   loggingLevel: "info",
-  "hotkey.dictation": "Ctrl+Win",
+  // Must be a registrable global accelerator (a non-modifier key + modifiers). A modifier-only
+  // chord like "Ctrl+Win" cannot be bound by Electron's globalShortcut and would silently die.
+  // Mirrors DEFAULT_DICTATION_HOTKEY in electron/main/hotkeys.ts.
+  "hotkey.dictation": "Ctrl+Shift+Space",
   "hotkey.dictation.mode": "tap",
   "hotkey.voiceAgent": "",
   "hotkey.meeting": "",

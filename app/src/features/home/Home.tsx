@@ -18,7 +18,7 @@ export function Home() {
   const { profile, content } = useServices();
   const setActiveView = useUiStore((s) => s.setActiveView);
   const openSettings = useUiStore((s) => s.openSettings);
-  const hotkey = useSettingsStore((s) => s.values["hotkey.dictation"] ?? "Ctrl+Win");
+  const hotkey = useSettingsStore((s) => s.values["hotkey.dictation"] ?? "Ctrl+Shift+Space");
   const [firstName, setFirstName] = useState("You");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const loadedRef = useRef(false);

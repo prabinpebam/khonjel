@@ -1,6 +1,6 @@
 // Electron main process (TypeScript, bundled to ../main.cjs by scripts/build-electron.mjs).
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
-import { app, BrowserWindow, dialog, ipcMain, screen, session, shell } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen, session, shell } from "electron";
 import * as path from "node:path";
 import { writeFileSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
 import type { Platform } from "../../src/services/ports";
@@ -13,7 +13,13 @@ import { createTranscriptionService } from "./services/transcription";
 import { resolveTranscriber } from "./stt/runtime";
 import { createInjector } from "./injection/injector";
 import * as win32 from "./injection/win32";
-import { createHotkeyManager, type HotkeyManager } from "./hotkeys";
+import {
+  createHotkeyManager,
+  normalizeAccelerator,
+  isRegistrableAccelerator,
+  DEFAULT_DICTATION_HOTKEY,
+  type HotkeyManager,
+} from "./hotkeys";
 import { createConnectionStore } from "./services/connections";
 import { createContentStore } from "./services/content";
 import { createSecretStore } from "./secrets/store";
@@ -41,7 +47,7 @@ if (process.env.KHONJEL_EVAL === "1") {
  * app is ready so `userData` paths resolve. Phase 0 wires profile + system + durable settings
  * (JSON file); later phases inject the db, keychain, inference, etc.
  */
-function buildDispatch(inferenceRuntime: InferenceRuntime, onTransformsChanged: () => void) {
+function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () => void) {
   const userData = app.getPath("userData");
   const injector = createInjector({
     writeClipboard: win32.writeClipboard,
@@ -83,7 +89,18 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onTransformsChanged: 
       injectText: (text) => injector.inject(text),
       captureSelection: () => win32.captureSelection(),
     },
-    settings: settingsStore,
+    settings: {
+      get: () => settingsStore.get(),
+      // Re-register global shortcuts when the dictation hotkey changes, so an edit in Settings takes
+      // effect live (without this, registerHotkeys only re-ran on transform edits and the new key
+      // stayed dead until restart).
+      patch: (patch) => {
+        const before = settingsStore.get().values["hotkey.dictation"];
+        const next = settingsStore.patch(patch);
+        if (next.values["hotkey.dictation"] !== before) onHotkeysChanged();
+        return next;
+      },
+    },
     inference: createInferenceService(inferenceRuntime.engine, router),
     transcription: createTranscriptionService({
       transcriber: resolveTranscriber({
@@ -134,7 +151,7 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onTransformsChanged: 
       ...contentStore,
       replace: (collection: string, items: unknown[]) => {
         contentStore.replace(collection, items);
-        if (collection === "transforms") onTransformsChanged();
+        if (collection === "transforms") onHotkeysChanged();
       },
     },
   });
@@ -307,6 +324,10 @@ void app.whenReady().then(() => {
     floatingBarWindow?.webContents.send("khonjel:hotkey", "dictation");
   }
 
+  // The accelerator currently bound as the live global dictation shortcut (what register() actually
+  // committed) — surfaced to the EDD harness to gate that the advertised hotkey is the live one.
+  let liveDictationAccelerator: string | null = null;
+
   // The bar reports returning to idle (after injecting); auto-hide it if enabled.
   ipcMain.on("floating:idle", () => {
     const autoHide = built.settingsStore.get().toggles.floatingAutoHide ?? true;
@@ -316,20 +337,51 @@ void app.whenReady().then(() => {
   // Eval-only hook: Playwright can't press a global shortcut, so the EDD harness calls this to
   // exercise the real hotkey -> show-bar -> record path. Never installed outside the eval.
   if (process.env.KHONJEL_EVAL === "1") {
-    (globalThis as unknown as { __khonjelTriggerDictation?: () => void }).__khonjelTriggerDictation =
-      () => triggerDictation();
+    const evalGlobal = globalThis as unknown as {
+      __khonjelTriggerDictation?: () => void;
+      __khonjelHotkeyStatus?: () => {
+        configured: string;
+        normalized: string;
+        live: string | null;
+        registered: boolean;
+      };
+    };
+    evalGlobal.__khonjelTriggerDictation = () => triggerDictation();
+    // Truth-in-advertising probe: is the user-facing dictation hotkey the one actually bound?
+    evalGlobal.__khonjelHotkeyStatus = () => {
+      const configured =
+        built.settingsStore.get().values["hotkey.dictation"] ?? DEFAULT_DICTATION_HOTKEY;
+      return {
+        configured,
+        normalized: normalizeAccelerator(configured),
+        live: liveDictationAccelerator,
+        registered: liveDictationAccelerator
+          ? globalShortcut.isRegistered(liveDictationAccelerator)
+          : false,
+      };
+    };
   }
 
   // Register the global dictation hotkey + each opted-in transform hotkey. Re-runs whenever the
-  // renderer edits transforms (content:replace -> onTransformsChanged). register() clears all
-  // shortcuts first, so dictation is rebound before the transforms are layered on via registerExtra.
+  // renderer edits transforms (content:replace) or changes the dictation hotkey (settings:patch).
+  // register() clears all shortcuts first, so dictation is rebound before the transforms are layered
+  // on via registerExtra.
   function registerHotkeys(): void {
     if (!hotkeyManager) return;
     const snapshot = built.settingsStore.get();
-    const dictationSetting = snapshot.values["hotkey.dictation"] ?? "Ctrl+Shift+D";
+    let dictationSetting = snapshot.values["hotkey.dictation"] ?? DEFAULT_DICTATION_HOTKEY;
+    // Self-heal a persisted hotkey the OS can never bind (e.g. an old "Ctrl+Win" saved before the
+    // default was made registrable). Without this, a stale modifier-only value overrides the default
+    // forever and the advertised hotkey stays dead. Patch the durable store (raw, no re-register) so
+    // the renderer adopts the corrected value and what the user sees is what is actually bound.
+    if (!isRegistrableAccelerator(dictationSetting)) {
+      dictationSetting = DEFAULT_DICTATION_HOTKEY;
+      built.settingsStore.patch({ values: { "hotkey.dictation": dictationSetting } });
+    }
     const live = hotkeyManager.register(dictationSetting, () => {
       triggerDictation();
     });
+    liveDictationAccelerator = live;
     console.log(`[khonjel] dictation hotkey: ${live ?? "none (registration failed)"}`);
     if (snapshot.toggles["transforms.optIn"]) {
       for (const transform of built.contentStore.transforms()) {

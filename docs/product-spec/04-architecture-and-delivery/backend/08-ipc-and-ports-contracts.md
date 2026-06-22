@@ -156,6 +156,11 @@ interface ModelCatalogService {
 }
 ```
 
+> **Full lifecycle (download/verify/remove/storage) + UX** — see
+> [03-ux-ui/07 Local model management](../../03-ux-ui/07-local-model-management.md), which extends
+> this interface with `status/verify/remove/storage`, the integrity (size + `sha256`) contract, and
+> the inline four-state UX (resume/queue/cleanup are internal automatic mechanics).
+
 ### 3.7 Content-mutation ports
 ```ts
 interface NotesService { create; update; remove; move }        // notes:create/update/remove/move (+notes:changed)

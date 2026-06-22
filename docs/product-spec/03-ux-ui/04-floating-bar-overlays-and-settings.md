@@ -178,7 +178,7 @@ modes. Reasoning/**thinking mode** is selectable; self-hosted OpenAI-compatible 
 ## B7. System  *(P0 — OpenWhispr "system")*
 - **Software Updates:** `Current version` + `Latest`/`Update` badge + `Check for Updates` → `Download` (progress) → `Install & Restart`; release-notes panel.
 - **Developer Tools** (`DeveloperSection`): diagnostics/logging.
-- **Data Management:** `Model cache` + path (mono) → `Open` + `Clear Cache` (danger). `Reset app data` → `Reset` (danger; confirm) — "Permanently delete all local settings, transcriptions, audio recordings, downloaded models, and cached data."
+- **Data Management:** `Model cache` + path (mono) + **used / free** summary → `Open` + `Clear Cache` (danger). Per-model download/remove live inline in the B4/B5 model list — see [07 Local model management](07-local-model-management.md). `Reset app data` → `Reset` (danger; confirm) — "Permanently delete all local settings, transcriptions, audio recordings, downloaded models, and cached data."
 
 ## B8. Integrations  *(P1 — OpenWhispr `IntegrationsView`; ungated/free)*
 Sectioned list (icon tile + title + description + action):
