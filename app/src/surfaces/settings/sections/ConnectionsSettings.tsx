@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { useServices } from "@services";
 import type { ConnectionAuthMode, ConnectionKind, ConnectionProfile } from "@services/ports";
+import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 import { Label } from "@components/ui/label";
 import { Select } from "@components/ui/select";
 import { ProviderIcon } from "@components/brand/provider-icon";
+import { cn } from "@lib/utils";
 
 const KINDS: ConnectionKind[] = [
   "openai",
@@ -39,6 +41,7 @@ export function ConnectionsSettings() {
   const { connections, secrets } = useServices();
   const [list, setList] = useState<ConnectionProfile[]>([]);
   const [keyed, setKeyed] = useState<Record<string, boolean>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ConnectionProfile>(EMPTY);
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -61,13 +64,31 @@ export function ConnectionsSettings() {
     };
   }, [connections, secrets]);
 
+  const editing = editingId !== null;
   const isAzure = draft.kind === "azure-openai";
+  const hasKey = editing && keyed[editingId] === true;
+
+  /** Reset the editor back to "add a new connection". */
+  function startNew() {
+    setEditingId(null);
+    setDraft(EMPTY);
+    setApiKey("");
+    setError(null);
+  }
+
+  /** Load an existing connection into the editor. The saved API key is never loaded (write-only). */
+  function startEdit(profile: ConnectionProfile) {
+    setEditingId(profile.id);
+    setDraft({ ...profile });
+    setApiKey("");
+    setError(null);
+  }
 
   async function save() {
-    const id = draft.id.trim();
+    const id = (editingId ?? draft.id).trim();
     const baseEndpoint = draft.baseEndpoint.trim();
     if (!id || !baseEndpoint) {
-      setError("An id and base endpoint are required.");
+      setError("A name and base endpoint are required.");
       return;
     }
     setError(null);
@@ -80,13 +101,13 @@ export function ConnectionsSettings() {
       apiVersion: isAzure ? draft.apiVersion?.trim() || undefined : undefined,
     };
     const next = await connections.upsert(profile);
+    // The key is write-only: store it only when a new value is entered; blank keeps the existing key.
     if (apiKey.trim()) {
       await secrets.set(id, apiKey.trim());
       setKeyed((k) => ({ ...k, [id]: true }));
     }
     setList(next);
-    setDraft(EMPTY);
-    setApiKey("");
+    startNew();
   }
 
   async function remove(id: string) {
@@ -96,12 +117,17 @@ export function ConnectionsSettings() {
       delete next[id];
       return next;
     });
+    if (editingId === id) startNew();
   }
 
   return (
     <div className="space-y-8">
       <section>
-        <h3 className="mb-3 text-sm font-semibold text-foreground">Saved connections</h3>
+        <h3 className="mb-1 text-sm font-semibold text-foreground">Saved connections</h3>
+        <p className="mb-3 text-xs text-tertiary-foreground">
+          Select a connection to edit it. API keys are stored in your OS keychain and can never be
+          viewed or copied.
+        </p>
         {list.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No provider connections yet. Add one below to use a cloud or self-hosted model. The API
@@ -109,44 +135,61 @@ export function ConnectionsSettings() {
           </p>
         ) : (
           <ul className="space-y-2">
-            {list.map((profile) => (
-              <li
-                key={profile.id}
-                className="flex items-center gap-3 rounded-md border border-border bg-surface p-3"
-              >
-                <ProviderIcon provider={profile.kind} className="size-5 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{profile.id}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {profile.kind}
-                    {profile.model ? ` · ${profile.model}` : ""} · {profile.baseEndpoint}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-pill border px-2 py-0.5 text-xs ${
-                    keyed[profile.id]
-                      ? "border-border text-muted-foreground"
-                      : "border-danger text-danger"
-                  }`}
+            {list.map((profile) => {
+              const active = editingId === profile.id;
+              return (
+                <li
+                  key={profile.id}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md border p-3 transition-colors",
+                    active ? "border-accent bg-accent-soft" : "border-border bg-surface hover:border-accent",
+                  )}
                 >
-                  {keyed[profile.id] ? "Key set" : "No key"}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Remove ${profile.id}`}
-                  onClick={() => void remove(profile.id)}
-                >
-                  <Trash2 />
-                </Button>
-              </li>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => startEdit(profile)}
+                    aria-label={`Edit ${profile.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
+                    <ProviderIcon provider={profile.kind} className="size-5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{profile.id}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {profile.kind}
+                        {profile.model ? ` · ${profile.model}` : ""} · {profile.baseEndpoint}
+                      </p>
+                    </div>
+                  </button>
+                  <Badge variant={keyed[profile.id] ? "neutral" : "danger"}>
+                    {keyed[profile.id] ? "Key set" : "No key"}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove ${profile.id}`}
+                    className="text-muted-foreground hover:text-danger"
+                    onClick={() => void remove(profile.id)}
+                  >
+                    <Trash2 />
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
 
       <section>
-        <h3 className="mb-3 text-sm font-semibold text-foreground">Add a connection</h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">
+            {editing ? `Edit "${editingId}"` : "Add a connection"}
+          </h3>
+          {editing ? (
+            <Button variant="ghost" size="sm" onClick={startNew}>
+              <X /> New connection
+            </Button>
+          ) : null}
+        </div>
         <div className="rounded-md border border-border bg-surface p-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
@@ -154,9 +197,15 @@ export function ConnectionsSettings() {
               <Input
                 id="conn-id"
                 value={draft.id}
+                disabled={editing}
                 onChange={(e) => setDraft({ ...draft, id: e.target.value })}
                 placeholder="my-openai"
               />
+              {editing ? (
+                <p className="text-xs text-tertiary-foreground">
+                  The name identifies this connection and can't be changed.
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>Provider</Label>
@@ -228,15 +277,31 @@ export function ConnectionsSettings() {
               <Input
                 id="conn-key"
                 type="password"
+                autoComplete="off"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Stored encrypted in your OS keychain (safeStorage); never shown again"
+                placeholder={
+                  hasKey
+                    ? "A key is saved \u2014 type a new one to replace it"
+                    : "Stored encrypted in your OS keychain (safeStorage); never shown again"
+                }
               />
+              <p className="text-xs text-tertiary-foreground">
+                {hasKey
+                  ? "Your saved key is encrypted in the OS keychain \u2014 it can't be viewed or copied. Leave blank to keep it."
+                  : "Stored encrypted in your OS keychain; never shown again."}
+              </p>
             </div>
           </div>
           {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
           <Button className="mt-4" onClick={() => void save()}>
-            <Plus /> Add connection
+            {editing ? (
+              "Save changes"
+            ) : (
+              <>
+                <Plus /> Add connection
+              </>
+            )}
           </Button>
         </div>
       </section>
