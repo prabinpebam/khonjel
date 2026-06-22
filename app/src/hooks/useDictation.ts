@@ -16,6 +16,12 @@ export interface UseDictation {
   error: string | null;
   /** Start when idle, finish + transcribe when recording. */
   toggle: () => void;
+  /** Begin recording (no-op if already starting/recording/transcribing). */
+  start: () => void;
+  /** Stop recording and transcribe (no-op if not recording). */
+  stop: () => void;
+  /** Abandon the current capture without transcribing and return to idle. */
+  cancel: () => void;
 }
 
 export function useDictation(
@@ -31,18 +37,40 @@ export function useDictation(
   const [error, setError] = useState<string | null>(null);
   const recorderRef = useRef<Recorder | null>(null);
   const startedAtRef = useRef(0);
+  // Guards: ignore re-entrant starts, and let cancel() abort a start that's still awaiting the mic.
+  const startingRef = useRef(false);
+  const abortRef = useRef(false);
 
   const start = async () => {
+    if (startingRef.current || status === "recording" || status === "transcribing") return;
+    startingRef.current = true;
+    abortRef.current = false;
     setError(null);
     try {
       const deviceId = await resolveMicDeviceId(micDevice, preferBuiltIn);
-      recorderRef.current = await startRecording({ deviceId, onLevel: opts.onLevel });
+      const recorder = await startRecording({ deviceId, onLevel: opts.onLevel });
+      if (abortRef.current) {
+        recorder.cancel();
+        return;
+      }
+      recorderRef.current = recorder;
       startedAtRef.current = Date.now();
       setStatus("recording");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Microphone unavailable");
       setStatus("error");
+    } finally {
+      startingRef.current = false;
     }
+  };
+
+  const cancel = () => {
+    abortRef.current = true;
+    startingRef.current = false;
+    const recorder = recorderRef.current;
+    recorderRef.current = null;
+    recorder?.cancel();
+    setStatus("idle");
   };
 
   const stop = async () => {
@@ -87,5 +115,12 @@ export function useDictation(
     else void start();
   };
 
-  return { status, error, toggle };
+  return {
+    status,
+    error,
+    toggle,
+    start: () => void start(),
+    stop: () => void stop(),
+    cancel,
+  };
 }

@@ -68,25 +68,41 @@ export function FloatingBar() {
     { onLevel: (n) => (levelRef.current = n) },
   );
 
-  // Keep the latest toggle in a ref so the hotkey subscription is set up once.
-  const toggleRef = useRef(dictation.toggle);
-  toggleRef.current = dictation.toggle;
+  // Keep the latest dictation API in a ref so the hotkey subscription is set up once.
+  const apiRef = useRef(dictation);
+  apiRef.current = dictation;
 
-  // The global dictation hotkey is relayed by the main process as "khonjel:hotkey" -> "dictation".
+  // Main relays the dictation hotkey as a session toggle: "dictation:start" begins a capture and
+  // "dictation:stop" ends it. Ending while recording transcribes + injects; ending in any other
+  // state (a failed or still-starting capture) just dismisses — so the bar is always escapable.
   useEffect(() => {
     const bridge = typeof window !== "undefined" ? window.khonjel : undefined;
     if (!bridge?.onHotkey) return;
     return bridge.onHotkey((action) => {
-      if (action === "dictation") toggleRef.current();
+      const api = apiRef.current;
+      if (action === "dictation:start") {
+        api.start();
+      } else if (action === "dictation:stop" || action === "dictation") {
+        if (api.status === "recording") {
+          api.stop();
+        } else {
+          api.cancel();
+          window.electronAPI?.floatingIdle?.();
+        }
+      }
     });
   }, []);
 
-  // After recording completes and the bar returns to idle, let the main process auto-hide it.
+  // When a capture ends — success (idle) OR failure (error) — let main auto-hide the bar. Hiding on
+  // error too is what keeps a missing model or mic failure from leaving the bar stuck on screen.
   const wasActiveRef = useRef(false);
   useEffect(() => {
     if (dictation.status === "recording" || dictation.status === "transcribing") {
       wasActiveRef.current = true;
-    } else if (dictation.status === "idle" && wasActiveRef.current) {
+    } else if (
+      (dictation.status === "idle" || dictation.status === "error") &&
+      wasActiveRef.current
+    ) {
       wasActiveRef.current = false;
       window.electronAPI?.floatingIdle?.();
     }
@@ -94,7 +110,14 @@ export function FloatingBar() {
 
   const recording = dictation.status === "recording";
   const transcribing = dictation.status === "transcribing";
-  const label = transcribing ? "Transcribing" : recording ? "Listening" : "Click to dictate";
+  const errored = dictation.status === "error";
+  const label = errored
+    ? (dictation.error ?? "Something went wrong")
+    : transcribing
+      ? "Transcribing"
+      : recording
+        ? "Listening"
+        : "Click to dictate";
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-transparent">
@@ -119,7 +142,14 @@ export function FloatingBar() {
           )}
         </button>
         <Waveform levelRef={levelRef} active={recording} />
-        <span className="min-w-20 text-sm font-medium text-foreground">{label}</span>
+        <span
+          className={cn(
+            "min-w-20 max-w-44 truncate text-sm font-medium",
+            errored ? "text-danger" : "text-foreground",
+          )}
+        >
+          {label}
+        </span>
       </div>
     </div>
   );

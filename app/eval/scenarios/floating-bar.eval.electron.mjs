@@ -96,3 +96,39 @@ test("floating bar: an always-on-top, non-focusable capture window exists and th
   await app.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });
 });
+
+test("floating bar: a failed capture (no STT model) still dismisses on the second hotkey press", async () => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-floating-dismiss-"));
+  const app = await electron.launch({
+    args: [
+      APP_DIR,
+      "--use-fake-ui-for-media-stream",
+      "--use-fake-device-for-media-stream",
+      `--user-data-dir=${userDataDir}`,
+    ],
+    // KHONJEL_EVAL_NO_STT makes transcription report model_unavailable — i.e. a device with no
+    // on-device model downloaded (the exact difference that made the bar stick on one machine).
+    env: { ...process.env, KHONJEL_LOAD_DIST: "1", KHONJEL_EVAL: "1", KHONJEL_EVAL_NO_STT: "1" },
+  });
+
+  const main = await findWindow(app, isMain);
+  await main.waitForSelector('[data-eval="app-shell"][data-eval-ready="true"]');
+  const bar = await findWindow(app, isBar);
+  await bar.waitForSelector('button[aria-label="Start dictation"]');
+
+  // First press: the bar appears and starts recording (a fake mic makes getUserMedia resolve).
+  await app.evaluate(() => globalThis.__khonjelTriggerDictation?.());
+  await expect.poll(async () => (await barWindowProps(app))?.visible, { timeout: 5000 }).toBe(true);
+  await expect(bar.getByText("Listening")).toBeVisible({ timeout: 8000 });
+
+  // Second press: stop -> transcription fails (no model) -> the bar must STILL dismiss. (The bug:
+  // it hid only on success, so a failed capture left it stuck on screen and the hotkey never
+  // dismissed it.)
+  await app.evaluate(() => globalThis.__khonjelTriggerDictation?.());
+  await expect
+    .poll(async () => (await barWindowProps(app))?.visible, { timeout: 12000 })
+    .toBe(false);
+
+  await app.close();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+});

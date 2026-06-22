@@ -145,12 +145,17 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     },
     inference: createInferenceService(inferenceRuntime.engine, router),
     transcription: createTranscriptionService({
-      transcriber: resolveTranscriber({
-        userDataDir: userData,
-        appDir: path.join(__dirname, ".."),
-        isWindows: process.platform === "win32",
-        env: process.env,
-      }),
+      // Eval hook: simulate a device with no on-device STT model (transcriber undefined ->
+      // model_unavailable) to gate that a failed capture still dismisses the floating bar.
+      transcriber:
+        process.env.KHONJEL_EVAL_NO_STT === "1"
+          ? undefined
+          : resolveTranscriber({
+              userDataDir: userData,
+              appDir: path.join(__dirname, ".."),
+              isWindows: process.platform === "win32",
+              env: process.env,
+            }),
       router,
       writeTempWav: (bytes) => {
         const file = path.join(
@@ -323,6 +328,9 @@ void app.whenReady().then(() => {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
+        // The bar lives hidden/non-focusable; without this Chromium throttles its renderer (frozen
+        // waveform, delayed hotkey IPC) so it looks unresponsive and won't dismiss on some machines.
+        backgroundThrottling: false,
       },
     });
     floatingBarWindow.setAlwaysOnTop(true, "screen-saver");
@@ -367,19 +375,30 @@ void app.whenReady().then(() => {
     floatingBarWindow.showInactive();
   }
 
-  // The dictation hotkey: show the bar (when the HUD is enabled) and tell it to toggle recording.
+  // The dictation hotkey is a session toggle: the first press shows the bar (when the HUD is on) and
+  // starts a capture; the next press ends it. `dictationActive` tracks the session so this also works
+  // when the HUD preview is off (there is no window visibility to toggle on). Reset when the bar idles.
+  let dictationActive = false;
   function triggerDictation(): void {
-    const preview = built.settingsStore.get().toggles["stt.dictation.preview"] ?? true;
-    if (preview) showFloatingBar();
-    floatingBarWindow?.webContents.send("khonjel:hotkey", "dictation");
+    if (!dictationActive) {
+      dictationActive = true;
+      const preview = built.settingsStore.get().toggles["stt.dictation.preview"] ?? true;
+      if (preview) showFloatingBar();
+      floatingBarWindow?.webContents.send("khonjel:hotkey", "dictation:start");
+    } else {
+      dictationActive = false;
+      floatingBarWindow?.webContents.send("khonjel:hotkey", "dictation:stop");
+    }
   }
 
   // The accelerator currently bound as the live global dictation shortcut (what register() actually
   // committed) — surfaced to the EDD harness to gate that the advertised hotkey is the live one.
   let liveDictationAccelerator: string | null = null;
 
-  // The bar reports returning to idle (after injecting); auto-hide it if enabled.
+  // The bar reports returning to idle (after injecting, or a failed/aborted capture); end the
+  // session and auto-hide it if enabled.
   ipcMain.on("floating:idle", () => {
+    dictationActive = false;
     const autoHide = built.settingsStore.get().toggles.floatingAutoHide ?? true;
     if (autoHide) floatingBarWindow?.hide();
   });
