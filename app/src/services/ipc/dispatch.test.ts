@@ -56,6 +56,14 @@ const deps: DispatchDeps = {
     addHistory: () => [],
     replace: () => undefined,
   },
+  models: {
+    status: () => [],
+    download: () => undefined,
+    cancel: () => undefined,
+    verify: () => ({ ok: true }),
+    remove: () => ({ freedBytes: 0 }),
+    storage: () => ({ cachePath: "", usedBytes: 0, freeBytes: 0 }),
+  },
 };
 
 describe("createDispatch", () => {

@@ -189,6 +189,12 @@ export type {
   IntegrationStatus,
   Integration,
   ModelInfo,
+  ModelInstallState,
+  ModelErrorCode,
+  ModelError,
+  ModelStatus,
+  ModelStorageReport,
+  ModelProgress,
 } from "./types";
 
 import type {
@@ -204,6 +210,9 @@ import type {
   Transform,
   Integration,
   ModelInfo,
+  ModelStatus,
+  ModelStorageReport,
+  ModelProgress,
 } from "./types";
 
 /**
@@ -248,6 +257,23 @@ export interface HistoryDraft {
   cleanupApplied: boolean;
 }
 
+/**
+ * Local model management (07 §7). Acquire, verify, remove on-device model assets and report
+ * storage. `onProgress` streams live download ticks (the ipc adapter bridges them from main; the
+ * mock drives them from its simulated downloads). Resume, queueing, and orphan cleanup are internal
+ * automatic mechanics — not part of this surface.
+ */
+export interface ModelManagementService {
+  status(): Promise<ModelStatus[]>;
+  download(id: string): Promise<void>;
+  cancel(id: string): Promise<void>;
+  verify(id: string): Promise<{ ok: boolean }>;
+  remove(id: string): Promise<{ freedBytes: number }>;
+  storage(): Promise<ModelStorageReport>;
+  /** Subscribe to live progress; returns an unsubscribe fn. */
+  onProgress(callback: (progress: ModelProgress) => void): () => void;
+}
+
 /** The full set of ports available to the app at runtime. */
 export interface Services {
   profile: ProfileService;
@@ -258,4 +284,5 @@ export interface Services {
   transcription: TranscriptionService;
   connections: ConnectionService;
   secrets: SecretsService;
+  models: ModelManagementService;
 }

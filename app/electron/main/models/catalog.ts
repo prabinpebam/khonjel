@@ -33,3 +33,88 @@ export function listModels(kind: ModelKind): ModelInfo[] {
 export function recommendedModel(kind: ModelKind): ModelInfo | undefined {
   return listModels(kind).find((model) => model.recommended);
 }
+
+/**
+ * Download/verify manifest for a local model (07 §3). `bytes`/`sha256` are optional: when present we
+ * verify exactly; when absent we accept a fully-transferred file (content-length complete). The
+ * first `sources[]` entry matches the URL the fetch scripts already use, so an in-app download and
+ * `npm run fetch:*` pull byte-identical files. Cloud catalog entries have NO manifest.
+ */
+export interface ModelManifest {
+  engine: "whisper" | "parakeet" | "llama";
+  /** Canonical on-disk filename we always write to (independent of the remote name). */
+  fileName: string;
+  /** Ordered mirrors; sources[0] == the script URL today. */
+  sources: string[];
+  bytes?: number;
+  sha256?: string;
+}
+
+const HF = "https://huggingface.co";
+
+const MANIFESTS: Record<string, ModelManifest> = {
+  "ggml-base.en.bin": {
+    engine: "whisper",
+    fileName: "ggml-base.en.bin",
+    sources: [`${HF}/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin`],
+  },
+  "ggml-small.bin": {
+    engine: "whisper",
+    fileName: "ggml-small.bin",
+    sources: [`${HF}/ggerganov/whisper.cpp/resolve/main/ggml-small.bin`],
+  },
+  "ggml-large-v3-turbo.bin": {
+    engine: "whisper",
+    fileName: "ggml-large-v3-turbo.bin",
+    sources: [`${HF}/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin`],
+  },
+  "qwen2.5-1.5b-instruct-q4_k_m.gguf": {
+    engine: "llama",
+    fileName: "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+    sources: [`${HF}/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf`],
+  },
+  "qwen2.5-3b-instruct-q4_k_m.gguf": {
+    engine: "llama",
+    fileName: "qwen2.5-3b-instruct-q4_k_m.gguf",
+    sources: [`${HF}/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf`],
+  },
+  "llama-3.2-3b-instruct-q4_k_m.gguf": {
+    engine: "llama",
+    fileName: "llama-3.2-3b-instruct-q4_k_m.gguf",
+    sources: [`${HF}/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf`],
+  },
+  "qwen2.5-7b-instruct-q4_k_m.gguf": {
+    engine: "llama",
+    fileName: "qwen2.5-7b-instruct-q4_k_m.gguf",
+    sources: [`${HF}/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf`],
+  },
+  "mistral-7b-instruct-v0.3.q4_k_m.gguf": {
+    engine: "llama",
+    fileName: "mistral-7b-instruct-v0.3.q4_k_m.gguf",
+    sources: [`${HF}/bartowski/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3-Q4_K_M.gguf`],
+  },
+};
+
+/** The manifest for a model id, or undefined for cloud/unknown ids (not locally managed). */
+export function modelManifest(id: string): ModelManifest | undefined {
+  return MANIFESTS[id];
+}
+
+/** `stt` | `llm` for a known local id, else undefined. */
+export function modelKindOf(id: string): ModelKind | undefined {
+  if (STT_MODELS.some((m) => m.id === id)) return "stt";
+  if (LLM_MODELS.some((m) => m.id === id)) return "llm";
+  return undefined;
+}
+
+/** Every locally-managed model (those with a manifest), joined with its catalog info + kind. */
+export function localModels(): { info: ModelInfo; kind: ModelKind; manifest: ModelManifest }[] {
+  const out: { info: ModelInfo; kind: ModelKind; manifest: ModelManifest }[] = [];
+  for (const kind of ["stt", "llm"] as const) {
+    for (const info of listModels(kind)) {
+      const manifest = MANIFESTS[info.id];
+      if (manifest) out.push({ info, kind, manifest });
+    }
+  }
+  return out;
+}

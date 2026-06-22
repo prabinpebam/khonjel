@@ -25,6 +25,8 @@ import type {
   InsightsAggregate,
   Integration,
   ModelInfo,
+  ModelStatus,
+  ModelStorageReport,
   Note,
   Platform,
   Profile,
@@ -87,6 +89,14 @@ export interface DispatchDeps {
     addHistory: (draft: HistoryDraft) => HistoryEntry[] | Promise<HistoryEntry[]>;
     replace: (collection: string, items: unknown[]) => void | Promise<void>;
   };
+  models: {
+    status: () => ModelStatus[] | Promise<ModelStatus[]>;
+    download: (id: string) => void | Promise<void>;
+    cancel: (id: string) => void | Promise<void>;
+    verify: (id: string) => { ok: boolean } | Promise<{ ok: boolean }>;
+    remove: (id: string) => { freedBytes: number } | Promise<{ freedBytes: number }>;
+    storage: () => ModelStorageReport | Promise<ModelStorageReport>;
+  };
   // Grows one slice per phase (meetings, transcription, agent, ...).
 }
 
@@ -127,6 +137,12 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.contentLlmModels]: () => deps.content.llmModels(),
     [CHANNELS.contentAddHistory]: (args) => deps.content.addHistory(args[0] as HistoryDraft),
     [CHANNELS.contentReplace]: (args) => deps.content.replace(args[0] as string, args[1] as unknown[]),
+    [CHANNELS.modelsStatus]: () => deps.models.status(),
+    [CHANNELS.modelsDownload]: (args) => deps.models.download(args[0] as string),
+    [CHANNELS.modelsCancel]: (args) => deps.models.cancel(args[0] as string),
+    [CHANNELS.modelsVerify]: (args) => deps.models.verify(args[0] as string),
+    [CHANNELS.modelsRemove]: (args) => deps.models.remove(args[0] as string),
+    [CHANNELS.modelsStorage]: () => deps.models.storage(),
   };
 
   return async function dispatch(channel: string, ...args: unknown[]): Promise<unknown> {

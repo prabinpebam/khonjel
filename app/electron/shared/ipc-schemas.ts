@@ -182,6 +182,52 @@ const ModelInfoSchema = z
   .object({ id: z.string(), name: z.string(), sizeLabel: z.string(), recommended: z.boolean() })
   .passthrough();
 
+const ModelErrorSchema = z.object({
+  code: z.enum([
+    "offline",
+    "source-unavailable",
+    "disk-full",
+    "checksum-mismatch",
+    "corrupt",
+    "permission",
+    "internal",
+  ]),
+  message: z.string(),
+});
+
+const ModelStatusSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    sizeLabel: z.string(),
+    recommended: z.boolean(),
+    kind: z.enum(["stt", "llm"]),
+    state: z.enum([
+      "not-installed",
+      "queued",
+      "downloading",
+      "paused",
+      "verifying",
+      "installed",
+      "error",
+      "removing",
+    ]),
+    bytesDone: z.number().optional(),
+    bytesTotal: z.number().optional(),
+    engineReady: z.boolean(),
+    error: ModelErrorSchema.optional(),
+    installedBytes: z.number().optional(),
+    verifiedAt: z.string().optional(),
+    inUse: z.boolean().optional(),
+  })
+  .passthrough();
+
+const ModelStorageReportSchema = z.object({
+  cachePath: z.string(),
+  usedBytes: z.number(),
+  freeBytes: z.number(),
+});
+
 const HistoryDraftSchema = z.object({
   finalText: z.string(),
   app: z.string(),
@@ -237,6 +283,12 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.contentLlmModels]: z.tuple([]),
   [CHANNELS.contentAddHistory]: z.tuple([HistoryDraftSchema]),
   [CHANNELS.contentReplace]: z.tuple([ContentCollectionSchema, z.array(z.unknown())]),
+  [CHANNELS.modelsStatus]: z.tuple([]),
+  [CHANNELS.modelsDownload]: z.tuple([z.string()]),
+  [CHANNELS.modelsCancel]: z.tuple([z.string()]),
+  [CHANNELS.modelsVerify]: z.tuple([z.string()]),
+  [CHANNELS.modelsRemove]: z.tuple([z.string()]),
+  [CHANNELS.modelsStorage]: z.tuple([]),
 };
 
 /** Response payload schemas. */
@@ -272,4 +324,10 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.contentLlmModels]: z.array(ModelInfoSchema),
   [CHANNELS.contentAddHistory]: z.array(HistoryEntrySchema),
   [CHANNELS.contentReplace]: z.void(),
+  [CHANNELS.modelsStatus]: z.array(ModelStatusSchema),
+  [CHANNELS.modelsDownload]: z.void(),
+  [CHANNELS.modelsCancel]: z.void(),
+  [CHANNELS.modelsVerify]: z.object({ ok: z.boolean() }),
+  [CHANNELS.modelsRemove]: z.object({ freedBytes: z.number() }),
+  [CHANNELS.modelsStorage]: ModelStorageReportSchema,
 };

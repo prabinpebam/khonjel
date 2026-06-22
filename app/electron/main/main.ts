@@ -22,6 +22,16 @@ import {
 } from "./hotkeys";
 import { createConnectionStore } from "./services/connections";
 import { createContentStore } from "./services/content";
+import { createModelIndexStore } from "./models/store";
+import { createDownloader } from "./models/downloader";
+import { createModelService, boundModelIdsFrom } from "./models/service";
+import {
+  nodeModelFs,
+  nodeDownloadFs,
+  nodeDownloadFetch,
+  makeEngineReady,
+  modelsDirOf,
+} from "./models/runtime";
 import { createSecretStore } from "./secrets/store";
 import { safeStorageCipher } from "./secrets/safeStorageCipher";
 import { createProviderRouter } from "./providers/router";
@@ -47,6 +57,17 @@ if (process.env.KHONJEL_EVAL === "1") {
  * app is ready so `userData` paths resolve. Phase 0 wires profile + system + durable settings
  * (JSON file); later phases inject the db, keychain, inference, etc.
  */
+/** Parse the optional KHONJEL_MODEL_SOURCES env (id -> url JSON) into a lookup map. */
+function parseModelSources(raw: string | undefined): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
 function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () => void) {
   const userData = app.getPath("userData");
   const injector = createInjector({
@@ -74,6 +95,27 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
   const contentStore = createContentStore(fileSettingsIO(path.join(userData, "content.json")), {
     listModels,
     computeInsights,
+  });
+
+  // Local model management (download/verify/remove/storage) over the durable models index. Progress
+  // ticks are relayed to the renderer over "khonjel:model-progress" (preload bridges onModelProgress).
+  const modelsDir = modelsDirOf(userData);
+  mkdirSync(modelsDir, { recursive: true });
+  const modelService = createModelService({
+    modelsDir,
+    store: createModelIndexStore(fileSettingsIO(path.join(modelsDir, "index.json"))),
+    downloader: createDownloader({ fetch: nodeDownloadFetch, fs: nodeDownloadFs() }),
+    fs: nodeModelFs(),
+    engineReady: makeEngineReady({
+      userDataDir: userData,
+      appDir: path.join(__dirname, ".."),
+      isWindows: process.platform === "win32",
+      env: process.env,
+    }),
+    boundModelIds: () => boundModelIdsFrom(settingsStore.get().values),
+    emit: (progress) => mainWindow?.webContents.send("khonjel:model-progress", progress),
+    // Optional per-id source override (mirror / eval): KHONJEL_MODEL_SOURCES='{"<id>":"<url>"}'.
+    sourceFor: (id) => parseModelSources(process.env.KHONJEL_MODEL_SOURCES)[id],
   });
 
   const dispatch = createDispatch({
@@ -153,6 +195,14 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
         contentStore.replace(collection, items);
         if (collection === "transforms") onHotkeysChanged();
       },
+    },
+    models: {
+      status: () => modelService.status(),
+      download: (id) => modelService.download(id),
+      cancel: (id) => modelService.cancel(id),
+      verify: (id) => modelService.verify(id),
+      remove: (id) => modelService.remove(id),
+      storage: () => modelService.storage(),
     },
   });
 

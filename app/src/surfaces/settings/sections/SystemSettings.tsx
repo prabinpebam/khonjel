@@ -1,9 +1,37 @@
+import { useEffect, useState } from "react";
+import { useServices } from "@services";
+import type { ModelStorageReport } from "@services/ports";
+import { useModelsStore } from "@stores/models";
 import { SettingGroup, SettingRow } from "@components/common/SettingRow";
 import { Button } from "@components/ui/button";
 import { SelectRow } from "../controls";
 
+/** Bytes to a short "3.1 GB" / "466 MB" label. */
+function fmt(bytes: number): string {
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1) return `${gb.toFixed(1)} GB`;
+  return `${Math.round(bytes / (1024 * 1024))} MB`;
+}
+
 export function SystemSettings() {
+  const services = useServices();
   const version = window.electronAPI?.getVersion?.() ?? "Browser preview";
+  // Re-read storage whenever a download/remove changes the installed set.
+  const statuses = useModelsStore((s) => s.statuses);
+  const [storage, setStorage] = useState<ModelStorageReport | null>(null);
+  useEffect(() => {
+    let live = true;
+    void services.models.storage().then((report) => {
+      if (live) setStorage(report);
+    });
+    return () => {
+      live = false;
+    };
+  }, [services, statuses]);
+
+  const modelCacheSubtitle = storage
+    ? `Models — ${fmt(storage.usedBytes)} used · ${fmt(storage.freeBytes)} free`
+    : "Downloaded speech + language models.";
 
   return (
     <div>
@@ -44,7 +72,7 @@ export function SystemSettings() {
       <SettingGroup label="Data management">
         <SettingRow
           title="Model cache"
-          subtitle="Downloaded speech + language models."
+          subtitle={modelCacheSubtitle}
           control={
             <div className="flex gap-2">
               <Button

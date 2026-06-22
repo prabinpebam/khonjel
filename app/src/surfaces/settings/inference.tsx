@@ -3,13 +3,14 @@ import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { useServices } from "@services";
 import { useSettingsStore } from "@stores/settings";
-import type { ConnectionProfile, ConnectionTestResult, ModelInfo } from "@services/ports";
+import type { ConnectionProfile, ConnectionTestResult } from "@services/ports";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 import { Label } from "@components/ui/label";
 import { Select } from "@components/ui/select";
 import { ProviderIcon } from "@components/brand/provider-icon";
 import { cn } from "@lib/utils";
+import { LocalModelList } from "./LocalModelList";
 
 export type InferenceMode = "cloud" | "providers" | "local" | "self-hosted" | "enterprise";
 
@@ -88,40 +89,12 @@ function ValueInput({ valueKey, placeholder }: { valueKey: string; placeholder?:
   );
 }
 
-function ValueSelect({
-  valueKey,
-  options,
-}: {
-  valueKey: string;
-  options: { value: string; label: string }[];
-}) {
-  const value = useSettingsStore((s) => s.values[valueKey] ?? options[0]?.value ?? "");
-  const setValue = useSettingsStore((s) => s.setValue);
-  return (
-    <Select
-      value={value}
-      onValueChange={(v) => setValue(valueKey, v)}
-      options={options}
-      className="w-full"
-    />
-  );
-}
-
-function modelOptions(models: ModelInfo[]) {
-  return models.map((m) => ({
-    value: m.id,
-    label: `${m.name} · ${m.sizeLabel}${m.recommended ? " (Recommended)" : ""}`,
-  }));
-}
-
 export function InferenceConfigBlock({
   prefix,
   kind,
-  models,
 }: {
   prefix: string;
   kind: "stt" | "llm";
-  models: ModelInfo[];
 }) {
   const mode = useSettingsStore((s) => s.values[`${prefix}.mode`] ?? "local");
 
@@ -146,7 +119,7 @@ export function InferenceConfigBlock({
         </Field>
       ) : null}
       <Field label="Model">
-        <ValueSelect valueKey={`${prefix}.model`} options={modelOptions(models)} />
+        <LocalModelList kind={kind} prefix={prefix} />
       </Field>
       <p className="text-xs text-tertiary-foreground">Runs on device. GPU auto-detected.</p>
     </div>

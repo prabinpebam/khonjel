@@ -24,6 +24,8 @@ import type {
   InsightsAggregate,
   Integration,
   ModelInfo,
+  ModelStatus,
+  ModelStorageReport,
   Note,
   Platform,
   Profile,
@@ -72,6 +74,12 @@ export const CHANNELS = {
   contentLlmModels: "content:llmModels",
   contentAddHistory: "content:addHistory",
   contentReplace: "content:replace",
+  modelsStatus: "models:status",
+  modelsDownload: "models:download",
+  modelsCancel: "models:cancel",
+  modelsVerify: "models:verify",
+  modelsRemove: "models:remove",
+  modelsStorage: "models:storage",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -109,6 +117,12 @@ export interface ChannelContract {
   "content:llmModels": { request: []; response: ModelInfo[] };
   "content:addHistory": { request: [HistoryDraft]; response: HistoryEntry[] };
   "content:replace": { request: [string, unknown[]]; response: void };
+  "models:status": { request: []; response: ModelStatus[] };
+  "models:download": { request: [string]; response: void };
+  "models:cancel": { request: [string]; response: void };
+  "models:verify": { request: [string]; response: { ok: boolean } };
+  "models:remove": { request: [string]; response: { freedBytes: number } };
+  "models:storage": { request: []; response: ModelStorageReport };
 }
 
 export type RequestOf<C extends Channel> = ChannelContract[C]["request"];

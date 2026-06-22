@@ -22,6 +22,22 @@ function launchOpts(userDataDir) {
   };
 }
 
+/** Seed a local model file so the inline picker shows it Installed (reconcile marks it on launch). */
+function seedInstalledModel(userDataDir, fileName) {
+  const dir = path.join(userDataDir, "models");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, fileName), Buffer.alloc(4096, 1));
+}
+
+/** Select an installed model in the Language Models list by its row radio. */
+async function selectLocalModel(page, modal, nameRe) {
+  await modal.getByRole("button", { name: "Language Models" }).first().click();
+  await page.waitForTimeout(150);
+  const row = modal.getByRole("radio", { name: nameRe });
+  await row.waitFor({ timeout: 6000 });
+  await row.click();
+}
+
 async function waitReady(page) {
   await page.waitForSelector('[data-eval="app-shell"][data-eval-ready="true"]');
 }
@@ -136,6 +152,7 @@ test("model badge: a routed (Azure) chat slot shows in the chat badge AND the si
 
 test("model badge: changing the one shared model fans out to every LLM task and the badge follows", async () => {
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-unify-"));
+  seedInstalledModel(userDataDir, "qwen2.5-3b-instruct-q4_k_m.gguf");
 
   const app = await electron.launch(launchOpts(userDataDir));
   const page = await app.firstWindow();
@@ -145,14 +162,11 @@ test("model badge: changing the one shared model fans out to every LLM task and 
   const badgeBefore = await chatBadge(page);
   expect(badgeBefore, "baseline chat badge is the default local model").toMatch(/1\.5B/i);
 
-  // Change THE model once, in the single shared Language Model config.
+  // Change THE model once, in the single shared Language Model config (select the installed 3B row).
   await page.locator('button[aria-label="Settings"]').first().click();
   const modal = page.locator('[data-eval="settings-modal"]');
   await modal.waitFor();
-  await modal.getByRole("button", { name: "Language Models" }).first().click();
-  await page.waitForTimeout(150);
-  await modal.locator('button[aria-haspopup="listbox"]').first().click();
-  await page.locator('div.shadow-pop button:has-text("3B")').first().click();
+  await selectLocalModel(page, modal, /Qwen2\.5 3B/i);
   await page.waitForTimeout(700);
   await page.keyboard.press("Escape");
 
@@ -175,6 +189,7 @@ test("model badge: changing the one shared model fans out to every LLM task and 
 
 test("model badge reactivity: changing the chat model in settings updates the badge + sidebar with NO remount", async () => {
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-react-"));
+  seedInstalledModel(userDataDir, "qwen2.5-3b-instruct-q4_k_m.gguf");
 
   const app = await electron.launch(launchOpts(userDataDir));
   const page = await app.firstWindow();
@@ -191,10 +206,7 @@ test("model badge reactivity: changing the chat model in settings updates the ba
   await page.locator('button[aria-label="Settings"]').first().click();
   const modal = page.locator('[data-eval="settings-modal"]');
   await modal.waitFor();
-  await modal.getByRole("button", { name: "Language Models" }).first().click();
-  await page.waitForTimeout(150);
-  await modal.locator('button[aria-haspopup="listbox"]').first().click();
-  await page.locator('div.shadow-pop button:has-text("3B")').first().click();
+  await selectLocalModel(page, modal, /Qwen2\.5 3B/i);
   await page.waitForTimeout(400);
 
   const badgeAfter = await page.locator('[data-eval="chat-model"]').innerText();

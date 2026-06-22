@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ServicesContext, type Services } from "@services";
+import type { ModelProgress } from "@services/ports";
 // ServicesProvider is the ONE place allowed to bind a concrete adapter (ESLint allowlists it).
 import { mockServices } from "@services/adapters/mock";
 import { createIpcServices } from "@services/adapters/ipc";
@@ -12,6 +13,8 @@ declare global {
       contractVersion?: number;
       /** Subscribe to global-hotkey relays from main; returns an unsubscribe fn. */
       onHotkey?: (callback: (action: string) => void) => () => void;
+      /** Subscribe to local-model download progress from main; returns an unsubscribe fn. */
+      onModelProgress?: (callback: (progress: ModelProgress) => void) => () => void;
     };
   }
 }
@@ -23,7 +26,10 @@ declare global {
 function resolveServices(): Services {
   const bridge = typeof window !== "undefined" ? window.khonjel : undefined;
   if (bridge && typeof bridge.invoke === "function") {
-    return createIpcServices((channel, ...args) => bridge.invoke(channel, ...args));
+    return createIpcServices(
+      (channel, ...args) => bridge.invoke(channel, ...args),
+      bridge.onModelProgress ? (cb) => bridge.onModelProgress!(cb) : undefined,
+    );
   }
   return mockServices;
 }

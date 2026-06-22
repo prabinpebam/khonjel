@@ -79,6 +79,14 @@ const dispatch = createDispatch({
     addHistory: () => [],
     replace: () => undefined,
   },
+  models: {
+    status: () => [],
+    download: () => undefined,
+    cancel: () => undefined,
+    verify: () => ({ ok: true }),
+    remove: () => ({ freedBytes: 0 }),
+    storage: () => ({ cachePath: "", usedBytes: 0, freeBytes: 0 }),
+  },
 });
 const ipcServices = createIpcServices((channel, ...args) => dispatch(channel, ...args));
 

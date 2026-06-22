@@ -10,6 +10,9 @@ import type {
   InsightsAggregate,
   Integration,
   ModelInfo,
+  ModelProgress,
+  ModelStatus,
+  ModelStorageReport,
   Note,
   Platform,
   Profile,
@@ -34,7 +37,13 @@ import { CHANNELS } from "@ipc/ipc-contract";
  */
 export type Invoke = (channel: string, ...args: unknown[]) => Promise<unknown>;
 
-export function createIpcServices(invoke: Invoke): Services {
+/** Subscribe to main-process progress events (preload `window.khonjel.onModelProgress`). */
+export type SubscribeModelProgress = (callback: (progress: ModelProgress) => void) => () => void;
+
+export function createIpcServices(
+  invoke: Invoke,
+  subscribeModelProgress?: SubscribeModelProgress,
+): Services {
   return {
     profile: {
       get: () => invoke(CHANNELS.profileGet) as Promise<Profile>,
@@ -93,6 +102,15 @@ export function createIpcServices(invoke: Invoke): Services {
         invoke(CHANNELS.contentReplace, "integrations", integrations) as Promise<void>,
       saveChat: (messages) => invoke(CHANNELS.contentReplace, "chat", messages) as Promise<void>,
       saveUploads: (jobs) => invoke(CHANNELS.contentReplace, "uploads", jobs) as Promise<void>,
+    },
+    models: {
+      status: () => invoke(CHANNELS.modelsStatus) as Promise<ModelStatus[]>,
+      download: (id) => invoke(CHANNELS.modelsDownload, id) as Promise<void>,
+      cancel: (id) => invoke(CHANNELS.modelsCancel, id) as Promise<void>,
+      verify: (id) => invoke(CHANNELS.modelsVerify, id) as Promise<{ ok: boolean }>,
+      remove: (id) => invoke(CHANNELS.modelsRemove, id) as Promise<{ freedBytes: number }>,
+      storage: () => invoke(CHANNELS.modelsStorage) as Promise<ModelStorageReport>,
+      onProgress: (callback) => subscribeModelProgress?.(callback) ?? (() => {}),
     },
   };
 }

@@ -1,7 +1,4 @@
 import { useState } from "react";
-import { useServices } from "@services";
-import type { ModelInfo } from "@services/ports";
-import { useAsync } from "@hooks/useAsync";
 import { SettingGroup } from "@components/common/SettingRow";
 import { Tabs } from "@components/ui/tabs";
 import { ToggleRow } from "../controls";
@@ -10,8 +7,6 @@ import { InferenceConfigBlock, InferenceModeSelector } from "../inference";
 type SttTab = "dictation" | "note";
 
 export function SpeechToTextSettings() {
-  const { content } = useServices();
-  const models = useAsync(() => content.sttModels(), [] as ModelInfo[]);
   const [tab, setTab] = useState<SttTab>("dictation");
   const prefix = `stt.${tab}`;
 
@@ -37,7 +32,7 @@ export function SpeechToTextSettings() {
         </section>
 
         <section className="rounded-md border border-border bg-surface p-5">
-          <InferenceConfigBlock prefix={prefix} kind="stt" models={models} />
+          <InferenceConfigBlock prefix={prefix} kind="stt" />
         </section>
 
         {tab === "dictation" ? (

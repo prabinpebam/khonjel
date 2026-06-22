@@ -31,4 +31,10 @@ contextBridge.exposeInMainWorld("khonjel", {
     ipcRenderer.on("khonjel:hotkey", listener);
     return () => ipcRenderer.removeListener("khonjel:hotkey", listener);
   },
+  // Local-model download progress relay: main streams "khonjel:model-progress" ticks.
+  onModelProgress: (callback: (progress: unknown) => void) => {
+    const listener = (_event: unknown, progress: unknown) => callback(progress);
+    ipcRenderer.on("khonjel:model-progress", listener);
+    return () => ipcRenderer.removeListener("khonjel:model-progress", listener);
+  },
 });

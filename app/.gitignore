@@ -13,8 +13,9 @@ electron/preload.cjs
 node_modules
 
 # Downloaded native runtimes + model weights (fetched by scripts/fetch-llama.mjs etc.)
-vendor
-models
+# Anchored to the app root so they do NOT match source dirs like electron/main/models/.
+/vendor
+/models
 
 # Test / eval artifacts
 coverage

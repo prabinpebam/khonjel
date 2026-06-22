@@ -1,7 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useServices } from "@services";
-import type { ModelInfo } from "@services/ports";
-import { useAsync } from "@hooks/useAsync";
 import { useSettingsStore } from "@stores/settings";
 import { SettingGroup } from "@components/common/SettingRow";
 import { Label } from "@components/ui/label";
@@ -18,8 +15,6 @@ type Purpose = "cleanup" | "agent" | "note" | "chat";
 const MIRROR_SLOTS = ["llm.cleanup", "llm.agent", "llm.note"];
 
 export function LanguageModelsSettings() {
-  const { content } = useServices();
-  const models = useAsync(() => content.llmModels(), [] as ModelInfo[]);
   const [tab, setTab] = useState<Purpose>("chat");
   const setValue = useSettingsStore((s) => s.setValue);
 
@@ -58,7 +53,7 @@ export function LanguageModelsSettings() {
       </section>
 
       <section className="rounded-md border border-border bg-surface p-5">
-        <InferenceConfigBlock prefix="llm.chat" kind="llm" models={models} />
+        <InferenceConfigBlock prefix="llm.chat" kind="llm" />
       </section>
 
       <div>
