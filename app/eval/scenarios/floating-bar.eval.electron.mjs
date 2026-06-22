@@ -132,3 +132,30 @@ test("floating bar: a failed capture (no STT model) still dismisses on the secon
   await app.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });
 });
+
+test("floating bar: recording mutes other system audio and stopping restores it", async () => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-floating-mute-"));
+  // KHONJEL_EVAL records the mute INTENT but skips the real Win32 mute, so the suite never mutes
+  // the machine running it — we assert the wiring (recording -> mute, stop -> restore).
+  const app = await electron.launch(launchOpts(userDataDir));
+
+  const main = await findWindow(app, isMain);
+  await main.waitForSelector('[data-eval="app-shell"][data-eval-ready="true"]');
+  const bar = await findWindow(app, isBar);
+  await bar.waitForSelector('button[aria-label="Start dictation"]');
+
+  const muteState = () => app.evaluate(() => globalThis.__khonjelMuteState?.() ?? null);
+  expect(await muteState(), "nothing is muted before recording").toBe(false);
+
+  // Start recording -> other system audio is muted.
+  await app.evaluate(() => globalThis.__khonjelTriggerDictation?.());
+  await expect(bar.getByText("Listening")).toBeVisible({ timeout: 8000 });
+  await expect.poll(muteState, { timeout: 5000 }).toBe(true);
+
+  // Stop recording -> audio is restored immediately (not only after transcription).
+  await app.evaluate(() => globalThis.__khonjelTriggerDictation?.());
+  await expect.poll(muteState, { timeout: 8000 }).toBe(false);
+
+  await app.close();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+});

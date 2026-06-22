@@ -22,6 +22,8 @@ export interface ElectronAPIShim {
   openModelsFolder?: () => void;
   clearModelCache?: () => void;
   resetAllData?: () => void;
+  /** The floating bar reports recording start/stop so other system audio can be muted. */
+  setRecordingActive?: (active: boolean) => void;
 }
 
 export const electronAPI: ElectronAPIShim = {
@@ -37,6 +39,7 @@ export const electronAPI: ElectronAPIShim = {
   openModelsFolder: () => {},
   clearModelCache: () => {},
   resetAllData: () => {},
+  setRecordingActive: () => {},
 };
 
 declare global {

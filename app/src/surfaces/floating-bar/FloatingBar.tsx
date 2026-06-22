@@ -108,6 +108,20 @@ export function FloatingBar() {
     }
   }, [dictation.status]);
 
+  // Tell main when the mic is actually capturing, so it can mute other system audio for a clean
+  // recording and restore it the instant recording stops.
+  const recordingSignalRef = useRef(false);
+  useEffect(() => {
+    const isRecording = dictation.status === "recording";
+    if (isRecording && !recordingSignalRef.current) {
+      recordingSignalRef.current = true;
+      window.electronAPI?.setRecordingActive?.(true);
+    } else if (!isRecording && recordingSignalRef.current) {
+      recordingSignalRef.current = false;
+      window.electronAPI?.setRecordingActive?.(false);
+    }
+  }, [dictation.status]);
+
   const recording = dictation.status === "recording";
   const transcribing = dictation.status === "transcribing";
   const errored = dictation.status === "error";

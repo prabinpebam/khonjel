@@ -79,7 +79,11 @@ export function GeneralSettings() {
 
       <SettingGroup label="Sound effects">
         <ToggleRow title="Dictation sounds" settingKey="dictationSounds" />
-        <ToggleRow title="Pause media while dictating" settingKey="pauseMedia" />
+        <ToggleRow
+          title="Mute other audio while dictating"
+          subtitle="Silence system audio during recording for a cleaner capture; restored when you stop."
+          settingKey="pauseMedia"
+        />
       </SettingGroup>
 
       <SettingGroup label="Clipboard">

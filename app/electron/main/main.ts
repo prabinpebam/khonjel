@@ -52,6 +52,16 @@ if (process.env.KHONJEL_EVAL === "1") {
   app.commandLine.appendSwitch("use-fake-device-for-media-stream");
 }
 
+// Mute other system audio while a dictation capture is live (Win32 Core Audio) so the recording is
+// clean, and always restore it when recording stops. Module-scoped so shutdown can guarantee a
+// restore. Skipped under KHONJEL_EVAL so the test suite never mutes the machine running it.
+let dictationMuted = false;
+function setDictationMute(muted: boolean): void {
+  dictationMuted = muted;
+  if (process.env.KHONJEL_EVAL === "1") return;
+  win32.setSystemMute(muted);
+}
+
 /**
  * Composition root: construct the real dependencies and the pure dispatch layer. Built after the
  * app is ready so `userData` paths resolve. Phase 0 wires profile + system + durable settings
@@ -403,11 +413,22 @@ void app.whenReady().then(() => {
     if (autoHide) floatingBarWindow?.hide();
   });
 
+  // The bar reports when the mic is actually recording, so other system audio can be muted for a
+  // clean capture (gated by the "pause media" setting) and reliably restored when recording stops.
+  ipcMain.on("recording:active", (_event, active: unknown) => {
+    if (active) {
+      if (built.settingsStore.get().toggles.pauseMedia ?? true) setDictationMute(true);
+    } else {
+      setDictationMute(false); // always restore on stop, regardless of the setting
+    }
+  });
+
   // Eval-only hook: Playwright can't press a global shortcut, so the EDD harness calls this to
   // exercise the real hotkey -> show-bar -> record path. Never installed outside the eval.
   if (process.env.KHONJEL_EVAL === "1") {
     const evalGlobal = globalThis as unknown as {
       __khonjelTriggerDictation?: () => void;
+      __khonjelMuteState?: () => boolean;
       __khonjelHotkeyStatus?: () => {
         configured: string;
         normalized: string;
@@ -416,6 +437,8 @@ void app.whenReady().then(() => {
       };
     };
     evalGlobal.__khonjelTriggerDictation = () => triggerDictation();
+    // Probe whether a live capture is currently muting other system audio.
+    evalGlobal.__khonjelMuteState = () => dictationMuted;
     // Truth-in-advertising probe: is the user-facing dictation hotkey the one actually bound?
     evalGlobal.__khonjelHotkeyStatus = () => {
       const configured =
@@ -471,6 +494,7 @@ void app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
+  if (dictationMuted) win32.setSystemMuteSync(false);
   inferenceRuntime?.stop();
   hotkeyManager?.unregisterAll();
   floatingBarWindow?.destroy();
