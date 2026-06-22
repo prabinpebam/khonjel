@@ -69,3 +69,64 @@ test("home: a new dictation appears in history live, without a reload or view sw
     fs.rmSync(userDataDir, { recursive: true, force: true });
   }
 });
+
+test("home feed: renders one page and loads more on scroll (infinite scroll)", async () => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-feed-"));
+  const app = await electron.launch({
+    args: [APP_DIR, `--user-data-dir=${userDataDir}`],
+    env: { ...process.env, KHONJEL_LOAD_DIST: "1" },
+  });
+
+  try {
+    const page = await findMain(app);
+    await page.waitForSelector('[data-eval="app-shell"][data-eval-ready="true"]');
+
+    const TOTAL = 50;
+    const id = (n) => `khonjel-feed-entry-${String(n).padStart(3, "0")}`;
+
+    // Seed more than one page of history (newest is added last, so it lands at the top of the feed).
+    await page.evaluate(async (total) => {
+      const pad = (n) => String(n).padStart(3, "0");
+      for (let i = 1; i <= total; i++) {
+        await window.khonjel.invoke("content:addHistory", {
+          finalText: `khonjel-feed-entry-${pad(i)}`,
+          app: "Khonjel",
+          language: "auto",
+          durationSec: 1,
+          mode: "dictation",
+          hasAudio: false,
+          cleanupApplied: false,
+        });
+      }
+    }, TOTAL);
+
+    // Remount Home fresh so the feed starts at exactly one page (deterministic — no scroll yet).
+    await page.reload();
+    await page.waitForSelector('[data-eval="app-shell"][data-eval-ready="true"]');
+
+    // The newest entry is on screen, but the feed is windowed: only the first page is in the DOM.
+    await expect(page.getByText(id(TOTAL))).toBeVisible();
+    const rows = page.locator('[data-eval="history-row"]');
+    const initial = await rows.count();
+    expect(initial, "only the first page is rendered, not all entries").toBeLessThan(TOTAL);
+    await expect(
+      page.getByText(id(30)),
+      "an entry just past the first page is not in the DOM yet",
+    ).toHaveCount(0);
+    await expect(page.locator('[data-eval="history-sentinel"]')).toBeVisible();
+
+    // Scroll the content panel to the end: the sentinel comes into view and the next page loads.
+    await page.locator('[data-eval="content"]').evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+
+    await expect(
+      page.getByText(id(30)),
+      "scrolling to the end loads older entries (infinite scroll)",
+    ).toHaveCount(1);
+    expect(await rows.count(), "more rows are rendered after scrolling").toBeGreaterThan(initial);
+  } finally {
+    await app.close();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  }
+});

@@ -13,6 +13,10 @@ import { Keycap } from "@components/ui/keycap";
 import { Textarea } from "@components/ui/textarea";
 import { dayKey, formatDateLabel, formatDuration, formatNumber, formatTime } from "@lib/format";
 
+// The feed renders in pages of this many entries; the next page loads as the sentinel scrolls into
+// view. Keeps the DOM small even when the dictation history grows into the thousands.
+const PAGE_SIZE = 20;
+
 export function Home() {
   const { profile, content } = useServices();
   const setActiveView = useUiStore((s) => s.setActiveView);
@@ -24,6 +28,8 @@ export function Home() {
   const loadedRef = useRef(false);
   // Set when history is replaced by a fresh fetch, so the persist effect does not re-save it.
   const skipPersistRef = useRef(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -71,16 +77,35 @@ export function Home() {
     void content.saveHistory(history);
   }, [history, content]);
 
+  // Only the first `visibleCount` entries are rendered; the rest load on scroll. New dictations
+  // arriving live (history grows at the top) stay within this window automatically.
+  const visible = useMemo(() => history.slice(0, visibleCount), [history, visibleCount]);
+  const hasMore = visible.length < history.length;
+
+  // Grow the window when the sentinel at the end of the feed scrolls into view.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) setVisibleCount((c) => c + PAGE_SIZE);
+      },
+      { rootMargin: "400px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, visibleCount]);
+
   const groups = useMemo(() => {
     const map = new Map<string, HistoryEntry[]>();
-    for (const entry of history) {
+    for (const entry of visible) {
       const key = dayKey(entry.createdAt);
       const list = map.get(key) ?? [];
       list.push(entry);
       map.set(key, list);
     }
     return [...map.entries()];
-  }, [history]);
+  }, [visible]);
 
   function removeEntry(id: string) {
     setHistory((prev) => prev.filter((e) => e.id !== id));
@@ -103,22 +128,33 @@ export function Home() {
               onConfigure={() => openSettings("hotkeys")}
             />
           ) : (
-            groups.map(([key, entries]) => (
-              <div key={key} className="mb-2">
-                <div className="mb-1 border-b border-border-subtle pb-1 text-xs font-semibold uppercase tracking-wide text-tertiary-foreground">
-                  {formatDateLabel(entries[0]?.createdAt ?? key)}
+            <>
+              {groups.map(([key, entries]) => (
+                <div key={key} className="mb-2">
+                  <div className="mb-1 border-b border-border-subtle pb-1 text-xs font-semibold uppercase tracking-wide text-tertiary-foreground">
+                    {formatDateLabel(entries[0]?.createdAt ?? key)}
+                  </div>
+                  {entries.map((entry) => (
+                    <HistoryRow
+                      key={entry.id}
+                      entry={entry}
+                      onCopy={() => void navigator.clipboard.writeText(entry.finalText)}
+                      onDelete={() => removeEntry(entry.id)}
+                      onSave={(text) => saveEntry(entry.id, text)}
+                    />
+                  ))}
                 </div>
-                {entries.map((entry) => (
-                  <HistoryRow
-                    key={entry.id}
-                    entry={entry}
-                    onCopy={() => void navigator.clipboard.writeText(entry.finalText)}
-                    onDelete={() => removeEntry(entry.id)}
-                    onSave={(text) => saveEntry(entry.id, text)}
-                  />
-                ))}
-              </div>
-            ))
+              ))}
+              {hasMore ? (
+                <div
+                  ref={sentinelRef}
+                  data-eval="history-sentinel"
+                  className="py-4 text-center text-xs text-tertiary-foreground"
+                >
+                  Loading older dictations...
+                </div>
+              ) : null}
+            </>
           )}
         </section>
 
@@ -173,7 +209,10 @@ function HistoryRow({
   }
 
   return (
-    <div className="group flex gap-4 border-b border-border-subtle py-3 transition-colors hover:bg-surface-2">
+    <div
+      data-eval="history-row"
+      className="group flex gap-4 border-b border-border-subtle py-3 transition-colors hover:bg-surface-2"
+    >
       <span className="w-20 shrink-0 pt-0.5 text-xs text-tertiary-foreground">
         {formatTime(entry.createdAt)}
       </span>

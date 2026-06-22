@@ -101,6 +101,7 @@ Goal: no UI that lies. Every control must either **do something real** or **not 
 - [ ] **F3** Voice agent surface/dispatcher — DEFER (not requested; remove dependent settings).
 - [ ] **F4** Notes folder CRUD / move-note + live counts — IMPLEMENT (folder management).
 - [x] **F5** Home history not live — WIRE real-time refresh. _Done + EDD-validated in real Electron:_ main broadcasts `khonjel:content-changed` to every window after a `content:addHistory` dispatch; a new `content.onChanged` seam port (preload relay + mock in-memory notifier) lets Home re-fetch history + stats the instant a dictation completes — including captures made in the floating-bar window — with no reload or view switch. Refetched data is guarded from re-triggering the persist effect. Eval: `eval/scenarios/home-history.eval.electron.mjs`.
+- [x] **F6** Home feed unbounded render — ADD infinite scroll. _Done + EDD-validated in real Electron:_ the feed renders in pages of `PAGE_SIZE` (20) and grows as an `IntersectionObserver` sentinel at the end scrolls into view, so the DOM stays small even with thousands of entries. Plays nicely with the live refresh (new dictations arrive at the top, within the window) and with edit/delete/persist (the full array stays in memory; only rendering is windowed). Eval: second test in `eval/scenarios/home-history.eval.electron.mjs`.
 
 ## G. Minor / dead code
 
