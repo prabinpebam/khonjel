@@ -15,6 +15,8 @@ declare global {
       onHotkey?: (callback: (action: string) => void) => () => void;
       /** Subscribe to local-model download progress from main; returns an unsubscribe fn. */
       onModelProgress?: (callback: (progress: ModelProgress) => void) => () => void;
+      /** Subscribe to content mutations (e.g. a new dictation) from main; returns an unsubscribe fn. */
+      onContentChanged?: (callback: (collection: string) => void) => () => void;
     };
   }
 }
@@ -29,6 +31,7 @@ function resolveServices(): Services {
     return createIpcServices(
       (channel, ...args) => bridge.invoke(channel, ...args),
       bridge.onModelProgress ? (cb) => bridge.onModelProgress!(cb) : undefined,
+      bridge.onContentChanged ? (cb) => bridge.onContentChanged!(cb) : undefined,
     );
   }
   return mockServices;

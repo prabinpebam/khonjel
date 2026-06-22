@@ -100,6 +100,7 @@ Goal: no UI that lies. Every control must either **do something real** or **not 
 - [ ] **F2** Meeting capture surface — DEFER (not requested; remove dependent settings).
 - [ ] **F3** Voice agent surface/dispatcher — DEFER (not requested; remove dependent settings).
 - [ ] **F4** Notes folder CRUD / move-note + live counts — IMPLEMENT (folder management).
+- [x] **F5** Home history not live — WIRE real-time refresh. _Done + EDD-validated in real Electron:_ main broadcasts `khonjel:content-changed` to every window after a `content:addHistory` dispatch; a new `content.onChanged` seam port (preload relay + mock in-memory notifier) lets Home re-fetch history + stats the instant a dictation completes — including captures made in the floating-bar window — with no reload or view switch. Refetched data is guarded from re-triggering the persist effect. Eval: `eval/scenarios/home-history.eval.electron.mjs`.
 
 ## G. Minor / dead code
 

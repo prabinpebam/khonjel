@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Mic, Pencil, Trash2, X } from "lucide-react";
 import { useServices } from "@services";
-import type { HistoryEntry } from "@services/ports";
-import { useAsync } from "@hooks/useAsync";
+import type { HistoryEntry, InsightsAggregate } from "@services/ports";
 import { useSettingsStore } from "@stores/settings";
 import { useUiStore } from "@stores/ui";
 import { EMPTY_INSIGHTS } from "@lib/defaults";
@@ -21,7 +20,10 @@ export function Home() {
   const hotkey = useSettingsStore((s) => s.values["hotkey.dictation"] ?? "Ctrl+Shift+Space");
   const [firstName, setFirstName] = useState("You");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [insights, setInsights] = useState<InsightsAggregate>(EMPTY_INSIGHTS);
   const loadedRef = useRef(false);
+  // Set when history is replaced by a fresh fetch, so the persist effect does not re-save it.
+  const skipPersistRef = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -33,24 +35,41 @@ export function Home() {
     };
   }, [profile]);
 
+  // Load history + stats, and keep them live: refetch whenever main reports a content change
+  // (a new dictation lands in history, including captures made from the floating-bar window), so the
+  // page updates the instant a dictation completes, with no reload or view switch.
   useEffect(() => {
     let live = true;
-    void content.history().then((h) => {
-      if (!live) return;
-      setHistory(h);
-      loadedRef.current = true;
+    const load = () => {
+      void content.history().then((h) => {
+        if (!live) return;
+        skipPersistRef.current = true;
+        setHistory(h);
+        loadedRef.current = true;
+      });
+      void content.insights().then((i) => {
+        if (live) setInsights(i);
+      });
+    };
+    load();
+    const unsubscribe = content.onChanged((collection) => {
+      if (collection === "history") load();
     });
     return () => {
       live = false;
+      unsubscribe();
     };
   }, [content]);
 
-  // Persist edits/deletes back to the durable store.
+  // Persist user edits/deletes back to the durable store (skip a change that came from a refetch).
   useEffect(() => {
-    if (loadedRef.current) void content.saveHistory(history);
+    if (!loadedRef.current) return;
+    if (skipPersistRef.current) {
+      skipPersistRef.current = false;
+      return;
+    }
+    void content.saveHistory(history);
   }, [history, content]);
-
-  const insights = useAsync(() => content.insights(), EMPTY_INSIGHTS);
 
   const groups = useMemo(() => {
     const map = new Map<string, HistoryEntry[]>();

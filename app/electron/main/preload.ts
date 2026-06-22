@@ -38,4 +38,11 @@ contextBridge.exposeInMainWorld("khonjel", {
     ipcRenderer.on("khonjel:model-progress", listener);
     return () => ipcRenderer.removeListener("khonjel:model-progress", listener);
   },
+  // Content-mutation relay: main sends "khonjel:content-changed" (with the collection) after a
+  // mutation (e.g. a new dictation appended to history), so views can refresh live.
+  onContentChanged: (callback: (collection: string) => void) => {
+    const listener = (_event: unknown, collection: string) => callback(collection);
+    ipcRenderer.on("khonjel:content-changed", listener);
+    return () => ipcRenderer.removeListener("khonjel:content-changed", listener);
+  },
 });

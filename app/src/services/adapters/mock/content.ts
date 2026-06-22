@@ -17,6 +17,12 @@ const state = {
   integrations: [...seed.INTEGRATIONS],
 };
 
+// Live content-change subscribers (mirrors the main-process broadcast under Electron).
+const listeners = new Set<(collection: string) => void>();
+function notify(collection: string): void {
+  for (const cb of listeners) cb(collection);
+}
+
 export const mockContentService: ContentService = {
   history: async () => state.history,
   insights: async () => seed.INSIGHTS,
@@ -39,6 +45,7 @@ export const mockContentService: ContentService = {
       ...draft,
     };
     state.history = [entry, ...state.history];
+    notify("history");
     return state.history;
   },
   saveHistory: async (entries) => {
@@ -67,5 +74,9 @@ export const mockContentService: ContentService = {
   },
   saveUploads: async (jobs) => {
     state.uploads = jobs;
+  },
+  onChanged: (callback) => {
+    listeners.add(callback);
+    return () => listeners.delete(callback);
   },
 };

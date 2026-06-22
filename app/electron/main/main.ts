@@ -4,7 +4,7 @@ import { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen, session, s
 import * as path from "node:path";
 import { writeFileSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
 import type { Platform } from "../../src/services/ports";
-import { checkContractVersion } from "../shared/ipc-contract";
+import { CHANNELS, checkContractVersion } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
 import { createSettingsStore, fileSettingsIO } from "./services/settings";
 import { createInferenceService } from "./services/inference";
@@ -284,9 +284,17 @@ void app.whenReady().then(() => {
   // The single allow-listed request/response bridge. The preload sends the contract version on
   // every call (rejected on mismatch); `dispatch` then validates channel + payload (unknown
   // channel -> not_found; bad payload -> validation). Together these are the allow-list.
-  ipcMain.handle("khonjel:invoke", (_event, version: unknown, channel: string, args: unknown[]) => {
+  ipcMain.handle("khonjel:invoke", async (_event, version: unknown, channel: string, args: unknown[]) => {
     checkContractVersion(version);
-    return built.dispatch(channel, ...(Array.isArray(args) ? args : []));
+    const result = await built.dispatch(channel, ...(Array.isArray(args) ? args : []));
+    // A new dictation just landed in history: tell every window so live views (Home) refresh now,
+    // not on the next reload or view switch — including captures made from the floating bar window.
+    if (channel === CHANNELS.contentAddHistory) {
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.send("khonjel:content-changed", "history");
+      }
+    }
+    return result;
   });
 
   // Live mic capture (dictation + the floating bar) issues a getUserMedia permission request. This

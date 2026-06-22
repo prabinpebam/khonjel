@@ -40,9 +40,13 @@ export type Invoke = (channel: string, ...args: unknown[]) => Promise<unknown>;
 /** Subscribe to main-process progress events (preload `window.khonjel.onModelProgress`). */
 export type SubscribeModelProgress = (callback: (progress: ModelProgress) => void) => () => void;
 
+/** Subscribe to content-mutation relays (preload `window.khonjel.onContentChanged`). */
+export type SubscribeContentChanged = (callback: (collection: string) => void) => () => void;
+
 export function createIpcServices(
   invoke: Invoke,
   subscribeModelProgress?: SubscribeModelProgress,
+  subscribeContentChanged?: SubscribeContentChanged,
 ): Services {
   return {
     profile: {
@@ -102,6 +106,7 @@ export function createIpcServices(
         invoke(CHANNELS.contentReplace, "integrations", integrations) as Promise<void>,
       saveChat: (messages) => invoke(CHANNELS.contentReplace, "chat", messages) as Promise<void>,
       saveUploads: (jobs) => invoke(CHANNELS.contentReplace, "uploads", jobs) as Promise<void>,
+      onChanged: (callback) => subscribeContentChanged?.(callback) ?? (() => {}),
     },
     models: {
       status: () => invoke(CHANNELS.modelsStatus) as Promise<ModelStatus[]>,

@@ -244,6 +244,8 @@ export interface ContentService {
   saveIntegrations(integrations: Integration[]): Promise<void>;
   saveChat(messages: ChatMessage[]): Promise<void>;
   saveUploads(jobs: UploadJob[]): Promise<void>;
+  /** Subscribe to content mutations (e.g. a new dictation appended to history) for live refresh. */
+  onChanged(callback: (collection: string) => void): () => void;
 }
 
 /** The fields a caller supplies for a new history entry; the store derives id/createdAt/wordCount. */
