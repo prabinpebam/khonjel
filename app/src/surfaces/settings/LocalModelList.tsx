@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { useServices } from "@services";
 import type { ModelStatus } from "@services/ports";
@@ -28,6 +28,7 @@ export function LocalModelList({ kind, prefix }: { kind: "stt" | "llm"; prefix: 
   const selected = useSettingsStore((s) => s.values[selectedKey] ?? "");
   const setValue = useSettingsStore((s) => s.setValue);
   const autoSelect = useRef<Set<string>>(new Set());
+  const [flash, setFlash] = useState<Record<string, "ok" | "fail">>({});
 
   useEffect(() => {
     init(services);
@@ -65,7 +66,21 @@ export function LocalModelList({ kind, prefix }: { kind: "stt" | "llm"; prefix: 
           }}
           onCancel={() => void services.models.cancel(model.id)}
           onRemove={() => void services.models.remove(model.id)}
-          onVerify={() => void services.models.verify(model.id)}
+          flash={flash[model.id]}
+          onVerify={() => {
+            void services.models.verify(model.id).then(({ ok }) => {
+              setFlash((f) => ({ ...f, [model.id]: ok ? "ok" : "fail" }));
+              window.setTimeout(
+                () =>
+                  setFlash((f) => {
+                    const next = { ...f };
+                    delete next[model.id];
+                    return next;
+                  }),
+                2500,
+              );
+            });
+          }}
         />
       ))}
     </div>
@@ -80,9 +95,10 @@ interface RowProps {
   onCancel: () => void;
   onRemove: () => void;
   onVerify: () => void;
+  flash?: "ok" | "fail";
 }
 
-function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, onVerify }: RowProps) {
+function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, onVerify, flash }: RowProps) {
   const busy =
     model.state === "downloading" ||
     model.state === "queued" ||
@@ -125,6 +141,8 @@ function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, o
             </span>
           ) : null}
           {model.inUse && selected ? <span className="text-xs text-accent">In use</span> : null}
+          {flash === "ok" ? <span className="text-xs text-success">Verified</span> : null}
+          {flash === "fail" ? <span className="text-xs text-danger">Re-downloading…</span> : null}
         </div>
 
         {busy ? (

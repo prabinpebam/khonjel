@@ -100,3 +100,44 @@ test("local models: download from a (local) source installs, accounts storage, a
     fs.rmSync(userDataDir, { recursive: true, force: true });
   }
 });
+
+test("local models: clicking Verify shows visible feedback in the picker", async () => {
+  const { server, url } = await startSource();
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-verify-"));
+  const app = await electron.launch({
+    args: [APP_DIR, `--user-data-dir=${userDataDir}`],
+    env: {
+      ...process.env,
+      KHONJEL_LOAD_DIST: "1",
+      KHONJEL_EVAL: "1",
+      KHONJEL_MODEL_SOURCES: JSON.stringify({ [MODEL_ID]: url }),
+    },
+  });
+
+  try {
+    const main = await findWindow(app, isMain);
+    await main.waitForSelector('[data-eval="app-shell"][data-eval-ready="true"]');
+
+    // Install the model first (direct invoke; faster than driving the download UI).
+    await main.evaluate((id) => window.khonjel.invoke("models:download", id), MODEL_ID);
+    await expect
+      .poll(async () => (await statusOf(main, MODEL_ID))?.state, { timeout: 15000 })
+      .toBe("installed");
+
+    // Open Settings -> Speech-to-Text (Local is the default mode, so the model list renders).
+    await main.locator('button[aria-label="Settings"]').first().click();
+    const modal = main.locator('[data-eval="settings-modal"]');
+    await modal.waitFor();
+    await modal.getByRole("button", { name: "Speech-to-Text" }).click();
+
+    // The installed row exposes Verify; clicking it must produce visible feedback (the user's bug).
+    const verify = modal.getByRole("button", { name: "Re-verify Whisper Base (English)" });
+    await verify.waitFor({ timeout: 8000 });
+    await verify.click();
+    await expect(modal.getByText("Verified")).toBeVisible({ timeout: 8000 });
+  } finally {
+    await app.close();
+    server.close();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  }
+});

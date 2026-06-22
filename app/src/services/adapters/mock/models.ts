@@ -97,7 +97,20 @@ export const mockModelService: ModelManagementService = {
     s.bytesDone = undefined;
     emit(s);
   },
-  verify: async () => ({ ok: true }),
+  verify: async (id) => {
+    const s = status.get(id);
+    if (!s || s.state !== "installed") return { ok: false };
+    s.state = "verifying";
+    emit(s);
+    await new Promise((r) => setTimeout(r, 450));
+    const cur = status.get(id);
+    if (cur) {
+      cur.state = "installed";
+      cur.verifiedAt = new Date().toISOString();
+      emit(cur);
+    }
+    return { ok: true };
+  },
   remove: async (id) => {
     stopTimer(id);
     const s = status.get(id);

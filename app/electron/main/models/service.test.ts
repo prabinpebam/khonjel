@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from "vitest";
+import { join } from "node:path";
 import { createModelService, boundModelIdsFrom, type ModelServiceFs } from "./service";
 import { createModelIndexStore } from "./store";
 import type { Downloader } from "./downloader";
@@ -12,11 +13,16 @@ function memoryIO(): SettingsIO {
   return { read: () => doc, write: (d) => (doc = d) };
 }
 
-function fakeFs(free = 1e12): { fs: ModelServiceFs; setFree: (n: number) => void } {
+function fakeFs(free = 1e12): {
+  fs: ModelServiceFs;
+  setFree: (n: number) => void;
+  setSize: (p: string, n: number) => void;
+} {
   let freeBytes = free;
   const sizes = new Map<string, number>();
   return {
     setFree: (n) => (freeBytes = n),
+    setSize: (p, n) => sizes.set(p, n),
     fs: {
       exists: (p) => sizes.has(p),
       size: (p) => sizes.get(p) ?? 0,
@@ -39,7 +45,7 @@ function okDownloader(bytes = 100): Downloader {
 
 function build(over: Partial<Parameters<typeof createModelService>[0]> = {}) {
   const store = createModelIndexStore(memoryIO());
-  const { fs, setFree } = fakeFs();
+  const { fs, setFree, setSize } = fakeFs();
   const emitted: { id: string; state: string }[] = [];
   const service = createModelService({
     modelsDir: "/models",
@@ -51,7 +57,7 @@ function build(over: Partial<Parameters<typeof createModelService>[0]> = {}) {
     emit: (p) => emitted.push({ id: p.id, state: p.state }),
     ...over,
   });
-  return { service, store, fs, setFree, emitted };
+  return { service, store, fs, setFree, setSize, emitted };
 }
 
 const stateOf = (service: ReturnType<typeof build>["service"], id: string) =>
@@ -103,6 +109,22 @@ describe("createModelService", () => {
   it("marks a bound model as in use", async () => {
     const { service } = build({ boundModelIds: () => new Set([ID]) });
     expect(service.status().find((s) => s.id === ID)?.inUse).toBe(true);
+  });
+
+  it("verify emits a verifying tick then re-confirms installed (picker feedback)", async () => {
+    const { service, emitted, setSize } = build();
+    setSize(join("/models", "ggml-small.bin"), 100); // the model file is present on disk
+    const result = await service.verify(ID);
+    expect(result.ok).toBe(true);
+    expect(emitted.map((e) => e.state)).toEqual(["verifying", "installed"]);
+  });
+
+  it("verify of a vanished file emits verifying, drops to not-installed, and re-downloads", async () => {
+    const { service, emitted } = build();
+    const result = await service.verify(ID); // no file on disk
+    expect(result.ok).toBe(false);
+    expect(emitted[0]?.state).toBe("verifying");
+    await vi.waitFor(() => expect(stateOf(service, ID)).toBe("installed"));
   });
 });
 

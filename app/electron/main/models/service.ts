@@ -252,14 +252,23 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
       const manifest = modelManifest(id);
       if (!manifest) return { ok: false };
       const finalPath = finalPathOf(manifest);
-      if (!deps.fs.exists(finalPath) || deps.fs.size(finalPath) <= 0) return { ok: false };
-      const sizeOk = manifest.bytes == null || deps.fs.size(finalPath) === manifest.bytes;
-      const hashOk = !manifest.sha256 || deps.fs.sha256(finalPath).toLowerCase() === manifest.sha256.toLowerCase();
+      // Signal that verification started so the picker shows "Verifying…" (transient, not persisted).
+      deps.emit({ id, state: "verifying" });
+      // Yield once so the "verifying" tick reaches the renderer before a large synchronous hash
+      // blocks the event loop (otherwise the success/failure tick coalesces and nothing is shown).
+      await new Promise((resolve) => setImmediate(resolve));
+
+      const present = deps.fs.exists(finalPath) && deps.fs.size(finalPath) > 0;
+      const sizeOk = present && (manifest.bytes == null || deps.fs.size(finalPath) === manifest.bytes);
+      const hashOk =
+        present &&
+        (!manifest.sha256 || deps.fs.sha256(finalPath).toLowerCase() === manifest.sha256.toLowerCase());
       if (sizeOk && hashOk) {
         deps.store.patch(id, { state: "installed", verifiedAt: new Date().toISOString(), errorCode: undefined });
+        progress(id);
         return { ok: true };
       }
-      // Corrupt: drop it and silently re-download (07 §3/§4).
+      // Missing or corrupt: drop it and silently re-download (07 §3/§4).
       deps.fs.remove(finalPath);
       deps.store.patch(id, { state: "not-installed", installedBytes: undefined });
       progress(id);
