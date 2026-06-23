@@ -22,6 +22,17 @@ function launchOpts(userDataDir) {
   };
 }
 
+async function findMain(app) {
+  for (let i = 0; i < 60; i++) {
+    const win = app
+      .windows()
+      .find((w) => w.url().includes("index.html") && !w.url().includes("surface=floating-bar"));
+    if (win) return win;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  throw new Error("main window never appeared");
+}
+
 /** Seed a local model file so the inline picker shows it Installed (reconcile marks it on launch). */
 function seedInstalledModel(userDataDir, fileName) {
   const dir = path.join(userDataDir, "models");
@@ -110,7 +121,7 @@ test("model badge: a routed (Azure) chat slot shows in the chat badge AND the si
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "khonjel-eval-badge-"));
 
   let app = await electron.launch(launchOpts(userDataDir));
-  let page = await app.firstWindow();
+  let page = await findMain(app);
   await waitReady(page);
 
   // ---- Drive the real UI end-to-end, exactly as the user does ----
@@ -136,7 +147,7 @@ test("model badge: a routed (Azure) chat slot shows in the chat badge AND the si
 
   // ---- Relaunch: the persisted routed slot must still render correctly in both places ----
   app = await electron.launch(launchOpts(userDataDir));
-  page = await app.firstWindow();
+  page = await findMain(app);
   await waitReady(page);
 
   const cardAfter = await engineCard(page);
@@ -155,7 +166,7 @@ test("model badge: changing the one shared model fans out to every LLM task and 
   seedInstalledModel(userDataDir, "qwen2.5-3b-instruct-q4_k_m.gguf");
 
   const app = await electron.launch(launchOpts(userDataDir));
-  const page = await app.firstWindow();
+  const page = await findMain(app);
   await waitReady(page);
 
   // Baseline: the chat badge shows the default local model.
@@ -192,7 +203,7 @@ test("model badge reactivity: changing the chat model in settings updates the ba
   seedInstalledModel(userDataDir, "qwen2.5-3b-instruct-q4_k_m.gguf");
 
   const app = await electron.launch(launchOpts(userDataDir));
-  const page = await app.firstWindow();
+  const page = await findMain(app);
   await waitReady(page);
 
   // Mount the Chat view so its badge is live, and capture the baseline (default local model).

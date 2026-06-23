@@ -9,12 +9,13 @@
  */
 import Database from "better-sqlite3";
 import { runMigrations } from "./migrate";
+import type { MigrationDb } from "./migrations";
 
 export type AppDatabase = Database.Database;
 
 export function openDatabase(filename: string): AppDatabase {
   const db = new Database(filename);
   db.pragma("foreign_keys = ON");
-  runMigrations(db);
+  runMigrations(db as unknown as MigrationDb);
   return db;
 }

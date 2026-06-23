@@ -6,14 +6,13 @@
  * - Applies only pending migrations, in order, each wrapped in a transaction so a failure rolls
  *   back cleanly (the caller aborts boot rather than serving a half-migrated DB).
  *
- * Pure w.r.t. the app: it takes an open `better-sqlite3` Database, so it is unit-tested against
- * an in-memory DB without Electron (BE1). See backend/09-data-and-storage.md §5 and 14 (T0.6).
+ * Pure w.r.t. the app: it takes a minimal database surface (structural with `better-sqlite3`) so
+ * tests do not need to load a native SQLite binding. See backend/09-data-and-storage.md §5.
  */
-import type Database from "better-sqlite3";
-import { MIGRATIONS, type Migration } from "./migrations";
+import { MIGRATIONS, type Migration, type MigrationDb } from "./migrations";
 
 /** Applies pending migrations and returns the ids that were newly applied (in order). */
-export function runMigrations(db: Database.Database, migrations: Migration[] = MIGRATIONS): string[] {
+export function runMigrations(db: MigrationDb, migrations: Migration[] = MIGRATIONS): string[] {
   db.pragma("journal_mode = WAL");
   db.exec(`CREATE TABLE IF NOT EXISTS _migrations (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL);`);
 
@@ -36,7 +35,7 @@ export function runMigrations(db: Database.Database, migrations: Migration[] = M
 }
 
 /** The current applied schema version = the count of applied migrations. */
-export function appliedMigrationCount(db: Database.Database): number {
+export function appliedMigrationCount(db: MigrationDb): number {
   const row = db.prepare(`SELECT COUNT(*) AS n FROM _migrations`).get() as { n: number };
   return row.n;
 }

@@ -156,21 +156,18 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
   });
 
   // STT transcriber: the real whisper engine; an eval stub so the streaming capture path is
-  // exercisable offline (KHONJEL_EVAL); or undefined to simulate no model (KHONJEL_EVAL_NO_STT).
-  const realTranscriber =
+  // deterministic/offline (KHONJEL_EVAL); or undefined to simulate no model (KHONJEL_EVAL_NO_STT).
+  const transcriber: Transcriber | undefined =
     process.env.KHONJEL_EVAL_NO_STT === "1"
       ? undefined
-      : resolveTranscriber({
-          userDataDir: userData,
-          appDir: path.join(__dirname, ".."),
-          isWindows: process.platform === "win32",
-          env: process.env,
-        });
-  const transcriber: Transcriber | undefined =
-    realTranscriber ??
-    (process.env.KHONJEL_EVAL === "1" && process.env.KHONJEL_EVAL_NO_STT !== "1"
-      ? { transcribe: async () => "khonjel eval transcript" }
-      : undefined);
+      : process.env.KHONJEL_EVAL === "1"
+        ? { transcribe: async () => "khonjel eval transcript" }
+        : resolveTranscriber({
+            userDataDir: userData,
+            appDir: path.join(__dirname, ".."),
+            isWindows: process.platform === "win32",
+            env: process.env,
+          });
   const writeTempWav = (bytes: Buffer): string => {
     const file = path.join(
       app.getPath("temp"),
