@@ -84,7 +84,15 @@ docs/product-spec/
 │   ├── 03-roadmap-mvp-open-questions.md
 │   ├── 04-technology-stack.md
 │   ├── 05-mock-frontend-plan.md
-│   └── 06-test-and-validation-strategy.md
+│   ├── 06-test-and-validation-strategy.md
+│   └── gpu-acceleration/
+│       ├── README.md
+│       ├── 01-gpu-detection-and-capability.md
+│       ├── 02-backend-provisioning-and-rollback.md
+│       ├── 03-runtime-acceleration-and-fallback.md
+│       ├── 04-contracts-data-and-ipc.md
+│       ├── 05-ux-setup-test-validate.md
+│       └── 06-edd-tdd-and-implementation-plan.md
 └── 99-reference-analysis/
     ├── 01-open-wisper-screen-by-screen.md
     ├── 02-wisper-flow-screen-by-screen.md
@@ -121,6 +129,7 @@ docs/product-spec/
 | [04 · Technology Stack](04-architecture-and-delivery/04-technology-stack.md) | The exact OpenWhispr stack Khonjel adopts |
 | [04 · **Mock Frontend Plan**](04-architecture-and-delivery/05-mock-frontend-plan.md) | **Build the inspectable, backend-free frontend** — stack, architecture, phases |
 | [04 · **Test & Validation Strategy**](04-architecture-and-delivery/06-test-and-validation-strategy.md) | **The eval loop** — how we detect "what right looks like" against the spec |
+| [04 · **GPU Acceleration (no-compromise + graceful fallback)**](04-architecture-and-delivery/gpu-acceleration/README.md) | **Full local-model GPU support** — smart detect, auto-provision, probe, rollback, test-and-validate UX, EDD + phased plan |
 | [99 · OpenWhispr **repo** analysis](99-reference-analysis/03-openwhispr-repo-analysis.md) | **Authoritative** capture of the real app (stack, nav, features) |
 | [99 · OpenWhispr screen-by-screen](99-reference-analysis/01-open-wisper-screen-by-screen.md) | Hi-fidelity capture of all 15 OW screenshots |
 | [99 · Productivity reference — screen-by-screen](99-reference-analysis/02-wisper-flow-screen-by-screen.md) | Hi-fidelity capture of all 18 reference screenshots |

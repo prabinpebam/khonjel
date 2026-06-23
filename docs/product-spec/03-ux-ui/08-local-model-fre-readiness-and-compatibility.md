@@ -179,6 +179,11 @@ Details shown as checklist rows:
 
 Do not require GPU for local models. CPU mode is valid; the UI should only warn about speed.
 
+> Optional GPU acceleration (smart detect, auto-provision, probe, rollback, and a one-click
+> test-and-validate UX) is specified separately in
+> [GPU Acceleration](../04-architecture-and-delivery/gpu-acceleration/README.md). CPU remains the
+> always-available floor; GPU is a proven, reversible enhancement layered on top.
+
 ### Step 3 - Recommended Local Setup
 
 Recommend a pair:
