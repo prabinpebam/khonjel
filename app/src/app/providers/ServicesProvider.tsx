@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ServicesContext, type Services } from "@services";
-import type { ModelProgress } from "@services/ports";
+import type { ModelProgress, TranscriptEvent } from "@services/ports";
 // ServicesProvider is the ONE place allowed to bind a concrete adapter (ESLint allowlists it).
 import { mockServices } from "@services/adapters/mock";
 import { createIpcServices } from "@services/adapters/ipc";
@@ -17,6 +17,10 @@ declare global {
       onModelProgress?: (callback: (progress: ModelProgress) => void) => () => void;
       /** Subscribe to content mutations (e.g. a new dictation) from main; returns an unsubscribe fn. */
       onContentChanged?: (callback: (collection: string) => void) => () => void;
+      /** Push high-rate 16 kHz PCM frames for a streaming capture session (one-way). */
+      capturePushChunk?: (sessionId: string, base64Pcm16: string) => void;
+      /** Subscribe to the live transcript from a streaming capture session; returns an unsubscribe fn. */
+      onTranscript?: (callback: (event: TranscriptEvent) => void) => () => void;
     };
   }
 }
@@ -32,6 +36,12 @@ function resolveServices(): Services {
       (channel, ...args) => bridge.invoke(channel, ...args),
       bridge.onModelProgress ? (cb) => bridge.onModelProgress!(cb) : undefined,
       bridge.onContentChanged ? (cb) => bridge.onContentChanged!(cb) : undefined,
+      bridge.capturePushChunk && bridge.onTranscript
+        ? {
+            pushChunk: (id, b64) => bridge.capturePushChunk!(id, b64),
+            onTranscript: (cb) => bridge.onTranscript!(cb),
+          }
+        : undefined,
     );
   }
   return mockServices;

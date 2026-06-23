@@ -195,6 +195,7 @@ export type {
   ModelStatus,
   ModelStorageReport,
   ModelProgress,
+  TranscriptEvent,
 } from "./types";
 
 import type {
@@ -213,6 +214,7 @@ import type {
   ModelStatus,
   ModelStorageReport,
   ModelProgress,
+  TranscriptEvent,
 } from "./types";
 
 /**
@@ -276,6 +278,19 @@ export interface ModelManagementService {
   onProgress(callback: (progress: ModelProgress) => void): () => void;
 }
 
+/**
+ * Long-form capture session (12 §2A.6). Streams 16 kHz mono 16-bit PCM frames to the backend and
+ * surfaces a live, growing transcript via `onTranscript`. `pushChunk` is fire-and-forget (high-rate
+ * frames); `start`/`stop` bound a session. The ipc adapter bridges frames + events to main; the mock
+ * simulates them so the browser preview shows live partials.
+ */
+export interface CaptureService {
+  start(): Promise<string>;
+  pushChunk(sessionId: string, base64Pcm16: string): void;
+  stop(sessionId: string): Promise<{ text: string }>;
+  onTranscript(callback: (event: TranscriptEvent) => void): () => void;
+}
+
 /** The full set of ports available to the app at runtime. */
 export interface Services {
   profile: ProfileService;
@@ -287,4 +302,5 @@ export interface Services {
   connections: ConnectionService;
   secrets: SecretsService;
   models: ModelManagementService;
+  capture: CaptureService;
 }

@@ -64,6 +64,10 @@ const deps: DispatchDeps = {
     remove: () => ({ freedBytes: 0 }),
     storage: () => ({ cachePath: "", usedBytes: 0, freeBytes: 0 }),
   },
+  capture: {
+    start: () => "s1",
+    stop: () => ({ text: "" }),
+  },
 };
 
 describe("createDispatch", () => {

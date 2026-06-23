@@ -289,6 +289,8 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.modelsVerify]: z.tuple([z.string()]),
   [CHANNELS.modelsRemove]: z.tuple([z.string()]),
   [CHANNELS.modelsStorage]: z.tuple([]),
+  [CHANNELS.captureStart]: z.tuple([]),
+  [CHANNELS.captureStop]: z.tuple([z.string()]),
 };
 
 /** Response payload schemas. */
@@ -330,4 +332,6 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.modelsVerify]: z.object({ ok: z.boolean() }),
   [CHANNELS.modelsRemove]: z.object({ freedBytes: z.number() }),
   [CHANNELS.modelsStorage]: ModelStorageReportSchema,
+  [CHANNELS.captureStart]: z.string(),
+  [CHANNELS.captureStop]: z.object({ text: z.string() }),
 };

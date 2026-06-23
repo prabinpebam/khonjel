@@ -3,6 +3,7 @@
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen, session, shell } from "electron";
 import * as path from "node:path";
 import { writeFileSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import type { Platform } from "../../src/services/ports";
 import { CHANNELS, checkContractVersion } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
@@ -11,6 +12,9 @@ import { createInferenceService } from "./services/inference";
 import { createInferenceRuntime, type InferenceRuntime } from "./inference/runtime";
 import { createTranscriptionService } from "./services/transcription";
 import { resolveTranscriber } from "./stt/runtime";
+import type { Transcriber } from "./stt/whisper";
+import { createCaptureSession, type CaptureSession } from "./stt/capture";
+import { DEFAULT_SEGMENTER } from "./stt/segmenter";
 import { createInjector } from "./injection/injector";
 import * as win32 from "./injection/win32";
 import {
@@ -128,6 +132,89 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     sourceFor: (id) => parseModelSources(process.env.KHONJEL_MODEL_SOURCES)[id],
   });
 
+  // STT transcriber: the real whisper engine; an eval stub so the streaming capture path is
+  // exercisable offline (KHONJEL_EVAL); or undefined to simulate no model (KHONJEL_EVAL_NO_STT).
+  const realTranscriber =
+    process.env.KHONJEL_EVAL_NO_STT === "1"
+      ? undefined
+      : resolveTranscriber({
+          userDataDir: userData,
+          appDir: path.join(__dirname, ".."),
+          isWindows: process.platform === "win32",
+          env: process.env,
+        });
+  const transcriber: Transcriber | undefined =
+    realTranscriber ??
+    (process.env.KHONJEL_EVAL === "1" && process.env.KHONJEL_EVAL_NO_STT !== "1"
+      ? { transcribe: async () => "khonjel eval transcript" }
+      : undefined);
+  const writeTempWav = (bytes: Buffer): string => {
+    const file = path.join(
+      app.getPath("temp"),
+      `khonjel-${Date.now()}-${Math.random().toString(36).slice(2)}.wav`,
+    );
+    writeFileSync(file, bytes);
+    return file;
+  };
+  const removeTempWav = (file: string): void => {
+    try {
+      unlinkSync(file);
+    } catch {
+      // best-effort temp cleanup
+    }
+  };
+  const transcriptionService = createTranscriptionService({
+    transcriber,
+    router,
+    writeTempWav,
+    cleanup: removeTempWav,
+  });
+
+  // Long-form streaming capture (12 §2A): each session segments incoming 16 kHz PCM and transcribes
+  // window-by-window through the same transcription service (local whisper or a bound cloud slot),
+  // broadcasting a live transcript to every window.
+  const captureSessions = new Map<string, CaptureSession>();
+  const captureManager = {
+    start: (): string => {
+      const id = randomUUID();
+      // Live-vs-quality balance: shorter windows = more frequent live updates; tunable per device.
+      const values = settingsStore.get().values;
+      const windowSec = Number(values["stt.dictation.chunkWindowSec"]);
+      const silenceMs = Number(values["stt.dictation.chunkSilenceMs"]);
+      const config = {
+        ...DEFAULT_SEGMENTER,
+        ...(Number.isFinite(windowSec) && windowSec > 0 ? { maxWindowSec: windowSec } : {}),
+        ...(Number.isFinite(silenceMs) && silenceMs > 0 ? { silenceTailMs: silenceMs } : {}),
+      };
+      captureSessions.set(
+        id,
+        createCaptureSession({
+          sessionId: id,
+          config,
+          transcribeSegment: (wav) =>
+            transcriptionService
+              .transcribe({ audioBase64: wav.toString("base64") })
+              .then((r) => r.text),
+          emit: (event) => {
+            for (const win of BrowserWindow.getAllWindows()) {
+              if (!win.isDestroyed()) win.webContents.send("khonjel:transcript", event);
+            }
+          },
+        }),
+      );
+      return id;
+    },
+    stop: async (id: string): Promise<{ text: string }> => {
+      const session = captureSessions.get(id);
+      if (!session) return { text: "" };
+      captureSessions.delete(id);
+      return session.stop();
+    },
+    pushChunk: (id: string, base64Pcm16: string): void => {
+      captureSessions.get(id)?.pushChunk(base64Pcm16);
+    },
+  };
+
   const dispatch = createDispatch({
     profile: {
       get: () => ({ id: "local", name: "You" }),
@@ -154,35 +241,7 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
       },
     },
     inference: createInferenceService(inferenceRuntime.engine, router),
-    transcription: createTranscriptionService({
-      // Eval hook: simulate a device with no on-device STT model (transcriber undefined ->
-      // model_unavailable) to gate that a failed capture still dismisses the floating bar.
-      transcriber:
-        process.env.KHONJEL_EVAL_NO_STT === "1"
-          ? undefined
-          : resolveTranscriber({
-              userDataDir: userData,
-              appDir: path.join(__dirname, ".."),
-              isWindows: process.platform === "win32",
-              env: process.env,
-            }),
-      router,
-      writeTempWav: (bytes) => {
-        const file = path.join(
-          app.getPath("temp"),
-          `khonjel-${Date.now()}-${Math.random().toString(36).slice(2)}.wav`,
-        );
-        writeFileSync(file, bytes);
-        return file;
-      },
-      cleanup: (file) => {
-        try {
-          unlinkSync(file);
-        } catch {
-          // best-effort temp cleanup
-        }
-      },
-    }),
+    transcription: transcriptionService,
     connections: {
       list: () => connectionStore.list(),
       upsert: (profile) => connectionStore.upsert(profile),
@@ -219,9 +278,13 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
       remove: (id) => modelService.remove(id),
       storage: () => modelService.storage(),
     },
+    capture: {
+      start: () => captureManager.start(),
+      stop: (id) => captureManager.stop(id),
+    },
   });
 
-  return { dispatch, contentStore, settingsStore };
+  return { dispatch, contentStore, settingsStore, captureManager };
 }
 
 function createWindow(startMinimized = false): void {
@@ -295,6 +358,12 @@ void app.whenReady().then(() => {
       }
     }
     return result;
+  });
+
+  // High-rate audio frames for a streaming capture session bypass the typed dispatch (no per-chunk
+  // zod). The session segments + transcribes them and broadcasts a live transcript (12 §2A).
+  ipcMain.on("khonjel:capture-chunk", (_event, sessionId: string, base64Pcm16: string) => {
+    built.captureManager.pushChunk(sessionId, base64Pcm16);
   });
 
   // Live mic capture (dictation + the floating bar) issues a getUserMedia permission request. This

@@ -174,3 +174,16 @@ export interface ModelProgress {
   bytesTotal?: number;
   error?: ModelError;
 }
+
+/**
+ * A streamed transcript update during a long-form capture session (12 §2A.6). `final` is a closed
+ * window's text; `partial` is reserved for true streaming engines. `fullText` is the running
+ * transcript (finalized windows joined) the surface renders live.
+ */
+export interface TranscriptEvent {
+  sessionId: string;
+  kind: "partial" | "final";
+  segmentId: number;
+  text: string;
+  fullText: string;
+}

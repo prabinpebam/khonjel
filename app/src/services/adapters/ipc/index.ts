@@ -19,6 +19,7 @@ import type {
   Services,
   SettingsSnapshot,
   Snippet,
+  TranscriptEvent,
   Transform,
   TranscriptionRequest,
   TranscriptionResult,
@@ -43,10 +44,17 @@ export type SubscribeModelProgress = (callback: (progress: ModelProgress) => voi
 /** Subscribe to content-mutation relays (preload `window.khonjel.onContentChanged`). */
 export type SubscribeContentChanged = (callback: (collection: string) => void) => () => void;
 
+/** The capture bridge (preload): push high-rate frames + subscribe to the live transcript. */
+export interface CaptureBridge {
+  pushChunk: (sessionId: string, base64Pcm16: string) => void;
+  onTranscript: (callback: (event: TranscriptEvent) => void) => () => void;
+}
+
 export function createIpcServices(
   invoke: Invoke,
   subscribeModelProgress?: SubscribeModelProgress,
   subscribeContentChanged?: SubscribeContentChanged,
+  captureBridge?: CaptureBridge,
 ): Services {
   return {
     profile: {
@@ -116,6 +124,12 @@ export function createIpcServices(
       remove: (id) => invoke(CHANNELS.modelsRemove, id) as Promise<{ freedBytes: number }>,
       storage: () => invoke(CHANNELS.modelsStorage) as Promise<ModelStorageReport>,
       onProgress: (callback) => subscribeModelProgress?.(callback) ?? (() => {}),
+    },
+    capture: {
+      start: () => invoke(CHANNELS.captureStart) as Promise<string>,
+      stop: (id) => invoke(CHANNELS.captureStop, id) as Promise<{ text: string }>,
+      pushChunk: (id, base64Pcm16) => captureBridge?.pushChunk(id, base64Pcm16),
+      onTranscript: (callback) => captureBridge?.onTranscript(callback) ?? (() => {}),
     },
   };
 }

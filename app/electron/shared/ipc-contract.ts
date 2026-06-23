@@ -80,6 +80,8 @@ export const CHANNELS = {
   modelsVerify: "models:verify",
   modelsRemove: "models:remove",
   modelsStorage: "models:storage",
+  captureStart: "capture:start",
+  captureStop: "capture:stop",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -123,6 +125,8 @@ export interface ChannelContract {
   "models:verify": { request: [string]; response: { ok: boolean } };
   "models:remove": { request: [string]; response: { freedBytes: number } };
   "models:storage": { request: []; response: ModelStorageReport };
+  "capture:start": { request: []; response: string };
+  "capture:stop": { request: [string]; response: { text: string } };
 }
 
 export type RequestOf<C extends Channel> = ChannelContract[C]["request"];

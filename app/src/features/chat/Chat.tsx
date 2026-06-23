@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Mic, SendHorizontal } from "lucide-react";
 import { useServices } from "@services";
 import type { ChatMessage } from "@services/ports";
-import { useDictation } from "@hooks/useDictation";
+import { useDictationField } from "@hooks/useDictationField";
 import { useActiveModel } from "@hooks/useActiveModel";
 import { PageHeader } from "@components/common/PageHeader";
 import { Badge } from "@components/ui/badge";
@@ -17,7 +17,7 @@ export function Chat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
-  const dictation = useDictation((text) => setInput((prev) => (prev ? `${prev} ${text}` : text)));
+  const dictation = useDictationField(input, setInput);
   const llm = useActiveModel("llm.chat", "llm");
   const loadedRef = useRef(false);
 

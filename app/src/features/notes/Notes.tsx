@@ -3,7 +3,7 @@ import { Loader2, Mic, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { useServices } from "@services";
 import type { Folder, Note } from "@services/ports";
 import { useAsync } from "@hooks/useAsync";
-import { useDictation } from "@hooks/useDictation";
+import { useDictationField } from "@hooks/useDictationField";
 import { PageHeader } from "@components/common/PageHeader";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
@@ -48,16 +48,11 @@ export function Notes() {
   const selected = notes.find((note) => note.id === selectedId) ?? null;
   const selectedIdValue = selected?.id ?? null;
 
-  const dictation = useDictation((text) => {
+  const dictation = useDictationField(selected?.body ?? "", (next) => {
     setNotes((prev) =>
       prev.map((n) =>
         n.id === selectedIdValue
-          ? {
-              ...n,
-              body: n.body ? `${n.body} ${text}` : text,
-              preview: preview(n.body ? `${n.body} ${text}` : text),
-              updatedAt: new Date().toISOString(),
-            }
+          ? { ...n, body: next, preview: preview(next), updatedAt: new Date().toISOString() }
           : n,
       ),
     );

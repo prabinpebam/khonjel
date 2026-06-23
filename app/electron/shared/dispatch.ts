@@ -97,6 +97,10 @@ export interface DispatchDeps {
     remove: (id: string) => { freedBytes: number } | Promise<{ freedBytes: number }>;
     storage: () => ModelStorageReport | Promise<ModelStorageReport>;
   };
+  capture: {
+    start: () => string | Promise<string>;
+    stop: (sessionId: string) => { text: string } | Promise<{ text: string }>;
+  };
   // Grows one slice per phase (meetings, transcription, agent, ...).
 }
 
@@ -143,6 +147,8 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.modelsVerify]: (args) => deps.models.verify(args[0] as string),
     [CHANNELS.modelsRemove]: (args) => deps.models.remove(args[0] as string),
     [CHANNELS.modelsStorage]: () => deps.models.storage(),
+    [CHANNELS.captureStart]: () => deps.capture.start(),
+    [CHANNELS.captureStop]: (args) => deps.capture.stop(args[0] as string),
   };
 
   return async function dispatch(channel: string, ...args: unknown[]): Promise<unknown> {
