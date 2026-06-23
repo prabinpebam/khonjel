@@ -4,7 +4,7 @@ import os from "node:os";
 import fs from "node:fs";
 
 /**
- * EDD under real Electron — Phase 1 security hardening (docs/security-privacy-hardening-plan.md).
+ * EDD under real Electron — Phase 1 security hardening (docs/archive/security-privacy-hardening-plan.md).
  *
  * Asserts the two renderer-containment controls against the ACTUAL packaged renderer (file://):
  *   - a strict Content-Security-Policy is in force (an injected inline <script> does NOT execute);

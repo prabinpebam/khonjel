@@ -23,7 +23,7 @@ A lightweight runbook for security incidents in Khonjel (a local-first desktop a
 3. **Eradicate & fix.** Land the patch with a regression eval (this repo is eval-driven — every fix ships with a test).
 4. **Release.** Cut a signed release; verify with `npm run verify` + the security/electron evals; bump minimum version for critical issues.
 5. **Notify.** Publish a security advisory + in-app/release-notes notice. Credit the reporter per [SECURITY.md](../../SECURITY.md) if applicable.
-6. **Post-mortem.** Blameless write-up: root cause, timeline, what control failed, what control/eval is added so it cannot recur. Update [threat-model.md](threat-model.md) and the [hardening plan](../security-privacy-hardening-plan.md).
+6. **Post-mortem.** Blameless write-up: root cause, timeline, what control failed, what control/eval is added so it cannot recur. Update [threat-model.md](threat-model.md) and the [hardening plan](../archive/security-privacy-hardening-plan.md).
 
 ## Useful facts
 - Wiping user data: deleting `settings.json`, `content.json`, `connections.json`, `secrets.json` under `userData` resets the app (also exposed as Settings → System → "Reset all Khonjel data").

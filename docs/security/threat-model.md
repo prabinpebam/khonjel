@@ -1,6 +1,6 @@
 # Khonjel — Threat Model (living document)
 
-**Method:** STRIDE per trust boundary. Reviewed when a new boundary is added (e.g., an integration) and each minor release. Controls marked ✅ are implemented; ⏳ are planned in [docs/security-privacy-hardening-plan.md](../security-privacy-hardening-plan.md).
+**Method:** STRIDE per trust boundary. Reviewed when a new boundary is added (e.g., an integration) and each minor release. Controls marked ✅ are implemented; ⏳ are planned in [docs/archive/security-privacy-hardening-plan.md](../archive/security-privacy-hardening-plan.md).
 
 ## Trust boundaries
 

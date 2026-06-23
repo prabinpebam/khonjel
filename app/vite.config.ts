@@ -9,7 +9,7 @@ const alias = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 // production build so Vite's dev server (HMR + React Fast Refresh, which need eval/ws) is untouched.
 // script-src 'self' blocks inline/remote script — the backstop that contains any XSS from the
 // untrusted text the renderer shows (transcripts, notes, LLM output) before it can reach the IPC
-// bridge. See docs/security-privacy-hardening-plan.md (WS-A).
+// bridge. See docs/archive/security-privacy-hardening-plan.md (WS-A).
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",

@@ -33,4 +33,4 @@ We track the latest stable Electron major and ship Chromium/Electron **security*
 - Provider traffic requires TLS (https) for non-loopback endpoints.
 - No telemetry, analytics, crash reporting, or auto-update beacon.
 
-See [docs/security-privacy-audit.md](docs/security-privacy-audit.md) and [docs/security-privacy-hardening-plan.md](docs/security-privacy-hardening-plan.md) for the full audit and roadmap.
+See [docs/archive/security-privacy-audit.md](docs/archive/security-privacy-audit.md) and [docs/archive/security-privacy-hardening-plan.md](docs/archive/security-privacy-hardening-plan.md) for the full audit and roadmap.

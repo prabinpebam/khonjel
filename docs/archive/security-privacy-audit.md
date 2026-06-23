@@ -1,5 +1,14 @@
 # Khonjel — Security & Privacy Audit
 
+> **Status: Archived (complete).** This is the initial source audit (baseline `a714e63`) that
+> produced the [hardening program](security-privacy-hardening-plan.md). Its findings have been
+> actioned (Phase 0 governance + Phase 1 critical-containment landed and are guarded by evals) and it
+> has since been **superseded** by the independent re-audit at `86c305f`
+> ([../independent-security-privacy-audit-2026-06-23.md](../independent-security-privacy-audit-2026-06-23.md)).
+> The **living** security documents are now under [../security/](../security/) (threat model, electron
+> policy, incident response). This file is retained for historical reference only and is no longer
+> maintained.
+
 **Date:** 2026-06-23
 **Scope:** `app/` (Electron main process, preload bridge, React renderer, build & fetch scripts, dependency manifest)
 **Reviewer:** Automated source audit (GitHub Copilot)

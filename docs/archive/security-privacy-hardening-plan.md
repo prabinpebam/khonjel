@@ -1,8 +1,18 @@
 # Khonjel — Security & Privacy Hardening Program
 
-**Status:** Proposed plan
+> **Status: Archived (complete).** Planning is finished and the first wave is delivered:
+> **Phase 0** (governance — threat model, Electron-upgrade policy, incident response, `SECURITY.md`)
+> and **Phase 1** (critical containment — CSP, navigation lock, HTTPS-only providers, segmented
+> capture, versioned + zod-validated IPC, fail-closed secrets) are implemented and verified by evals.
+> The remaining workstreams (integrity/hash-pinning, crypto & data-at-rest, services & integrations,
+> continuous assurance — Phases 2–5) are now tracked through the independent re-audit
+> ([../independent-security-privacy-audit-2026-06-23.md](../independent-security-privacy-audit-2026-06-23.md),
+> findings F1–F11) and the **living** documents under [../security/](../security/). This planning
+> document is retained for historical reference and is no longer the active backlog.
+
+**Status:** Archived — Phase 0–1 delivered; Phases 2–5 tracked via the independent audit + `docs/security/`
 **Date:** 2026-06-23
-**Companion document:** [docs/security-privacy-audit.md](docs/security-privacy-audit.md)
+**Companion document:** [security-privacy-audit.md](security-privacy-audit.md)
 **Owner:** _TBD (assign a Security Champion)_
 
 > This is the remediation **and** future-proofing plan derived from the security & privacy audit. It is intentionally exhaustive: it closes every finding (H1–H3, M1–M5, L1–L7, I1–I3) **and** establishes security as a continuous program so the app stays hardened as it grows (cloud providers, the planned Google Calendar / MCP / CLI-bridge / Public-API integrations, macOS/Linux targets, and future Electron/Chromium CVEs).
