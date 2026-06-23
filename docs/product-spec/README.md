@@ -73,6 +73,8 @@ docs/product-spec/
 │   ├── 04-floating-bar-overlays-and-settings.md
 │   ├── 05-interaction-states-and-accessibility.md
 │   ├── 06-ui-design-spec.md
+│   ├── 07-local-model-management.md
+│   ├── 08-local-model-fre-readiness-and-compatibility.md
 │   └── design-system/
 │       ├── README.md
 │       └── 01-intent.md
@@ -111,6 +113,8 @@ docs/product-spec/
 | [03 · Screen Specifications](03-ux-ui/03-screen-specifications.md) | Reproduction-grade specs for every main screen |
 | [03 · Floating Bar, Overlays & Settings](03-ux-ui/04-floating-bar-overlays-and-settings.md) | Dictation Panel, overlays, full settings spec |
 | [03 · Interaction, States & Accessibility](03-ux-ui/05-interaction-states-and-accessibility.md) | States, motion, keyboard, WCAG 2.2 AA |
+| [03 · Local Model Management](03-ux-ui/07-local-model-management.md) | In-app local model asset download, verify, remove, storage, and row states |
+| [03 · Local Model FRE, Readiness & Compatibility](03-ux-ui/08-local-model-fre-readiness-and-compatibility.md) | Consumer-grade setup, hardware compatibility, support copy, readiness, and seamless switching |
 | [04 · System Architecture](04-architecture-and-delivery/01-system-architecture.md) | Multi-window Electron, pipeline, inference router, local engines |
 | [04 · Privacy, Data & Security](04-architecture-and-delivery/02-privacy-data-security.md) | Defaults, data inventory, egress map, no-telemetry |
 | [04 · Roadmap, MVP & Open Questions](04-architecture-and-delivery/03-roadmap-mvp-open-questions.md) | Phasing, NFRs, decisions |

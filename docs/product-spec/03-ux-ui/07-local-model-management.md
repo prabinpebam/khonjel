@@ -22,6 +22,14 @@
 > resume, queueing, verification — runs **invisibly**, surfacing only when the user must decide
 > something (a hard failure, or not enough disk).
 
+> **2026-06 update.** This document remains the low-level model asset management contract. The
+> broader consumer-grade first-run setup, hardware compatibility, readiness diagnostics, support
+> copy, and seamless model switching experience is specified in
+> [08 - Local Model FRE, Readiness & Hardware Compatibility](08-local-model-fre-readiness-and-compatibility.md).
+> In short: this doc defines how a row downloads/verifies/removes a model; 08 defines how a user
+> discovers the right model, knows whether their hardware can run it, and understands why local AI is
+> or is not ready.
+
 ---
 
 ## 1. What exists today, and the gap
