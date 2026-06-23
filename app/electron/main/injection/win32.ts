@@ -63,6 +63,10 @@ export function writeClipboard(text: string): void {
   clipboard.writeText(text);
 }
 
+export function readClipboard(): string {
+  return clipboard.readText();
+}
+
 const FOREGROUND_SCRIPT = [
   "$sig = '[DllImport(\"user32.dll\")] public static extern System.IntPtr GetForegroundWindow();",
   "[DllImport(\"user32.dll\")] public static extern uint GetWindowThreadProcessId(System.IntPtr h, out uint p);';",

@@ -42,6 +42,8 @@ export interface ContentDoc {
 export interface ContentDeps {
   listModels: (kind: "stt" | "llm") => ModelInfo[];
   computeInsights: (history: HistoryEntry[]) => InsightsAggregate;
+  /** Privacy retention: dictation history older than this many days is purged (0/undefined = keep). */
+  retentionDays?: () => number;
 }
 
 /** The user-owned collections a renderer feature may replace wholesale. */
@@ -204,6 +206,15 @@ export function createContentStore(io: SettingsIO, deps: ContentDeps): ContentSt
         cleanupApplied: draft.cleanupApplied,
       };
       doc.history = [entry, ...doc.history];
+      // Enforce the privacy retention window (if set): drop entries older than N days.
+      const days = deps.retentionDays?.() ?? 0;
+      if (days > 0) {
+        const cutoff = Date.now() - days * 86_400_000;
+        doc.history = doc.history.filter((h) => {
+          const t = Date.parse(h.createdAt);
+          return Number.isNaN(t) || t >= cutoff;
+        });
+      }
       write(doc);
       return doc.history;
     },

@@ -12,13 +12,15 @@ export const safeStorageCipher: Cipher = {
     if (safeStorage.isEncryptionAvailable()) {
       return `v1:${safeStorage.encryptString(plain).toString("base64")}`;
     }
-    // Fallback when OS encryption is unavailable (e.g. a headless Linux without a keyring).
-    return `raw:${Buffer.from(plain, "utf8").toString("base64")}`;
+    // Fail-closed: never silently persist plaintext. The secret store catches this and keeps the
+    // value in memory for the session instead of writing an unprotected key to disk (see ./store.ts).
+    throw new Error("OS encryption is unavailable on this host; refusing to persist plaintext.");
   },
   decrypt: (value) => {
     if (value.startsWith("v1:")) {
       return safeStorage.decryptString(Buffer.from(value.slice(3), "base64"));
     }
+    // Legacy values from older installs (before fail-closed) — decode for backward compatibility.
     if (value.startsWith("raw:")) {
       return Buffer.from(value.slice(4), "base64").toString("utf8");
     }

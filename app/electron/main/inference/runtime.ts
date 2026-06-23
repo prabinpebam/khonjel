@@ -14,6 +14,7 @@
  */
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { randomUUID } from "node:crypto";
 import type { InferenceEngine } from "../services/inference";
 import { stubInferenceEngine } from "../services/inference";
 import { createLlamaEngine, withFallback } from "./llama";
@@ -96,21 +97,28 @@ export function createInferenceRuntime(cfg: InferenceRuntimeConfig): InferenceRu
     const paths = resolvePaths(cfg);
 
     if (paths.endpoint) {
-      backing = withFallback(createLlamaEngine({ endpoint: paths.endpoint }), stubInferenceEngine);
+      // User-managed server: forward an explicit token if they set one.
+      backing = withFallback(
+        createLlamaEngine({ endpoint: paths.endpoint, apiKey: cfg.env.KHONJEL_LLAMA_API_KEY }),
+        stubInferenceEngine,
+      );
       return "endpoint";
     }
 
     if (paths.binPath && paths.modelPath) {
       try {
+        // Per-session bearer token so only this app can use the local model server.
+        const apiKey = randomUUID();
         const handle = await startLlamaServer({
           binPath: paths.binPath,
           modelPath: paths.modelPath,
           ctxSize: 4096,
           gpuLayers: gpuLayers(cfg.env),
+          apiKey,
         });
         stopServer = handle.stop;
         backing = withFallback(
-          createLlamaEngine({ endpoint: handle.endpoint }),
+          createLlamaEngine({ endpoint: handle.endpoint, apiKey }),
           stubInferenceEngine,
         );
         return "spawned";

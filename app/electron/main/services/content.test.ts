@@ -143,4 +143,58 @@ describe("createContentStore", () => {
     expect(store.notes()).toEqual([]);
     expect((({}) as Record<string, unknown>).polluted).toBeUndefined();
   });
+
+  it("keeps all history when retention is unset", () => {
+    const store = createContentStore(memIO(), deps);
+    store.addHistory({
+      finalText: "one",
+      app: "k",
+      language: "en",
+      durationSec: 1,
+      mode: "dictation",
+      hasAudio: false,
+      cleanupApplied: false,
+    });
+    const out = store.addHistory({
+      finalText: "two",
+      app: "k",
+      language: "en",
+      durationSec: 1,
+      mode: "dictation",
+      hasAudio: false,
+      cleanupApplied: false,
+    });
+    expect(out).toHaveLength(2);
+  });
+
+  it("purges history older than the retention window when a new entry is added", () => {
+    const io = memIO();
+    const retaining: ContentDeps = { ...deps, retentionDays: () => 7 };
+    const store = createContentStore(io, retaining);
+    store.replace("history", [
+      {
+        id: "old",
+        createdAt: new Date(Date.now() - 30 * 86_400_000).toISOString(),
+        finalText: "old",
+        app: "x",
+        language: "en",
+        wordCount: 1,
+        durationSec: 1,
+        mode: "dictation",
+        hasAudio: false,
+        cleanupApplied: false,
+      },
+    ]);
+    const out = store.addHistory({
+      finalText: "fresh",
+      app: "k",
+      language: "en",
+      durationSec: 1,
+      mode: "dictation",
+      hasAudio: false,
+      cleanupApplied: false,
+    });
+    expect(out.some((h) => h.id === "old"), "old entry purged").toBe(false);
+    expect(out.some((h) => h.finalText === "fresh")).toBe(true);
+  });
 });

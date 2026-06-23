@@ -48,3 +48,21 @@ export function selectInjectionStrategy(
   const key = appName.toLowerCase();
   return table.rules.find((rule) => rule.app === key)?.strategy ?? table.default;
 }
+
+/**
+ * Apps where synthetic text could be executed as a command (shells/consoles). When injecting into
+ * these, a trailing newline must be suppressed so dictated text cannot auto-run (security WS-H/H1).
+ */
+export const SHELL_APPS = new Set<string>([
+  "windowsterminal.exe",
+  "wt.exe",
+  "cmd.exe",
+  "powershell.exe",
+  "pwsh.exe",
+  "conhost.exe",
+]);
+
+/** PURE: is the focused app a shell/console where auto-ENTER would be dangerous? */
+export function isShellApp(appName: string | undefined): boolean {
+  return appName ? SHELL_APPS.has(appName.toLowerCase()) : false;
+}

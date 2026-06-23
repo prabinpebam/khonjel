@@ -56,4 +56,25 @@ describe("createInjector", () => {
     expect(d.paste).not.toHaveBeenCalled();
     expect(out.strategy).toBe("clipboard");
   });
+
+  it("paste strategy restores the user's prior clipboard after pasting", async () => {
+    const d = { ...deps("notepad.exe"), readClipboard: vi.fn(() => "prior"), sleep: vi.fn(async () => {}) };
+    await createInjector(d).inject("hello");
+    expect(d.writeClipboard).toHaveBeenNthCalledWith(1, "hello");
+    expect(d.paste).toHaveBeenCalledOnce();
+    expect(d.writeClipboard).toHaveBeenNthCalledWith(2, "prior");
+  });
+
+  it("type strategy into a shell strips a trailing newline so it cannot auto-execute", async () => {
+    const d = deps("cmd.exe");
+    await createInjector(d).inject("rm -rf important\n");
+    expect(d.typeText).toHaveBeenCalledWith("rm -rf important");
+  });
+
+  it("type strategy into a non-shell keeps the text verbatim", async () => {
+    const table: InjectionTable = { default: "type", rules: [] };
+    const d = { ...deps("notepad.exe"), table };
+    await createInjector(d).inject("line one\n");
+    expect(d.typeText).toHaveBeenCalledWith("line one\n");
+  });
 });

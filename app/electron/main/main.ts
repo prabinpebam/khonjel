@@ -1,13 +1,13 @@
 // Electron main process (TypeScript, bundled to ../main.cjs by scripts/build-electron.mjs).
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen, session, shell } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen, session, shell, type IpcMainEvent } from "electron";
 import * as path from "node:path";
 import { writeFileSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import type { Platform } from "../../src/services/ports";
-import { CHANNELS, checkContractVersion } from "../shared/ipc-contract";
+import { CHANNELS, checkContractVersion, ipcError } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
-import { createSettingsStore, fileSettingsIO } from "./services/settings";
+import { createSettingsStore, fileSettingsIO, encryptedSettingsIO } from "./services/settings";
 import { createInferenceService } from "./services/inference";
 import { createInferenceRuntime, type InferenceRuntime } from "./inference/runtime";
 import { createTranscriptionService } from "./services/transcription";
@@ -41,6 +41,7 @@ import { safeStorageCipher } from "./secrets/safeStorageCipher";
 import { createProviderRouter } from "./providers/router";
 import { proxyFetch } from "./providers/proxyFetch";
 import { testConnection } from "./providers/test";
+import { isEndpointAllowed } from "./providers/url";
 import { listModels } from "./models/catalog";
 import { computeInsights } from "./insights/compute";
 
@@ -48,6 +49,22 @@ let mainWindow: BrowserWindow | null = null;
 let floatingBarWindow: BrowserWindow | null = null;
 let inferenceRuntime: InferenceRuntime | null = null;
 let hotkeyManager: HotkeyManager | null = null;
+
+/** True when an IPC message originates from one of our own app frames (file:// or the dev server). */
+function isTrustedSender(event: { senderFrame?: { url?: string } | null }): boolean {
+  const url = event.senderFrame?.url ?? "";
+  if (url.startsWith("file://")) return true;
+  if (!app.isPackaged && url.startsWith("http://localhost:5173")) return true;
+  return false;
+}
+
+/** Register an `ipcMain.on` listener that silently drops messages from any untrusted sender frame. */
+function ipcOn(channel: string, handler: (event: IpcMainEvent, ...args: unknown[]) => void): void {
+  ipcMain.on(channel, (event, ...args) => {
+    if (!isTrustedSender(event)) return;
+    handler(event, ...args);
+  });
+}
 
 // Eval harness only: provide a fake microphone so getUserMedia resolves headlessly (no real device
 // or user gesture needed). Must be set before the app is ready. Never enabled in normal runs.
@@ -86,6 +103,7 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
   const userData = app.getPath("userData");
   const injector = createInjector({
     writeClipboard: win32.writeClipboard,
+    readClipboard: win32.readClipboard,
     paste: win32.paste,
     typeText: win32.typeText,
     getForegroundApp: win32.getForegroundApp,
@@ -106,10 +124,15 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
 
   // Hoisted so the composition root can read transforms for hotkey registration and re-register
   // when the renderer edits them (content:replace -> onTransformsChanged).
-  const contentStore = createContentStore(fileSettingsIO(path.join(userData, "content.json")), {
-    listModels,
-    computeInsights,
-  });
+  const contentStore = createContentStore(
+    encryptedSettingsIO(path.join(userData, "content.json"), safeStorageCipher),
+    {
+      listModels,
+      computeInsights,
+      // Privacy retention: purge dictation history older than the configured number of days (0 = keep).
+      retentionDays: () => Number(settingsStore.get().values["privacy.historyRetentionDays"]) || 0,
+    },
+  );
 
   // Local model management (download/verify/remove/storage) over the durable models index. Progress
   // ticks are relayed to the renderer over "khonjel:model-progress" (preload bridges onModelProgress).
@@ -244,7 +267,17 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     transcription: transcriptionService,
     connections: {
       list: () => connectionStore.list(),
-      upsert: (profile) => connectionStore.upsert(profile),
+      upsert: (profile) => {
+        // Fail-closed: refuse to persist a cleartext (non-loopback http) endpoint that would leak
+        // the API key and audio/text on the wire.
+        if (!isEndpointAllowed(profile.baseEndpoint)) {
+          throw ipcError(
+            "validation",
+            "Endpoint must use https:// (http is allowed only for localhost).",
+          );
+        }
+        return connectionStore.upsert(profile);
+      },
       remove: (id) => {
         secretStore.remove(id); // drop the orphaned key with the profile
         return connectionStore.remove(id);
@@ -324,9 +357,10 @@ function createWindow(startMinimized = false): void {
     void mainWindow.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }
 
-  // External links open in the OS browser, never inside the app window.
+  // External links open in the OS browser, never inside the app window. Only https is forwarded, so a
+  // crafted file:/custom-scheme link cannot be used to launch an arbitrary local handler.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("http")) void shell.openExternal(url);
+    if (url.startsWith("https://")) void shell.openExternal(url);
     return { action: "deny" };
   });
 
@@ -347,7 +381,8 @@ void app.whenReady().then(() => {
   // The single allow-listed request/response bridge. The preload sends the contract version on
   // every call (rejected on mismatch); `dispatch` then validates channel + payload (unknown
   // channel -> not_found; bad payload -> validation). Together these are the allow-list.
-  ipcMain.handle("khonjel:invoke", async (_event, version: unknown, channel: string, args: unknown[]) => {
+  ipcMain.handle("khonjel:invoke", async (event, version: unknown, channel: string, args: unknown[]) => {
+    if (!isTrustedSender(event)) throw ipcError("unauthorized", "Untrusted IPC sender.");
     checkContractVersion(version);
     const result = await built.dispatch(channel, ...(Array.isArray(args) ? args : []));
     // A new dictation just landed in history: tell every window so live views (Home) refresh now,
@@ -362,7 +397,13 @@ void app.whenReady().then(() => {
 
   // High-rate audio frames for a streaming capture session bypass the typed dispatch (no per-chunk
   // zod). The session segments + transcribes them and broadcasts a live transcript (12 §2A).
-  ipcMain.on("khonjel:capture-chunk", (_event, sessionId: string, base64Pcm16: string) => {
+  ipcMain.on("khonjel:capture-chunk", (event, sessionId: unknown, base64Pcm16: unknown) => {
+    if (!isTrustedSender(event)) return;
+    // High-rate channel that bypasses the typed zod dispatch: enforce basic shape + a per-chunk size
+    // cap so a buggy or hostile renderer cannot push non-strings or exhaust memory. Unknown sessions
+    // are ignored by the capture manager downstream.
+    if (typeof sessionId !== "string" || typeof base64Pcm16 !== "string") return;
+    if (base64Pcm16.length > 4_000_000) return;
     built.captureManager.pushChunk(sessionId, base64Pcm16);
   });
 
@@ -373,13 +414,27 @@ void app.whenReady().then(() => {
   });
   session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === "media");
 
+  // Lock navigation to our own origin so a compromised or redirected renderer can never load remote
+  // content that would inherit the preload bridge. New windows are already denied via the window-open
+  // handler; this closes the top-level navigation path (Electron checklist #13).
+  app.on("web-contents-created", (_event, contents) => {
+    const allowed = (url: string): boolean =>
+      url.startsWith("file://") || (!app.isPackaged && url.startsWith("http://localhost:5173"));
+    contents.on("will-navigate", (navEvent, url) => {
+      if (!allowed(url)) navEvent.preventDefault();
+    });
+    contents.on("will-redirect", (navEvent, url) => {
+      if (!allowed(url)) navEvent.preventDefault();
+    });
+  });
+
   // Apply OS startup preferences from settings. Only meaningful for the packaged app (in dev the
   // executable is electron.exe, so registering a login item would point at the wrong binary).
   const boot = built.settingsStore.get();
   const startMinimized = boot.toggles.startMinimized ?? false;
   if (app.isPackaged) {
     app.setLoginItemSettings({
-      openAtLogin: boot.toggles.launchAtLogin ?? true,
+      openAtLogin: boot.toggles.launchAtLogin ?? false,
       openAsHidden: startMinimized,
     });
   }
@@ -484,7 +539,7 @@ void app.whenReady().then(() => {
 
   // The bar reports returning to idle (after injecting, or a failed/aborted capture); end the
   // session and auto-hide it if enabled.
-  ipcMain.on("floating:idle", () => {
+  ipcOn("floating:idle", () => {
     dictationActive = false;
     const autoHide = built.settingsStore.get().toggles.floatingAutoHide ?? true;
     if (autoHide) floatingBarWindow?.hide();
@@ -492,7 +547,7 @@ void app.whenReady().then(() => {
 
   // The bar reports when the mic is actually recording, so other system audio can be muted for a
   // clean capture (gated by the "pause media" setting) and reliably restored when recording stops.
-  ipcMain.on("recording:active", (_event, active: unknown) => {
+  ipcOn("recording:active", (_event, active: unknown) => {
     if (active) {
       if (built.settingsStore.get().toggles.pauseMedia ?? true) setDictationMute(true);
     } else {
@@ -581,31 +636,34 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-// Frameless window controls.
-ipcMain.on("window:minimize", () => mainWindow?.minimize());
-ipcMain.on("window:toggle-maximize", () => {
+// Frameless window controls (sender-guarded).
+ipcOn("window:minimize", () => mainWindow?.minimize());
+ipcOn("window:toggle-maximize", () => {
   if (!mainWindow) return;
   if (mainWindow.isMaximized()) mainWindow.unmaximize();
   else mainWindow.maximize();
 });
-ipcMain.on("window:close", () => mainWindow?.close());
+ipcOn("window:close", () => mainWindow?.close());
 
 // System / diagnostics controls (Settings -> System).
-ipcMain.on("app:version", (event) => {
+ipcOn("app:version", (event) => {
   event.returnValue = app.getVersion();
 });
-ipcMain.on("system:open-devtools", () => {
+ipcOn("system:open-devtools", () => {
+  // DevTools can inspect in-memory transcripts and keys; keep it out of packaged builds unless an
+  // explicit debug flag/env is set.
+  if (app.isPackaged && process.env.KHONJEL_DEBUG !== "1" && !process.argv.includes("--debug")) return;
   mainWindow?.webContents.openDevTools({ mode: "detach" });
 });
-ipcMain.on("system:open-logs", () => {
+ipcOn("system:open-logs", () => {
   void shell.openPath(app.getPath("logs"));
 });
-ipcMain.on("system:open-models", () => {
+ipcOn("system:open-models", () => {
   const dir = path.join(app.getPath("userData"), "models");
   mkdirSync(dir, { recursive: true });
   void shell.openPath(dir);
 });
-ipcMain.on("system:clear-cache", () => {
+ipcOn("system:clear-cache", () => {
   if (!mainWindow) return;
   void dialog
     .showMessageBox(mainWindow, {
@@ -620,7 +678,7 @@ ipcMain.on("system:clear-cache", () => {
       if (response === 1) rmSync(path.join(app.getPath("userData"), "models"), { recursive: true, force: true });
     });
 });
-ipcMain.on("system:reset-data", () => {
+ipcOn("system:reset-data", () => {
   if (!mainWindow) return;
   void dialog
     .showMessageBox(mainWindow, {

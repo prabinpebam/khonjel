@@ -72,6 +72,8 @@ export type HttpFetch = (
 export interface LlamaEngineOptions {
   /** Base URL of the running llama-server, e.g. http://127.0.0.1:8080 */
   endpoint: string;
+  /** Bearer token the local server requires (zero-trust localhost); omitted when unset. */
+  apiKey?: string;
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -84,9 +86,11 @@ export interface LlamaEngineOptions {
 async function complete(opts: LlamaEngineOptions, messages: EngineMessage[]): Promise<string> {
   const fetchFn = opts.fetchFn ?? (globalThis as unknown as { fetch: HttpFetch }).fetch;
   const url = `${opts.endpoint.replace(/\/+$/, "")}/v1/chat/completions`;
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (opts.apiKey) headers["Authorization"] = `Bearer ${opts.apiKey}`;
   const res = await fetchFn(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify(
       buildLlamaBody(messages, {
         model: opts.model,

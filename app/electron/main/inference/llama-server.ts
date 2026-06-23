@@ -16,6 +16,8 @@ export interface LlamaServerOptions {
   modelPath: string;
   host?: string;
   port?: number;
+  /** Bearer token required on every request (zero-trust localhost). */
+  apiKey?: string;
   /** Context window (-c). */
   ctxSize?: number;
   /** GPU layers to offload (-ngl); 0 = CPU only. */
@@ -34,6 +36,7 @@ export function buildServerArgs(opts: LlamaServerOptions): string[] {
   const host = opts.host ?? "127.0.0.1";
   const port = opts.port ?? 8080;
   const args = ["-m", opts.modelPath, "--host", host, "--port", String(port)];
+  if (opts.apiKey) args.push("--api-key", opts.apiKey);
   if (typeof opts.ctxSize === "number") args.push("-c", String(opts.ctxSize));
   if (typeof opts.gpuLayers === "number") args.push("-ngl", String(opts.gpuLayers));
   if (opts.extraArgs && opts.extraArgs.length > 0) args.push(...opts.extraArgs);
@@ -59,6 +62,10 @@ export async function startLlamaServer(
 ): Promise<LlamaServerHandle> {
   const host = opts.host ?? "127.0.0.1";
   const port = opts.port ?? 8080;
+  // Zero-trust localhost: never expose the model server beyond the loopback interface.
+  if (host !== "127.0.0.1" && host !== "localhost" && host !== "::1") {
+    throw new Error(`llama-server refuses a non-loopback host: ${host}`);
+  }
   const endpoint = `http://${host}:${port}`;
 
   const child = spawn(opts.binPath, buildServerArgs(opts), { stdio: "ignore", windowsHide: true });

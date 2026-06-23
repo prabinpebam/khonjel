@@ -38,13 +38,32 @@ function parse(doc: string | null): Record<string, string> {
 
 export function createSecretStore(io: SecretIO, cipher: Cipher): SecretStore {
   const save = (map: Record<string, string>): void => io.write(JSON.stringify(map));
+  // Session-only secrets held when at-rest encryption is unavailable, so we never write plaintext.
+  const memory = new Map<string, string>();
   return {
     set: (id, secret) => {
+      let encrypted: string;
+      try {
+        encrypted = cipher.encrypt(secret);
+      } catch {
+        // Encryption unavailable: keep the secret in memory for this session only and ensure no
+        // previously persisted value for this id lingers on disk.
+        memory.set(id, secret);
+        const map = parse(io.read());
+        if (Object.prototype.hasOwnProperty.call(map, id)) {
+          delete map[id];
+          save(map);
+        }
+        return;
+      }
+      memory.delete(id);
       const map = parse(io.read());
-      map[id] = cipher.encrypt(secret);
+      map[id] = encrypted;
       save(map);
     },
     get: (id) => {
+      const inMemory = memory.get(id);
+      if (inMemory != null) return inMemory;
       const value = parse(io.read())[id];
       if (value == null) return undefined;
       try {
@@ -53,8 +72,10 @@ export function createSecretStore(io: SecretIO, cipher: Cipher): SecretStore {
         return undefined;
       }
     },
-    has: (id) => Object.prototype.hasOwnProperty.call(parse(io.read()), id),
+    has: (id) =>
+      memory.has(id) || Object.prototype.hasOwnProperty.call(parse(io.read()), id),
     remove: (id) => {
+      memory.delete(id);
       const map = parse(io.read());
       delete map[id];
       save(map);

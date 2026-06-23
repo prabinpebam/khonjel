@@ -17,6 +17,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,md}\"",
     "test": "vitest run",
     "test:watch": "vitest",
+    "verify:pins": "node scripts/verify-model-pins.mjs",
     "verify:quick": "npm run typecheck && npm run lint && npm run lint:ds && npm run test",
     "verify": "npm run verify:quick && npm run build",
     "eval": "playwright test --config=playwright.config.mjs",
