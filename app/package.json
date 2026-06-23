@@ -77,13 +77,16 @@
   "build": {
     "appId": "com.khonjel.app",
     "productName": "Khonjel",
+    "npmRebuild": false,
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "package.json"
+      "package.json",
+      "build/icon.png",
+      "!node_modules/**/*"
     ],
     "win": {
       "target": "portable",
