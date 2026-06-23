@@ -19,6 +19,7 @@
 | **LLM — modes** | local / providers / self-hosted / enterprise / cloud | OpenAI only | **All five modes** — from OpenWhispr; cloud **ungated/free** |
 | **Text pipeline** | Straight to LLM cleanup | **regex → isClean skip → LLM → fallback** | **FreeFlow's 3-stage pipeline** wins; bolt onto OpenWhispr's provider layer |
 | **Streaming latency** | Standard | Warm WSS backup + parallel batch fallback (sub-second median, self-reported) | **Adopt FreeFlow's latency engineering** |
+| **Long-form capture** | per-utterance batch (whole clip) | streaming WSS + on-device Parakeet **15 s windows** | **Segment/window, never whole-file**; partials as you speak; disk-backed bounded memory — see [12 §2A](12-audio-capture-and-os-integration.md) |
 | **Prompts** | i18n + `{{agentName}}` + dictionary suffix + Prompt Studio + per-kind | Per-language Swift constants, strict output discipline | **OpenWhispr's prompt *system*** + **FreeFlow's output discipline** |
 | **Instruction detection** | `detectAgentName(text, agentName)` splits cleanup vs command | n/a | **Adopt** — drives Voice Agent mode |
 | **Text injection** | Paste/keystroke | **Per-app strategy table** + transcript buffer | **Adopt FreeFlow's per-app table + recovery buffer** |
@@ -63,5 +64,9 @@ Concretely:
 8. **Move durable settings to the main process** (SQLite), mirror to the renderer store.
 9. **Keys in keychain; all provider HTTP proxied from main**; egress only to the chosen endpoint.
 10. **No paid gates.** Local is the default; cloud is optional and free.
+11. **Stream/segment capture for long sessions** — transcribe by VAD-segmented window (whisper),
+    transducer stream (Parakeet), or realtime WSS (cloud); show **partials as you speak**; keep memory
+    bounded by a ring buffer + disk-backed PCM. Replaces the single-shot whole-file path on the live
+    surface ([12 §2A](12-audio-capture-and-os-integration.md)).
 
 Everything downstream ([03](03-khonjel-backend-architecture.md)–[11](11-privacy-security-and-packaging.md)) implements this decision.

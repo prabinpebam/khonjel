@@ -43,6 +43,90 @@ container (e.g. wav/opus) get one wrapped at the egress boundary, not upstream.
 - **Backpressure:** the capture layer owns a bounded ring buffer; if a sidecar stalls, oldest
   non-speech frames drop first (never speech frames).
 
+## 2A. Long-form & streaming transcription (dictation / notes / meetings)
+
+> **Why this section exists.** §2 above defines the *frame* contract, but the unit of
+> *transcription* was left implicit — and the live code transcribes the **whole recording at once**.
+> That is correct for a one-line dictation and wrong for a long session. This section makes the unit
+> of work a **segment/window that is transcribed as you speak**, never the whole file, so latency and
+> memory are bounded by *seconds*, not session length.
+
+### 2A.1 Current state vs target (the gap this closes)
+
+> **Today the live path is single-shot, not streaming.** The renderer accumulates *every* Web-Audio
+> block for the whole session ([`recorder.ts`](../../../../app/src/lib/audio/recorder.ts)), then sends
+> one base64 WAV over a single `transcription:transcribe` call, and main runs `whisper-cli` over the
+> entire file once ([`transcription.ts`](../../../../app/electron/main/services/transcription.ts)).
+> Consequences for a long session: time-to-first-feedback = `stop + full-file decode`; renderer memory
+> grows ~0.2 MB/s **unbounded** with several full-size copies plus a multi-MB base64 IPC payload. The
+> contract below is the **target**; §9 gates the migration. The single-shot call survives **only** for
+> file **Upload** (audio already on disk), never for live capture.
+
+### 2A.2 How the field does it (benchmark)
+
+| Tool | Capture | Long-form transcription | Feedback |
+|---|---|---|---|
+| **Wispr Flow** | continuous mic stream to cloud | **realtime streaming** STT built for flow/long-form; words land as you speak | live partials, ~instant |
+| **FreeFlow** | non-blocking start; forwards frames immediately | **OpenAI Realtime (WSS)** persistent socket (partial+final) with a **warm backup** connection and a **parallel batch fallback**; on-device **Parakeet in 15 s windows** | sub-second median (self-reported) |
+| **OpenWhispr** | `audioManager` mic capture | whisper.cpp / Parakeet child process, largely **per-utterance batch**; cloud providers incl. Deepgram/AssemblyAI are streaming-capable | mostly after stop |
+| **Khonjel (target)** | 16 kHz/mono frames → main, disk-backed | **VAD-segmented rolling windows** for batch engines (whisper) + **true frame-streaming** for transducers (Parakeet) + **realtime WSS** for cloud | live partials per segment |
+
+**Imported rules:** FreeFlow's *stream-or-window, never the whole file*; its *warm-connection +
+parallel-batch* latency trick; Wispr Flow's *partials-as-you-speak* expectation. Detail in
+[01 FreeFlow](01-benchmark-freeflow.md) / [00 OpenWhispr](00-benchmark-openwhispr.md).
+
+### 2A.3 The transcription loop (segment, don't wait)
+
+A capture **session** runs a loop whose cost is independent of total length:
+
+```text
+frames ─▶ VAD ─▶ segmenter ─▶ StreamingTranscriber ─▶ partial/final ─▶ stitch ─▶ live transcript
+                   │ close a segment on: Silero silence-tail  OR  a hard cap (~20–30 s, whisper)
+                   ▼                                          OR  continuously (transducer / cloud)
+             disk-backed PCM  (retention + crash recovery)
+```
+
+- **Segment boundary** = Silero silence-tail **or** a hard window cap, so a non-stop talker still
+  flushes. Each closed segment is transcribed **immediately**, not at stop.
+- **Context carry-over:** prepend a short tail (~1–2 s / last few tokens) of the previous segment so
+  word-splits across a boundary heal; de-dup the overlap when stitching.
+- **Polish off the hot path:** the [3-stage pipeline](01-benchmark-freeflow.md) (`isClean` skip → LLM
+  → deterministic fallback) runs **per finalized segment** for notes/meetings, or **once on the final
+  text** for short dictation — never blocking capture.
+
+### 2A.4 One port, three engine strategies
+
+Mirror FreeFlow's `DictationProviding` (batch) vs `StreamingDictationProviding` (stream) split: a
+single `StreamingTranscriber` port, with **batch engines wrapped by the VAD-segmenter** so they look
+streaming to the loop. Extends the `TranscriptionService` in [08 §3](08-ipc-and-ports-contracts.md) /
+[10 §1–2](10-providers-and-models.md).
+
+| Engine | Native streaming? | Long-form strategy |
+|---|---|---|
+| **whisper.cpp** (local default) | No — full-file batch | VAD-segmented rolling windows (~20–30 s) + context carry; emit each window as it closes |
+| **Parakeet TDT** (local, sherpa-onnx) | **Yes** — online transducer | feed frames to the online recognizer; emit partial+final tokens continuously (FreeFlow: 15 s CoreML windows) |
+| **Cloud realtime** (OpenAI Realtime / Deepgram / AssemblyAI) | **Yes** — WSS | one persistent socket per session; forward frames; **warm backup** + **parallel batch fallback** |
+| **Cloud batch** (Azure / OpenAI file) | No | segment like whisper; POST each closed window (or one POST for a short clip) |
+
+### 2A.5 Memory & size (bounded by seconds, not session length)
+
+- The capture layer emits **16 kHz/mono/16-bit frames** to main over a MessagePort; the renderer
+  **never accumulates the whole session** — this removes the current ~0.2 MB/s unbounded growth and
+  the multi-MB base64 IPC payload.
+- Main keeps a **bounded ring buffer** (a few seconds; §2 backpressure) for in-flight frames and —
+  only when retention/recovery needs it — **appends raw PCM to a disk-backed temp file**. Peak memory
+  is the ring buffer, **independent of recording length**.
+
+### 2A.6 Streaming the result (partials + finalize + recovery)
+
+- New session IPC (the partials stream that [08 §2](08-ipc-and-ports-contracts.md) already
+  anticipates): `capture:start` / `capture:stop` plus `transcription:partial { text, segmentId }` and
+  `transcription:final { text, segmentId }` events; the surface renders a **live, growing transcript**.
+- **Finalize** on VAD auto-stop or explicit stop: flush the open segment, run final polish, persist.
+  For long notes/meetings the running transcript is already on screen, so finalize is cheap.
+- **Recovery:** finalized segments live in the disk-backed buffer + a `TranscriptBuffer` (FreeFlow);
+  a crash or lost injection target keeps the text for **re-paste / resume**, never silently dropped.
+
 ## 3. System audio & meetings (AEC)
 - **System/loopback capture** is per-OS (table below). Meetings use `source:"both"` → two
   streams (mic + system) tagged for diarization (`You:` / `Them:`).
@@ -93,11 +177,17 @@ container (e.g. wav/opus) get one wrapped at the egress boundary, not upstream.
 | Step | Budget |
 |---|---|
 | hotkey → "listening" UI | < 100 ms |
-| stop → first STT partial | model-dependent; show honest progress |
+| first spoken words → first on-screen **partial** | streaming/transducer < 1 s; whisper-segmented ≤ first window (~2–3 s) |
+| silence/stop → final text | streaming < 0.5 s after last words; whisper ≤ last-window decode |
 | final text → injected at cursor | < 50 ms after pipeline returns |
+| memory during a 60-min session | bounded by the ring buffer (seconds), **not** duration (§2A.5) |
 
 ## 9. Acceptance
 - [ ] All STT consumers receive **16 kHz/mono/16-bit PCM**, regardless of device or OS.
+- [ ] Live capture **streams** frames to main; the renderer never buffers a whole session, and the live path carries **no** single multi-MB base64 payload (§2A.1/§2A.5).
+- [ ] **Partial transcripts** appear *during* capture (not only after stop) for every engine; batch engines (whisper) are VAD-segmented into rolling windows (§2A.3/§2A.4).
+- [ ] A 30+ min session runs with **bounded memory** (ring buffer) and disk-backed audio; finalized segments survive a mid-session crash (§2A.5/§2A.6).
+- [ ] Each STT engine maps to its §2A.4 strategy (whisper = windows, Parakeet = transducer stream, cloud realtime = WSS + parallel-batch fallback).
 - [ ] Mic, system-audio, AEC, hotkey, injection, and app-context helpers exist for Win/macOS/Linux behind the OS ports.
 - [ ] Hotkey → "listening" < 100 ms; tap and hold both work; conflicts detected on rebind.
 - [ ] Injection uses the per-app strategy table, refuses secure fields, and restores the clipboard.
