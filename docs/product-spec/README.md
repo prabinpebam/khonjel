@@ -85,6 +85,7 @@ docs/product-spec/
 │   ├── 04-technology-stack.md
 │   ├── 05-mock-frontend-plan.md
 │   ├── 06-test-and-validation-strategy.md
+│   ├── parakeet-integration-plan.md
 │   └── gpu-acceleration/
 │       ├── README.md
 │       ├── 01-gpu-detection-and-capability.md
@@ -130,6 +131,7 @@ docs/product-spec/
 | [04 · **Mock Frontend Plan**](04-architecture-and-delivery/05-mock-frontend-plan.md) | **Build the inspectable, backend-free frontend** — stack, architecture, phases |
 | [04 · **Test & Validation Strategy**](04-architecture-and-delivery/06-test-and-validation-strategy.md) | **The eval loop** — how we detect "what right looks like" against the spec |
 | [04 · **GPU Acceleration (no-compromise + graceful fallback)**](04-architecture-and-delivery/gpu-acceleration/README.md) | **Full local-model GPU support** — smart detect, auto-provision, probe, rollback, test-and-validate UX, EDD + phased plan |
+| [04 · **Parakeet Integration (no-compromise)**](04-architecture-and-delivery/parakeet-integration-plan.md) | **Make NVIDIA Parakeet a first-class local STT engine** via sherpa-onnx — runtime, multi-asset model, GPU provider, EDD + phased plan |
 | [99 · OpenWhispr **repo** analysis](99-reference-analysis/03-openwhispr-repo-analysis.md) | **Authoritative** capture of the real app (stack, nav, features) |
 | [99 · OpenWhispr screen-by-screen](99-reference-analysis/01-open-wisper-screen-by-screen.md) | Hi-fidelity capture of all 15 OW screenshots |
 | [99 · Productivity reference — screen-by-screen](99-reference-analysis/02-wisper-flow-screen-by-screen.md) | Hi-fidelity capture of all 18 reference screenshots |
