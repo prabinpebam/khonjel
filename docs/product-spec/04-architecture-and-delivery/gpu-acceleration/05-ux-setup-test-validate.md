@@ -7,9 +7,41 @@
 
 ---
 
+## 0. The default experience: zero clicks
+
+In `auto` mode (the default) the user never hunts for a button. The first time a local model is
+ready, Khonjel runs the whole lifecycle in the background and only interrupts to celebrate:
+
+```text
+(user finishes picking / downloading a local model — does nothing else)
+
+        ▼   background · non-blocking · cancelable from the card
+   detect GPU  →  download GPU support  →  test on this machine  →  turn on
+        ▼
+   ┌────────────────────────────────────────────────────────────┐
+   │  ✓  Your graphics card is now making Khonjel ~7x faster     │  ← one toast
+   │     NVIDIA RTX 4090 · Running on GPU            [ Details ]  │
+   └────────────────────────────────────────────────────────────┘
+```
+
+- **Non-blocking** — dictation/chat keep working on CPU during setup; the flip to GPU happens only
+  when the engine is idle, never mid-sentence ([03 §8](03-runtime-acceleration-and-fallback.md)).
+- **Quiet on failure** — no scary popup; the app stays on CPU and the Acceleration card (not a modal)
+  holds a calm explanation for whenever the user happens to look.
+- **One toast, then silence** — success shows a single dismissible toast; we never nag.
+- **Honest + cancelable** — the toast/card shows the real download size; a Cancel is always present.
+- **Opt-out** — users on metered connections can switch off background setup
+  (`inference.acceleration.autoSetup = false`); the one-click button still works on demand.
+
+Everything below is what the user sees **only if** they open Settings, or if they are in `on`/`off`
+mode. The default journey above needs none of it.
+
+---
+
 ## 1. Design principles (UX)
 
-1. **One primary action.** "Turn on GPU acceleration" is the only thing most users ever click.
+1. **Zero or one action.** Most users do nothing — `auto` sets it up in the background (§0). When a
+   choice is genuinely needed, it collapses to a single "Turn on GPU acceleration" button.
 2. **Show, don't claim.** We never say "GPU auto-detected" without proof — we run a real test and
    show the numbers ([01 status-honesty principle](README.md)).
 3. **Plain language first, jargon on demand.** "Your graphics card" not "CUDA device 0"; backend
@@ -33,59 +65,60 @@
 
 ---
 
-## 3. The Acceleration card — state machine (UI)
+## 3. The Acceleration card — states (UI)
+
+One compact card: a one-line live status and **at most one** button. The states:
 
 ```text
-            ┌─────────────────────────────────────────────┐
-            │  detecting…  (spinner, "Checking hardware")  │
-            └───────────────┬─────────────────────────────┘
-                            ▼
-        ┌───────────────────────────────────────────────────────┐
-        │ NO USABLE GPU            │ GPU FOUND, NOT ON           │
-        │ "Running on CPU.         │ "Your NVIDIA RTX 4090 can   │
-        │  No compatible graphics  │  make this much faster."    │
-        │  card found."            │  [ Turn on GPU acceleration ]│
-        │ (calm, no CTA / Re-scan) │                              │
-        └───────────────────────────┬──────────────────────────┘
-                                     ▼  (click)
-                  ┌──────────────────────────────────────┐
-                  │ WORKING…  progress + cancel           │
-                  │  ● Checking your graphics card        │
-                  │  ◐ Downloading GPU support  (2 of 3)  │
-                  │  ○ Testing it on your machine         │
-                  └───────────────┬───────────────┬──────┘
-                          success ▼               ▼ failure
-        ┌──────────────────────────────┐  ┌──────────────────────────────┐
-        │ ON — "Running on your NVIDIA  │  │ ROLLED BACK — "We kept things │
-        │ RTX 4090. About 7x faster."   │  │ on CPU so nothing broke."     │
-        │ [ Test again ] [ Turn off ]   │  │ reason + [ Try again ] [Details]│
-        └──────────────────────────────┘  └──────────────────────────────┘
+DETECTING       "Checking your graphics card…"             (spinner)
+
+NO USABLE GPU   "Running on CPU — no compatible graphics    [ Re-scan ]
+                 card found. The app still works great."    (calm, no push)
+
+GPU OFF         "Your NVIDIA RTX 4090 could be ~5–10x       [ Turn on GPU ]
+                 faster.   ~250 MB download."               (estimate + size up front)
+
+SETTING UP      "Setting up GPU acceleration…  148/250 MB   [ Cancel ]
+                 — keep working, this runs in background."  (auto or manual)
+
+ON              "Running on your NVIDIA RTX 4090 ·          [ Test ] [ Turn off ]
+                 about 7x faster."
+
+ROLLED BACK     "Kept things on CPU so nothing broke."      [ Try again ] [ Details ]
+                 (one-line plain reason; calm, not red)
 ```
 
-Each visual state maps 1:1 to `EngineAcceleration.state` / `AccelerationState` from
-[04 §2](04-contracts-data-and-ipc.md).
+Each state maps 1:1 to `AccelerationState` / `EngineAcceleration.state` ([04 §2](04-contracts-data-and-ipc.md));
+the GPU-off **estimate and size** come from `AccelerationPlan.estimatedSpeedup` / `downloadBytes` so
+the user knows the benefit *and* the cost before committing.
 
 ---
 
-## 4. One-click "Turn on" flow (the happy path)
+## 4. The "Turn on" flow (manual / `on` mode)
 
-Single click runs Detect -> Provision -> **Validate** -> Activate, streaming `AccelerationProgress`:
+The same lifecycle as §0, but foregrounded when the user clicks **Turn on GPU** (or is in `on` mode).
+Detect -> Provision -> **Validate** -> Activate, streaming `AccelerationProgress`:
 
 ```text
 ┌─ Turning on GPU acceleration ──────────────────────────────┐
 │                                                            │
 │   ✓  Found your graphics card        NVIDIA RTX 4090       │
-│   ✓  Downloaded GPU support          just now              │
-│   ◐  Testing it on your machine…     running a quick check │
+│   ◐  Downloading GPU support         148 MB of 250 MB ▓▓▓░ │
+│   ○  Test it on your machine                               │
 │                                                            │
-│   This takes a few seconds. You can keep using the app.    │
-│                                              [ Cancel ]    │
+│   About a minute on a typical connection. Keep working —   │
+│   this runs in the background.               [ Cancel ]    │
 └────────────────────────────────────────────────────────────┘
 ```
 
-- **Cancel** is always available; cancelling rolls back cleanly to the prior state (CPU stays working).
-- Download progress shows bytes + count ("2 of 3") from `bytesDone/bytesTotal`.
-- The **test step is mandatory** — we only flip to "On" after a real probe passes ([02 §5](02-backend-provisioning-and-rollback.md)).
+- **Honest size/time** — the panel shows the real download size (`plan.downloadBytes`) and live
+  progress, never a vague "a few seconds". Large downloads are clearly backgroundable.
+- **Cancel** is always available; cancelling rolls back cleanly to CPU (which never stopped working).
+- The **test step is mandatory** — we flip to "On" only after a real probe passes ([02 §5](02-backend-provisioning-and-rollback.md)).
+- **Offline** — the button becomes "Connect to the internet to download GPU support" rather than
+  starting a doomed download.
+- **Won't interrupt you** — if you are mid-dictation when the test passes, the switch waits for idle
+  ([03 §8](03-runtime-acceleration-and-fallback.md)).
 
 ---
 
@@ -121,13 +154,17 @@ Triggered by the flow above and re-runnable via **Test again**. Runs a real CPU 
 | Situation | Headline | Body | Actions |
 |---|---|---|---|
 | No GPU | "Running on CPU" | "We didn't find a compatible graphics card. The app still works great." | Re-scan hardware |
+| Offline | "Running on CPU" | "You're offline. Connect to the internet to set up GPU acceleration." | Retry when online |
+| Waiting for a model | "GPU speed is ready when your model is" | "We'll switch on your graphics card as soon as your first model finishes downloading." | (none — automatic) |
 | GPU too old/driver | "Running on CPU" | "Your graphics driver is older than required. Update it to use GPU speed." | How to update, Re-check |
 | Download failed | "Couldn't finish setup" | "The GPU files couldn't be verified, so we kept you on CPU." | Try again, Details |
+| Security software blocked files | "Couldn't finish setup" | "Your security software blocked the GPU files. We kept you on CPU." | Try again, How to allow, Details |
 | Probe failed / OOM | "Kept things on CPU" | "GPU support didn't pass our quick test, so nothing changed." | Try again, Details |
 | Crash-loop demote | "Switched back to a stable setup" | "GPU acceleration was unstable, so we returned to what last worked." | Try again, Details |
 
 - **Details** opens a copyable technical panel (backend, version, error code, `reason.json`) for
-  support — hidden by default.
+  support — hidden by default, and **scrubbed** of the loopback token and the user's home path
+  ([02 §8](02-backend-provisioning-and-rollback.md)).
 - Tone rule: never "Error"/"Failed" as the headline; always frame around "we kept things working."
 
 ---
@@ -145,11 +182,15 @@ Collapsed "Advanced" section under the card, maps to the Advanced settings keys
    Backend (STT):  [ Auto ▾ ]
    GPU layers:     [ Auto ]  ( ) Custom [ ___ ]      # -ngl override
    [✓] Use GPU on battery
-   [ Re-scan hardware ]   [ Reset acceleration ]      # Reset = clear runtime/, re-provision
+   [ Re-scan hardware ]  [ Remove GPU support ]  [ Reset acceleration ]
+   # Remove = delete GPU backends, back to CPU (keeps models)
+   # Reset  = clear all acceleration state + re-detect from scratch
 ```
 
 - Everything here is optional; defaults ("Automatic" + "Auto") are the smart path.
-- "Reset acceleration" maps to deleting `runtime/` state (safe) and re-running detection.
+- "Remove GPU support" maps to `removeGpuBackends(engine)`; "Reset acceleration" deletes the entire
+  `runtime/` accel state and re-detects ([02 §9](02-backend-provisioning-and-rollback.md)). Both are
+  safe and reversible by re-provisioning.
 
 ---
 
@@ -171,7 +212,8 @@ Collapsed "Advanced" section under the card, maps to the Advanced settings keys
 
 - Every status = **icon + text + (optional) color**; color is never the sole signal.
 - All actions keyboard-reachable; progress uses `aria-live="polite"` so screen readers hear
-  "Downloading GPU support, 2 of 3", "Acceleration is on."
+  "Downloading GPU support, 148 of 250 megabytes", "Acceleration is on."
+- The success **toast** (§0) is announced politely, is keyboard-dismissible, and never steals focus.
 - Spinners have text equivalents; the speed bars expose numeric `aria-label`s.
 - Respects reduced-motion (no animated bars when the OS asks for less motion).
 - All strings ASCII in code (ds-lint); wireframe glyphs here are doc-only.

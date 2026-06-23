@@ -238,3 +238,57 @@ shows live, honest status.
   downloads; everything else stays off.
 - **Resource caps**: probe + downloads time-boxed; disk budgeted; a runaway engine is killed by the
   crash-loop guard.
+- **Anti-virus reality**: a freshly downloaded `.exe`/`.dll` may be locked or deleted by AV mid-extract.
+  Treat a locked/missing `expectFiles[]` as a normal provision failure -> quarantine + stay on the
+  prior backend + a plain-language "your security software blocked the GPU files" message ([05 §6](05-ux-setup-test-validate.md)).
+- **Scrubbed diagnostics**: `logTail`/`reason.json` shown in Advanced are filtered to strip the
+  loopback bearer token and the absolute `userData` path (which contains the OS username) before
+  display or copy.
+
+---
+
+## 9. Disk budget, cleanup & uninstall
+
+GPU backends are large; the app must stay tidy without the user thinking about it.
+
+- **Footprint** (typical, Windows): CPU floor ~80\u2013150 MB per engine; a CUDA llama backend + cudart
+  ~0.8\u20131.4 GB; Vulkan ~150\u2013300 MB; a cuBLAS whisper backend ~0.5\u20131 GB.
+- **Retention policy** per engine: keep **active + last-known-good + cpu** only. When a new backend is
+  activated and the old LKG is neither active nor cpu, prune it. Quarantined dirs keep only their
+  `reason.json` (the binaries are deleted) so a failure costs almost no disk.
+- **Pre-flight**: before downloading, require `free >= Σ parts + extractHeadroom (~2x largest zip)`;
+  otherwise show the existing model-management "free up space" path (never start an unwinnable
+  download).
+- **Manual controls** (Advanced, [05 §7](05-ux-setup-test-validate.md)):
+  - **Remove GPU support** \u2014 delete all GPU backends for an engine, revert to cpu (one click, safe).
+  - **Reset acceleration** \u2014 delete the entire `runtime/` accel state (profiles, backends, caches) and
+    re-detect from scratch.
+- All deletes are reversible by re-provisioning; nothing here touches user content or models.
+
+---
+
+## 10. Probe/test model dependency (ordering)
+
+The smoke probe (§5) and the speed test need *some*
+model to run. Ordering rules so setup never deadlocks:
+
+- **LLM**: probe with the smallest **already-installed** GGUF. If none is installed yet, GPU
+  provisioning is **deferred** until the first local LLM model is ready (the FRE downloads a model
+  first), then auto-runs in the background ([05 §0](05-ux-setup-test-validate.md)).
+- **STT**: ship a tiny bundled marker WAV (already used by evals) for the probe; the active whisper
+  model is used for the real speed test.
+- A backend may be **installed + verified** (files present, hashes ok) but remain **`installed`, not
+  `active`**, until a model exists to probe it against \u2014 this is a valid resting state, not a failure.
+
+---
+
+## 11. Engine version upgrades & migration
+
+When an app update bumps the pinned engine version (e.g. llama `b9744` -> `b9999`):
+
+- New version installs into a **new** dir (`cuda-12.4@b9999`); the old one stays as LKG until the new
+  one passes its probe, then the old is pruned per \u00a79.
+- `offload-cache.json` entries are keyed by `(modelId, backend, engineVersion)` so a new engine build
+  re-tunes `-ngl` rather than trusting a stale rung.
+- If the new version's probe fails, **stay on the old working version** and surface a quiet
+  "couldn't update GPU support, still running fine" note \u2014 an upgrade never degrades a working setup.

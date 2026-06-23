@@ -53,6 +53,9 @@ user in plain language.
 - Compute GPU offload (`-ngl`) automatically from VRAM vs model size, with an OOM auto-tune ladder.
 - Provide a friendly **Test & validate** experience with real metrics (tokens/sec, VRAM, latency).
 - Graceful, transparent fallback chain: best GPU backend -> next GPU backend -> CPU.
+- **Zero-click when safe.** In the default `auto` mode, detect, set up, and turn on the GPU
+  automatically in the background once a model is ready — no button to hunt for — then confirm with a
+  friendly notification. The explicit one-click button exists for `off`->`on` and re-tries.
 - Zero telemetry; everything stays on device.
 
 ### Non-goals (this spec)
@@ -60,6 +63,8 @@ user in plain language.
 - Cloud/provider acceleration (cloud already runs remotely; out of scope).
 - Training/fine-tuning on GPU.
 - Multi-node / distributed inference.
+- **Multi-GPU tensor-split** (using two GPUs at once for a single model). We pick one primary GPU;
+  the others are selectable in Advanced but not combined.
 - Shipping our own compiled engine backends (we consume official llama.cpp / whisper.cpp release
   artifacts; building them is a separate supply-chain task).
 
@@ -80,6 +85,19 @@ user in plain language.
 7. **Bounded + offline-aware.** Disk budgeted; works offline if a backend is already installed.
 8. **Pinned + verified.** Every downloaded backend artifact is sha256-pinned (ties to the security
    audit F1 supply-chain item).
+9. **Invisible by default.** The best path needs zero decisions; UI appears only when there is a real
+   choice to make or a problem to explain. Jargon is opt-in (Advanced), never required.
+
+### Acceleration modes at a glance
+
+| Mode | What it does | Who picks it |
+|---|---|---|
+| **`auto`** (default) | Detects + provisions + proves + turns on GPU **in the background** when safe; silently uses CPU when not. Adapts to battery/thermal. | Almost everyone (never has to touch it) |
+| **`on`** | Always prefer GPU (still probe-gated + fallback-safe); set up now via the one-click button; keep GPU even on battery. | Power users / desktops |
+| **`off`** | Force CPU everywhere; never download a GPU backend. | Privacy-strict / troubleshooting |
+
+> `auto` is the "super-simple" promise: a typical user installs Khonjel, picks a model, and a moment
+> later sees "Your graphics card is now making Khonjel ~7x faster" — having clicked nothing.
 
 ---
 
@@ -161,5 +179,8 @@ user in plain language.
 - **Privacy** — GPU detection and all metrics stay local; no telemetry.
 - **Packaging** — the portable build ships **no** backends; the CPU backend is acquired/validated on
   first run like any other (or bundled minimal CPU); GPU backends are always downloaded on demand.
+- **Disk** — budget roughly **1–2 GB** for an active GPU backend (engine + CUDA cudart redistributable)
+  on top of the CPU floor. Khonjel keeps only **active + last-known-good + cpu** per engine and prunes
+  the rest ([02 §9](02-backend-provisioning-and-rollback.md)).
 - **Accessibility** — every status has text + icon (never color only); the test reports a text
   summary; full keyboard operability. See [05 §9](05-ux-setup-test-validate.md).

@@ -67,6 +67,19 @@ if ngl == 0                      -> CPU (no GPU benefit) ; fall through to fallb
 Apple Metal: `unifiedMemory` -> treat `budget` from the unified-memory policy ([01 §3](01-gpu-detection-and-capability.md));
 Metal typically offloads all layers for models that fit.
 
+### Shared VRAM across engines (LLM + STT)
+
+The resident `llama-server` and whisper can want the GPU at the same time and share **one** VRAM
+pool, so the offload budget subtracts a reservation for the other engine:
+
+- The LLM has the largest footprint (model resident in VRAM) and is budgeted first.
+- When STT is also GPU-enabled, the LLM `budget` subtracts a small STT reservation (whisper models
+  are far smaller and loaded per run).
+- If both cannot fit safely, default policy: **the LLM keeps the GPU and STT falls back to CPU**
+  (short dictations are already fast on CPU), reported honestly per engine.
+- A live `vramUsedBytes` sample (nvidia-smi/API) refines the budget; a real OOM still triggers the
+  ladder (§3) as the correctness backstop.
+
 ---
 
 ## 3. OOM auto-tune ladder (no-compromise but safe)
@@ -136,6 +149,19 @@ interface RuntimeMetrics {
 
 These feed the **Test & validate** before/after comparison ([05 §5](05-ux-setup-test-validate.md)).
 
+### The benchmark (fair, deterministic, local)
+
+`runTest` ([04](04-contracts-data-and-ipc.md)) must produce a **stable, fair** number, not a lucky one:
+
+- **Fixed workload** — a canned prompt + fixed `max_tokens` (e.g. 128) for the LLM, and the bundled
+  sample clip for STT. The exact same input is used for the CPU and GPU legs.
+- **Warmup** — one discarded short run to load weights/caches before timing (cold-start excluded).
+- **On-device CPU baseline** — the same workload run once with `-ngl 0` / `--no-gpu` on the *active*
+  model, so "x faster" is true for *this* machine, never a generic marketing number.
+- **Bounded** — each leg is time-boxed; if the CPU leg would be very slow it is estimated from a
+  shorter run and labelled "approx".
+- **Reported** — tokens/sec (LLM), realtime-factor (STT), peak `vramUsedBytes`, and `speedup`.
+
 ---
 
 ## 7. Power & thermal policy (laptops)
@@ -145,6 +171,9 @@ These feed the **Test & validate** before/after comparison ([05 §5](05-ux-setup
   "Use GPU on battery" (default off for `auto`, on for `on`).
 - Never spin up a parked Optimus dGPU for a 1-second dictation if CPU is fast enough — measured by the
   probe's tokens/sec vs a CPU baseline.
+- **Live AC/battery transitions**: unplugging does **not** kill an in-progress GPU run; the new policy
+  applies at the next engine start/idle moment so nothing is interrupted. Re-plugging re-enables GPU
+  on the next start.
 - These are policy knobs in settings ([04](04-contracts-data-and-ipc.md)), not hardcodes.
 
 ---
@@ -156,6 +185,9 @@ These feed the **Test & validate** before/after comparison ([05 §5](05-ux-setup
   serving until the new one passes start (preserving "seamless switch, keep last working").
 - Changing acceleration mode (on/off/auto) is itself a warm switch: prepare the target engine, prove
   it, then flip; on failure, stay on the current one and report.
+- **Never interrupt active work**: if a switch (mode change, `enable`, or auto-setup activation) would
+  restart an engine that is mid-dictation/mid-generation, defer the flip until the engine is idle and
+  show "will apply in a moment". The current backend keeps serving until then.
 
 ---
 
@@ -169,3 +201,5 @@ These feed the **Test & validate** before/after comparison ([05 §5](05-ux-setup
 | Use GPU on battery | off (auto) | laptop policy |
 | Probe before activate | always | the hard gate |
 | Crash-loop demote | 2 crashes / 120 s | configurable |
+| Auto-setup on first run | on (in `auto` mode) | background, cancelable, after first model ready |
+| LLM+STT VRAM contention | LLM keeps GPU | STT -> CPU when both can't fit safely |

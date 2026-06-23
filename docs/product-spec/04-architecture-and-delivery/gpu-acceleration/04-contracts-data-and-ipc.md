@@ -29,8 +29,12 @@ export interface AccelerationService {
   disable(engine: Engine): Promise<void>;
   /** Retry a quarantined backend (e.g. after a driver update). */
   retry(engine: Engine, backend: Backend): Promise<void>;
-  /** Run the friendly Test & validate benchmark (CPU vs GPU). */
-  runTest(): Promise<AccelerationTestReport>;
+  /** Run the friendly Test & validate benchmark (CPU vs GPU). Deterministic workload (03 §6). */
+  runTest(opts?: { tokens?: number; warmup?: boolean }): Promise<AccelerationTestReport>;
+  /** Advanced: delete all GPU backends for an engine, revert to CPU (keeps models). */
+  removeGpuBackends(engine: Engine): Promise<void>;
+  /** Advanced: delete all acceleration runtime state and re-detect ("Reset acceleration"). */
+  reset(): Promise<void>;
   /** Live progress (detect/download/probe/activate/rollback) + state changes. */
   onProgress(cb: (e: AccelerationProgress) => void): () => void;
   onState(cb: (s: AccelerationState) => void): () => void;
@@ -71,11 +75,15 @@ export interface AccelerationPlan {
   stt: BackendCandidate[];
   recommendedLevel: "gpu-great" | "gpu-ok" | "cpu-only" | "unknown";
   summary: string;              // plain language for the card
+  estimatedSpeedup?: string;    // PRE-commit hint from VRAM + model fit, e.g. "5-10x"
+  downloadBytes?: number;       // total to fetch to enable (engine + redist), for honest size copy
+  diskBytes?: number;           // installed footprint
+  requiresDownload: boolean;    // false if already provisioned or offline-ready
 }
 
 export type BackendState =
   | "none" | "planning" | "downloading" | "verifying" | "installing"
-  | "probing" | "active" | "quarantined" | "failed";
+  | "probing" | "active" | "deferred" | "quarantined" | "failed";
 
 export interface EngineAcceleration {
   engine: Engine;
@@ -92,6 +100,16 @@ export interface AccelerationState {
   llm: EngineAcceleration;
   stt: EngineAcceleration;
   gpuActive: boolean;           // any engine on GPU
+  online: boolean;              // network reachable for provisioning (drives offline copy)
+  autoSetup?: {                 // present while `auto` mode provisions in the background
+    active: boolean;
+    message: string;            // "Setting up GPU acceleration in the background"
+    bytesDone?: number; bytesTotal?: number;
+  };
+  notice?: {                    // one-shot, surfaced as a toast then cleared
+    kind: "enabled" | "rolled-back" | "updated";
+    message: string;            // "Your graphics card is now making Khonjel ~7x faster"
+  };
   summary: string;              // "Running on your NVIDIA RTX 4090" / "Running on CPU"
 }
 
@@ -132,7 +150,9 @@ acceleration:setMode      // [AccelerationMode] -> void
 acceleration:enable       // [Engine, Backend?] -> void
 acceleration:disable      // [Engine] -> void
 acceleration:retry        // [Engine, Backend] -> void
-acceleration:runTest      // [] -> AccelerationTestReport
+acceleration:runTest      // [{tokens?,warmup?}?] -> AccelerationTestReport
+acceleration:removeGpu    // [Engine] -> void
+acceleration:reset        // [] -> void
 ```
 
 Plus two main->renderer relays (preload, like `onModelProgress`):
@@ -156,7 +176,7 @@ khonjel:acceleration-state      -> AccelerationState      (onState)
 | `gpu-profile.json` | `GpuProfile` | cached detection (01 §7) |
 | `backends.json` | `Record<Engine, EngineBackends>` | install index, active, LKG, quarantine (02 §4) |
 | `<backend>@<ver>/reason.json` | `{ code, message, at }` | quarantine reason (02 §6) |
-| `offload-cache.json` | `Record<modelId, { backend, ngl }>` | best working `-ngl` per model (03 §3) |
+| `offload-cache.json` | `Record<"modelId\|backend\|engineVersion", { ngl }>` | best working `-ngl` per model + backend + engine build (02 §11, 03 §3) |
 
 All written user-only (0600 where supported), no secrets inside, safe to delete (forces re-provision).
 
@@ -166,6 +186,7 @@ All written user-only (0600 where supported), no secrets inside, safe to delete 
 
 ```ts
 "inference.acceleration.mode"        // "auto" (default) | "on" | "off"
+"inference.acceleration.autoSetup"   // "true" (default) | "false"  — allow background provisioning in `auto`
 "inference.acceleration.device"      // "" (auto-pick) | "<gpu index>"  (Advanced)
 "inference.acceleration.useOnBattery"// "false" (Advanced; laptops)
 "inference.llm.gpuLayers"            // "auto" (default) | "<number>"   (Advanced override)
