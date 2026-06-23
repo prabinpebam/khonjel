@@ -42,6 +42,11 @@ import type {
   UploadJob,
   GpuProfile,
   AccelerationPlan,
+  AccelerationState,
+  AccelerationMode,
+  AccelerationEngine,
+  Backend,
+  AccelerationTestReport,
 } from "../../src/services/ports";
 
 export interface DispatchDeps {
@@ -114,6 +119,14 @@ export interface DispatchDeps {
     profile: () => GpuProfile | Promise<GpuProfile>;
     rescan: () => GpuProfile | Promise<GpuProfile>;
     plan: () => AccelerationPlan | Promise<AccelerationPlan>;
+    state: () => AccelerationState | Promise<AccelerationState>;
+    setMode: (mode: AccelerationMode) => void | Promise<void>;
+    enable: (engine: AccelerationEngine, backend?: Backend) => void | Promise<void>;
+    disable: (engine: AccelerationEngine) => void | Promise<void>;
+    retry: (engine: AccelerationEngine, backend: Backend) => void | Promise<void>;
+    runTest: (opts?: { tokens?: number; warmup?: boolean }) => AccelerationTestReport | Promise<AccelerationTestReport>;
+    removeGpuBackends: (engine: AccelerationEngine) => void | Promise<void>;
+    reset: () => void | Promise<void>;
   };
   // Grows one slice per phase (meetings, transcription, agent, ...).
 }
@@ -170,6 +183,14 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.accelerationProfile]: () => deps.acceleration.profile(),
     [CHANNELS.accelerationRescan]: () => deps.acceleration.rescan(),
     [CHANNELS.accelerationPlan]: () => deps.acceleration.plan(),
+    [CHANNELS.accelerationState]: () => deps.acceleration.state(),
+    [CHANNELS.accelerationSetMode]: (args) => deps.acceleration.setMode(args[0] as AccelerationMode),
+    [CHANNELS.accelerationEnable]: (args) => deps.acceleration.enable(args[0] as AccelerationEngine, args[1] as Backend | undefined),
+    [CHANNELS.accelerationDisable]: (args) => deps.acceleration.disable(args[0] as AccelerationEngine),
+    [CHANNELS.accelerationRetry]: (args) => deps.acceleration.retry(args[0] as AccelerationEngine, args[1] as Backend),
+    [CHANNELS.accelerationRunTest]: (args) => deps.acceleration.runTest(args[0] as { tokens?: number; warmup?: boolean } | undefined),
+    [CHANNELS.accelerationRemoveGpu]: (args) => deps.acceleration.removeGpuBackends(args[0] as AccelerationEngine),
+    [CHANNELS.accelerationReset]: () => deps.acceleration.reset(),
   };
 
   return async function dispatch(channel: string, ...args: unknown[]): Promise<unknown> {

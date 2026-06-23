@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createDispatch, type DispatchDeps } from "@ipc/dispatch";
 import { isIpcError } from "@ipc/ipc-contract";
-import type { AccelerationPlan, GpuProfile } from "@services/ports";
+import type { AccelerationPlan, AccelerationState, AccelerationTestReport, GpuProfile } from "@services/ports";
 
 const GPU_PROFILE: GpuProfile = {
   os: "win32",
@@ -16,6 +16,20 @@ const GPU_PLAN: AccelerationPlan = {
   recommendedLevel: "cpu-only",
   summary: "Running on the CPU.",
   requiresDownload: false,
+};
+const GPU_STATE: AccelerationState = {
+  mode: "auto",
+  llm: { engine: "llama", device: "cpu", state: "none", message: "Running on the CPU." },
+  stt: { engine: "whisper", device: "cpu", state: "none", message: "Running on the CPU." },
+  gpuActive: false,
+  online: true,
+  summary: "Running on the CPU.",
+};
+const GPU_TEST_REPORT: AccelerationTestReport = {
+  ok: true,
+  llm: { ok: true, message: "ok" },
+  stt: { ok: true, message: "ok" },
+  summary: "ok",
 };
 
 /**
@@ -104,6 +118,14 @@ const deps: DispatchDeps = {
     profile: () => GPU_PROFILE,
     rescan: () => GPU_PROFILE,
     plan: () => GPU_PLAN,
+    state: () => GPU_STATE,
+    setMode: () => undefined,
+    enable: () => undefined,
+    disable: () => undefined,
+    retry: () => undefined,
+    runTest: () => GPU_TEST_REPORT,
+    removeGpuBackends: () => undefined,
+    reset: () => undefined,
   },
 };
 

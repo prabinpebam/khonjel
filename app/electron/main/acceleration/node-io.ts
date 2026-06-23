@@ -10,7 +10,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { detectGpuProfile, type DetectEnv, type DetectIo } from "./detect";
 import { createAccelerationService, defaultAvailableBackends, type AccelerationApi } from "./service";
-import type { GpuProfile } from "../../../src/services/ports";
+import { createAccelerationManager, type AccelerationManager } from "./manager";
+import { emptyIndex, type EngineBackends } from "./backends";
+import { BACKEND_MANIFEST, findArtifact } from "./manifest";
+import { installArtifact, ProvisionError, type ProvisionIo } from "./provision";
+import type { AccelerationEngine, AccelerationMode, GpuProfile } from "../../../src/services/ports";
 
 function run(cmd: string, args: string[], timeoutMs = 3500): string | undefined {
   try {
@@ -84,5 +88,108 @@ export function createNodeAccelerationService(runtimeDir: string): AccelerationA
     },
     availableBackends: (profile) => defaultAvailableBackends(profile.os, profile.arch),
     isCacheFresh: freshEnough,
+  });
+}
+
+function freeBytesOf(p: string): number {
+  for (const candidate of [p, path.dirname(p)]) {
+    try {
+      const stats = fs.statfsSync(candidate);
+      return Number(stats.bavail) * Number(stats.bsize);
+    } catch {
+      // try the parent
+    }
+  }
+  return 0;
+}
+
+/**
+ * The full acceleration manager (profile/rescan/plan + state/setMode/enable/disable/retry/runTest/
+ * removeGpu/reset + events). Provisioning is pin-gated: until the manifest carries pinned hashes,
+ * `enable` fails gracefully with a clear message and the app stays on the CPU.
+ */
+export function createNodeAccelerationManager(opts: {
+  runtimeDir: string;
+  getMode: () => AccelerationMode;
+  persistMode: (mode: AccelerationMode) => void;
+}): AccelerationManager {
+  const { runtimeDir } = opts;
+  const base = createNodeAccelerationService(runtimeDir);
+  const backendsPath = path.join(runtimeDir, "backends.json");
+
+  function loadAll(): Record<string, EngineBackends> {
+    try {
+      return JSON.parse(fs.readFileSync(backendsPath, "utf8")) as Record<string, EngineBackends>;
+    } catch {
+      return {};
+    }
+  }
+  function saveAll(all: Record<string, EngineBackends>): void {
+    try {
+      fs.mkdirSync(runtimeDir, { recursive: true });
+      fs.writeFileSync(backendsPath, JSON.stringify(all, null, 2));
+    } catch {
+      // persistence is best-effort
+    }
+  }
+
+  const provisionIo: ProvisionIo = {
+    freeDiskBytes: () => freeBytesOf(runtimeDir),
+    download: async () => {
+      throw new ProvisionError("download_failed", "Downloading GPU support isn't wired in this build yet.");
+    },
+    extractZip: async () => {
+      throw new ProvisionError("unknown", "Extracting GPU support isn't wired in this build yet.");
+    },
+    fileExists: (p) => fs.existsSync(p),
+    ensureDir: (p) => fs.mkdirSync(p, { recursive: true }),
+    atomicActivate: (staging, finalDir) => fs.renameSync(staging, finalDir),
+    removeDir: (p) => {
+      try {
+        fs.rmSync(p, { recursive: true, force: true });
+      } catch {
+        // ignore
+      }
+    },
+    now: () => new Date().toISOString(),
+  };
+
+  return createAccelerationManager({
+    profile: base.profile,
+    rescan: base.rescan,
+    plan: base.plan,
+    getMode: opts.getMode,
+    persistMode: opts.persistMode,
+    loadBackends: (engine) => loadAll()[engine] ?? emptyIndex(engine),
+    saveBackends: (engine, index) => {
+      const all = loadAll();
+      all[engine] = index;
+      saveAll(all);
+    },
+    provision: async (engine: AccelerationEngine, backend) => {
+      const profile = await base.profile();
+      const artifact = findArtifact(BACKEND_MANIFEST, { engine, backend, os: profile.os, arch: profile.arch });
+      if (!artifact) throw new ProvisionError("not_pinned", "GPU support isn't available for this system yet.");
+      const result = await installArtifact(artifact, path.join(runtimeDir, engine), provisionIo);
+      return { dir: result.dir, version: artifact.version };
+    },
+    probe: async (_engine, backend) => ({ ok: false, backend, message: "GPU support could not be validated." }),
+    removeDirs: (dirs) => {
+      for (const dir of dirs) provisionIo.removeDir(dir);
+    },
+    resetRuntime: () => {
+      try {
+        fs.rmSync(runtimeDir, { recursive: true, force: true });
+      } catch {
+        // ignore
+      }
+    },
+    isOnline: () => true,
+    runBenchmark: async () => ({
+      ok: false,
+      llm: { ok: false, message: "GPU acceleration is not active." },
+      stt: { ok: false, message: "GPU acceleration is not active." },
+      summary: "Running on the CPU.",
+    }),
   });
 }

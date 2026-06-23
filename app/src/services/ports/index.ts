@@ -217,6 +217,13 @@ export type {
   BackendCandidate,
   AccelerationLevel,
   AccelerationPlan,
+  RuntimeMetrics,
+  BackendState,
+  EngineAcceleration,
+  AccelerationState,
+  AccelerationProgress,
+  AccelerationTestLeg,
+  AccelerationTestReport,
 } from "./types";
 
 import type {
@@ -243,6 +250,14 @@ import type {
 } from "./types";
 
 import type { GpuProfile, AccelerationPlan } from "./types";
+import type {
+  AccelerationEngine,
+  AccelerationMode,
+  Backend,
+  AccelerationState,
+  AccelerationProgress,
+  AccelerationTestReport,
+} from "./types";
 
 /**
  * Read-only content the views render. Async: the mock resolves immediately; the real ipc adapter
@@ -338,6 +353,26 @@ export interface AccelerationService {
   rescan(): Promise<GpuProfile>;
   /** The smart recommendation: best backend per engine, level, estimate, and download size. */
   plan(): Promise<AccelerationPlan>;
+  /** The current acceleration state (mode, per-engine device, what is running). */
+  state(): Promise<AccelerationState>;
+  /** Turn acceleration on/off/auto (provisions + proves as needed; long-running -> events). */
+  setMode(mode: AccelerationMode): Promise<void>;
+  /** Provision + activate a backend for an engine (the one-click flow / Advanced). */
+  enable(engine: AccelerationEngine, backend?: Backend): Promise<void>;
+  /** Force CPU for an engine. */
+  disable(engine: AccelerationEngine): Promise<void>;
+  /** Retry a quarantined backend (e.g. after a driver update). */
+  retry(engine: AccelerationEngine, backend: Backend): Promise<void>;
+  /** Run the friendly Test & validate benchmark (CPU vs GPU). */
+  runTest(opts?: { tokens?: number; warmup?: boolean }): Promise<AccelerationTestReport>;
+  /** Advanced: delete all GPU backends for an engine, revert to CPU (keeps models). */
+  removeGpuBackends(engine: AccelerationEngine): Promise<void>;
+  /** Advanced: clear all acceleration state and re-detect ("Reset acceleration"). */
+  reset(): Promise<void>;
+  /** Live provisioning/probe/rollback progress; returns an unsubscribe fn. */
+  onProgress(cb: (event: AccelerationProgress) => void): () => void;
+  /** Live acceleration-state changes; returns an unsubscribe fn. */
+  onState(cb: (state: AccelerationState) => void): () => void;
 }
 
 /** The full set of ports available to the app at runtime. */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { ConnectionProfile, Services, AccelerationPlan, GpuProfile } from "@services/ports";
+import type { ConnectionProfile, Services, AccelerationPlan, AccelerationState, AccelerationTestReport, GpuProfile } from "@services/ports";
 import { mockServices } from "@services/adapters/mock";
 import { createIpcServices } from "@services/adapters/ipc";
 import { createDispatch } from "@ipc/dispatch";
@@ -17,6 +17,20 @@ const GPU_PLAN: AccelerationPlan = {
   recommendedLevel: "cpu-only",
   summary: "Running on the CPU.",
   requiresDownload: false,
+};
+const GPU_STATE: AccelerationState = {
+  mode: "auto",
+  llm: { engine: "llama", device: "cpu", state: "none", message: "Running on the CPU." },
+  stt: { engine: "whisper", device: "cpu", state: "none", message: "Running on the CPU." },
+  gpuActive: false,
+  online: true,
+  summary: "Running on the CPU.",
+};
+const GPU_TEST_REPORT: AccelerationTestReport = {
+  ok: true,
+  llm: { ok: true, message: "ok" },
+  stt: { ok: true, message: "ok" },
+  summary: "ok",
 };
 
 /**
@@ -126,6 +140,14 @@ const dispatch = createDispatch({
     profile: () => GPU_PROFILE,
     rescan: () => GPU_PROFILE,
     plan: () => GPU_PLAN,
+    state: () => GPU_STATE,
+    setMode: () => undefined,
+    enable: () => undefined,
+    disable: () => undefined,
+    retry: () => undefined,
+    runTest: () => GPU_TEST_REPORT,
+    removeGpuBackends: () => undefined,
+    reset: () => undefined,
   },
 });
 const ipcServices = createIpcServices((channel, ...args) => dispatch(channel, ...args));

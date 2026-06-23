@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ServicesContext, type Services } from "@services";
-import type { ModelProgress, ModelRuntimeEvent, TranscriptEvent } from "@services/ports";
+import type { ModelProgress, ModelRuntimeEvent, TranscriptEvent, AccelerationProgress, AccelerationState } from "@services/ports";
 // ServicesProvider is the ONE place allowed to bind a concrete adapter (ESLint allowlists it).
 import { mockServices } from "@services/adapters/mock";
 import { createIpcServices } from "@services/adapters/ipc";
@@ -19,6 +19,9 @@ declare global {
       onModelRuntime?: (callback: (event: ModelRuntimeEvent) => void) => () => void;
       /** Subscribe to content mutations (e.g. a new dictation) from main; returns an unsubscribe fn. */
       onContentChanged?: (callback: (collection: string) => void) => () => void;
+      /** Subscribe to GPU acceleration progress + state changes from main. */
+      onAccelerationProgress?: (callback: (event: AccelerationProgress) => void) => () => void;
+      onAccelerationState?: (callback: (state: AccelerationState) => void) => () => void;
       /** Push high-rate 16 kHz PCM frames for a streaming capture session (one-way). */
       capturePushChunk?: (sessionId: string, base64Pcm16: string) => void;
       /** Subscribe to the live transcript from a streaming capture session; returns an unsubscribe fn. */
@@ -45,6 +48,8 @@ function resolveServices(): Services {
           }
         : undefined,
       bridge.onModelRuntime ? (cb) => bridge.onModelRuntime!(cb) : undefined,
+      bridge.onAccelerationProgress ? (cb) => bridge.onAccelerationProgress!(cb) : undefined,
+      bridge.onAccelerationState ? (cb) => bridge.onAccelerationState!(cb) : undefined,
     );
   }
   return mockServices;

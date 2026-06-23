@@ -385,3 +385,81 @@ export interface AccelerationPlan {
   /** False when already provisioned or offline-ready (no download needed). */
   requiresDownload: boolean;
 }
+
+/** Local, never-transmitted runtime measurements that power the test UX + honest status. */
+export interface RuntimeMetrics {
+  device: "gpu" | "cpu";
+  backend?: Backend;
+  tokensPerSec?: number;
+  offloadedLayers?: number;
+  vramUsedBytes?: number;
+  firstTokenMs?: number;
+  realtimeFactor?: number;
+}
+
+export type BackendState =
+  | "none"
+  | "planning"
+  | "downloading"
+  | "verifying"
+  | "installing"
+  | "probing"
+  | "active"
+  | "deferred"
+  | "quarantined"
+  | "failed";
+
+export interface EngineAcceleration {
+  engine: AccelerationEngine;
+  device: "gpu" | "cpu";
+  activeBackend?: Backend;
+  state: BackendState;
+  /** User-facing one-liner. */
+  message: string;
+  metrics?: RuntimeMetrics;
+  lastError?: { code: string; message: string };
+}
+
+export interface AccelerationState {
+  mode: AccelerationMode;
+  llm: EngineAcceleration;
+  stt: EngineAcceleration;
+  /** Any engine currently on the GPU. */
+  gpuActive: boolean;
+  /** Network reachable for provisioning (drives offline copy). */
+  online: boolean;
+  /** Present while `auto` mode provisions in the background. */
+  autoSetup?: { active: boolean; message: string; bytesDone?: number; bytesTotal?: number };
+  /** One-shot, surfaced as a toast then cleared. */
+  notice?: { kind: "enabled" | "rolled-back" | "updated"; message: string };
+  /** "Running on your NVIDIA RTX 4090" / "Running on CPU". */
+  summary: string;
+}
+
+export interface AccelerationProgress {
+  engine: AccelerationEngine;
+  backend: Backend;
+  state: BackendState;
+  bytesDone?: number;
+  bytesTotal?: number;
+  message: string;
+  /** Present on a rollback. */
+  rolledBackTo?: Backend;
+}
+
+export interface AccelerationTestLeg {
+  ok: boolean;
+  message: string;
+  metrics?: RuntimeMetrics;
+}
+
+export interface AccelerationTestReport {
+  ok: boolean;
+  gpu?: RuntimeMetrics;
+  cpu?: RuntimeMetrics;
+  /** gpu.tokensPerSec / cpu.tokensPerSec. */
+  speedup?: number;
+  llm: AccelerationTestLeg;
+  stt: AccelerationTestLeg;
+  summary: string;
+}

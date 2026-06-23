@@ -41,6 +41,11 @@ import type {
   UploadJob,
   GpuProfile,
   AccelerationPlan,
+  AccelerationState,
+  AccelerationMode,
+  AccelerationEngine,
+  Backend,
+  AccelerationTestReport,
 } from "../../src/services/ports";
 
 /** Bumped only on breaking channel changes; preload sends it, main rejects mismatches. */
@@ -94,6 +99,14 @@ export const CHANNELS = {
   accelerationProfile: "acceleration:profile",
   accelerationRescan: "acceleration:rescan",
   accelerationPlan: "acceleration:plan",
+  accelerationState: "acceleration:state",
+  accelerationSetMode: "acceleration:setMode",
+  accelerationEnable: "acceleration:enable",
+  accelerationDisable: "acceleration:disable",
+  accelerationRetry: "acceleration:retry",
+  accelerationRunTest: "acceleration:runTest",
+  accelerationRemoveGpu: "acceleration:removeGpu",
+  accelerationReset: "acceleration:reset",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -146,6 +159,14 @@ export interface ChannelContract {
   "acceleration:profile": { request: []; response: GpuProfile };
   "acceleration:rescan": { request: []; response: GpuProfile };
   "acceleration:plan": { request: []; response: AccelerationPlan };
+  "acceleration:state": { request: []; response: AccelerationState };
+  "acceleration:setMode": { request: [AccelerationMode]; response: void };
+  "acceleration:enable": { request: [AccelerationEngine, Backend?]; response: void };
+  "acceleration:disable": { request: [AccelerationEngine]; response: void };
+  "acceleration:retry": { request: [AccelerationEngine, Backend]; response: void };
+  "acceleration:runTest": { request: [{ tokens?: number; warmup?: boolean }?]; response: AccelerationTestReport };
+  "acceleration:removeGpu": { request: [AccelerationEngine]; response: void };
+  "acceleration:reset": { request: []; response: void };
 }
 
 export type RequestOf<C extends Channel> = ChannelContract[C]["request"];

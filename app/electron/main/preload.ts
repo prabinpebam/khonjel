@@ -60,4 +60,15 @@ contextBridge.exposeInMainWorld("khonjel", {
     ipcRenderer.on("khonjel:content-changed", listener);
     return () => ipcRenderer.removeListener("khonjel:content-changed", listener);
   },
+  // GPU acceleration relays: main streams live provisioning/probe progress + state changes.
+  onAccelerationProgress: (callback: (event: unknown) => void) => {
+    const listener = (_event: unknown, payload: unknown) => callback(payload);
+    ipcRenderer.on("khonjel:acceleration-progress", listener);
+    return () => ipcRenderer.removeListener("khonjel:acceleration-progress", listener);
+  },
+  onAccelerationState: (callback: (state: unknown) => void) => {
+    const listener = (_event: unknown, payload: unknown) => callback(payload);
+    ipcRenderer.on("khonjel:acceleration-state", listener);
+    return () => ipcRenderer.removeListener("khonjel:acceleration-state", listener);
+  },
 });

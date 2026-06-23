@@ -30,6 +30,9 @@ import type {
   UploadJob,
   GpuProfile,
   AccelerationPlan,
+  AccelerationState,
+  AccelerationProgress,
+  AccelerationTestReport,
 } from "@services/ports";
 import { CHANNELS } from "@ipc/ipc-contract";
 
@@ -53,6 +56,10 @@ export type SubscribeModelRuntime = (callback: (event: ModelRuntimeEvent) => voi
 /** Subscribe to content-mutation relays (preload `window.khonjel.onContentChanged`). */
 export type SubscribeContentChanged = (callback: (collection: string) => void) => () => void;
 
+/** Subscribe to acceleration progress + state relays (preload bridges). */
+export type SubscribeAccelerationProgress = (callback: (event: AccelerationProgress) => void) => () => void;
+export type SubscribeAccelerationState = (callback: (state: AccelerationState) => void) => () => void;
+
 /** The capture bridge (preload): push high-rate frames + subscribe to the live transcript. */
 export interface CaptureBridge {
   pushChunk: (sessionId: string, base64Pcm16: string) => void;
@@ -65,6 +72,8 @@ export function createIpcServices(
   subscribeContentChanged?: SubscribeContentChanged,
   captureBridge?: CaptureBridge,
   subscribeModelRuntime?: SubscribeModelRuntime,
+  subscribeAccelerationProgress?: SubscribeAccelerationProgress,
+  subscribeAccelerationState?: SubscribeAccelerationState,
 ): Services {
   return {
     profile: {
@@ -150,6 +159,17 @@ export function createIpcServices(
       profile: () => invoke(CHANNELS.accelerationProfile) as Promise<GpuProfile>,
       rescan: () => invoke(CHANNELS.accelerationRescan) as Promise<GpuProfile>,
       plan: () => invoke(CHANNELS.accelerationPlan) as Promise<AccelerationPlan>,
+      state: () => invoke(CHANNELS.accelerationState) as Promise<AccelerationState>,
+      setMode: (mode) => invoke(CHANNELS.accelerationSetMode, mode) as Promise<void>,
+      enable: (engine, backend) =>
+        invoke(CHANNELS.accelerationEnable, ...(backend ? [engine, backend] : [engine])) as Promise<void>,
+      disable: (engine) => invoke(CHANNELS.accelerationDisable, engine) as Promise<void>,
+      retry: (engine, backend) => invoke(CHANNELS.accelerationRetry, engine, backend) as Promise<void>,
+      runTest: (opts) => invoke(CHANNELS.accelerationRunTest, ...(opts ? [opts] : [])) as Promise<AccelerationTestReport>,
+      removeGpuBackends: (engine) => invoke(CHANNELS.accelerationRemoveGpu, engine) as Promise<void>,
+      reset: () => invoke(CHANNELS.accelerationReset) as Promise<void>,
+      onProgress: (callback) => subscribeAccelerationProgress?.(callback) ?? (() => {}),
+      onState: (callback) => subscribeAccelerationState?.(callback) ?? (() => {}),
     },
   };
 }

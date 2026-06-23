@@ -4,7 +4,7 @@ import { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen, session, s
 import * as path from "node:path";
 import { writeFileSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import type { Platform } from "../../src/services/ports";
+import type { Platform, AccelerationMode } from "../../src/services/ports";
 import { CHANNELS, checkContractVersion, ipcError } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
 import { createSettingsStore, fileSettingsIO, encryptedSettingsIO } from "./services/settings";
@@ -38,7 +38,7 @@ import {
   modelsDirOf,
 } from "./models/runtime";
 import { detectHardwareProfile } from "./models/hardware";
-import { createNodeAccelerationService } from "./acceleration/node-io";
+import { createNodeAccelerationManager } from "./acceleration/node-io";
 import { createSecretStore } from "./secrets/store";
 import { safeStorageCipher } from "./secrets/safeStorageCipher";
 import { createProviderRouter } from "./providers/router";
@@ -141,7 +141,13 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
   // ticks are relayed to the renderer over "khonjel:model-progress" (preload bridges onModelProgress).
   const modelsDir = modelsDirOf(userData);
   mkdirSync(modelsDir, { recursive: true });
-  const accelerationService = createNodeAccelerationService(path.join(userData, "runtime"));
+  const accelerationManager = createNodeAccelerationManager({
+    runtimeDir: path.join(userData, "runtime"),
+    getMode: () => (settingsStore.get().values["inference.acceleration.mode"] as AccelerationMode) ?? "auto",
+    persistMode: (mode) => {
+      settingsStore.patch({ values: { "inference.acceleration.mode": mode } });
+    },
+  });
   const engineReady = makeEngineReady({
     userDataDir: userData,
     appDir: path.join(__dirname, ".."),
@@ -367,10 +373,26 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
       stop: (id) => captureManager.stop(id),
     },
     acceleration: {
-      profile: () => accelerationService.profile(),
-      rescan: () => accelerationService.rescan(),
-      plan: () => accelerationService.plan(),
+      profile: () => accelerationManager.profile(),
+      rescan: () => accelerationManager.rescan(),
+      plan: () => accelerationManager.plan(),
+      state: () => accelerationManager.state(),
+      setMode: (mode) => accelerationManager.setMode(mode),
+      enable: (engine, backend) => accelerationManager.enable(engine, backend),
+      disable: (engine) => accelerationManager.disable(engine),
+      retry: (engine, backend) => accelerationManager.retry(engine, backend),
+      runTest: (opts) => accelerationManager.runTest(opts),
+      removeGpuBackends: (engine) => accelerationManager.removeGpuBackends(engine),
+      reset: () => accelerationManager.reset(),
     },
+  });
+
+  // Relay acceleration progress + state to all renderer windows (preload bridges these).
+  accelerationManager.onProgress((event) => {
+    for (const win of BrowserWindow.getAllWindows()) win.webContents.send("khonjel:acceleration-progress", event);
+  });
+  accelerationManager.onState((state) => {
+    for (const win of BrowserWindow.getAllWindows()) win.webContents.send("khonjel:acceleration-state", state);
   });
 
   return { dispatch, contentStore, settingsStore, captureManager };

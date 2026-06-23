@@ -402,6 +402,58 @@ const AccelerationPlanSchema = z.object({
   requiresDownload: z.boolean(),
 });
 
+const AccelerationModeSchema = z.enum(["auto", "on", "off"]);
+const AccelerationEngineSchema = z.enum(["llama", "whisper"]);
+const DeviceSchema = z.enum(["gpu", "cpu"]);
+const BackendStateSchema = z.enum([
+  "none", "planning", "downloading", "verifying", "installing", "probing", "active", "deferred", "quarantined", "failed",
+]);
+
+const RuntimeMetricsSchema = z.object({
+  device: DeviceSchema,
+  backend: BackendSchema.optional(),
+  tokensPerSec: z.number().optional(),
+  offloadedLayers: z.number().optional(),
+  vramUsedBytes: z.number().optional(),
+  firstTokenMs: z.number().optional(),
+  realtimeFactor: z.number().optional(),
+});
+
+const EngineAccelerationSchema = z.object({
+  engine: AccelerationEngineSchema,
+  device: DeviceSchema,
+  activeBackend: BackendSchema.optional(),
+  state: BackendStateSchema,
+  message: z.string().max(300),
+  metrics: RuntimeMetricsSchema.optional(),
+  lastError: z.object({ code: z.string().max(64), message: z.string().max(300) }).optional(),
+});
+
+const AccelerationStateSchema = z.object({
+  mode: AccelerationModeSchema,
+  llm: EngineAccelerationSchema,
+  stt: EngineAccelerationSchema,
+  gpuActive: z.boolean(),
+  online: z.boolean(),
+  autoSetup: z
+    .object({ active: z.boolean(), message: z.string().max(300), bytesDone: z.number().optional(), bytesTotal: z.number().optional() })
+    .optional(),
+  notice: z.object({ kind: z.enum(["enabled", "rolled-back", "updated"]), message: z.string().max(300) }).optional(),
+  summary: z.string().max(300),
+});
+
+const AccelerationTestLegSchema = z.object({ ok: z.boolean(), message: z.string().max(300), metrics: RuntimeMetricsSchema.optional() });
+const AccelerationTestReportSchema = z.object({
+  ok: z.boolean(),
+  gpu: RuntimeMetricsSchema.optional(),
+  cpu: RuntimeMetricsSchema.optional(),
+  speedup: z.number().optional(),
+  llm: AccelerationTestLegSchema,
+  stt: AccelerationTestLegSchema,
+  summary: z.string().max(300),
+});
+const RunTestOptsSchema = z.object({ tokens: z.number().optional(), warmup: z.boolean().optional() });
+
 /** Request argument tuples (Phase 0 channels take no arguments; settings:patch takes a patch). */
 export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.profileGet]: z.tuple([]),
@@ -450,6 +502,14 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.accelerationProfile]: z.tuple([]),
   [CHANNELS.accelerationRescan]: z.tuple([]),
   [CHANNELS.accelerationPlan]: z.tuple([]),
+  [CHANNELS.accelerationState]: z.tuple([]),
+  [CHANNELS.accelerationSetMode]: z.tuple([AccelerationModeSchema]),
+  [CHANNELS.accelerationEnable]: z.union([z.tuple([AccelerationEngineSchema, BackendSchema]), z.tuple([AccelerationEngineSchema])]),
+  [CHANNELS.accelerationDisable]: z.tuple([AccelerationEngineSchema]),
+  [CHANNELS.accelerationRetry]: z.tuple([AccelerationEngineSchema, BackendSchema]),
+  [CHANNELS.accelerationRunTest]: z.union([z.tuple([RunTestOptsSchema]), z.tuple([])]),
+  [CHANNELS.accelerationRemoveGpu]: z.tuple([AccelerationEngineSchema]),
+  [CHANNELS.accelerationReset]: z.tuple([]),
 };
 
 /** Response payload schemas. */
@@ -500,4 +560,12 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.accelerationProfile]: GpuProfileSchema,
   [CHANNELS.accelerationRescan]: GpuProfileSchema,
   [CHANNELS.accelerationPlan]: AccelerationPlanSchema,
+  [CHANNELS.accelerationState]: AccelerationStateSchema,
+  [CHANNELS.accelerationSetMode]: z.void(),
+  [CHANNELS.accelerationEnable]: z.void(),
+  [CHANNELS.accelerationDisable]: z.void(),
+  [CHANNELS.accelerationRetry]: z.void(),
+  [CHANNELS.accelerationRunTest]: AccelerationTestReportSchema,
+  [CHANNELS.accelerationRemoveGpu]: z.void(),
+  [CHANNELS.accelerationReset]: z.void(),
 };
