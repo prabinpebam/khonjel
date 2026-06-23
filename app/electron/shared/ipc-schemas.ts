@@ -228,6 +228,112 @@ const ModelStorageReportSchema = z.object({
   freeBytes: z.number(),
 });
 
+const HardwareGpuSchema = z.object({
+  name: z.string(),
+  vendor: z.enum(["nvidia", "amd", "intel", "apple", "unknown"]),
+  vramBytes: z.number().optional(),
+  driverVersion: z.string().optional(),
+});
+
+const HardwareProfileSchema = z.object({
+  os: z.enum(["win32", "darwin", "linux"]),
+  arch: z.string(),
+  cpuName: z.string().optional(),
+  physicalCores: z.number().optional(),
+  logicalCores: z.number().optional(),
+  totalRamBytes: z.number().optional(),
+  availableRamBytes: z.number().optional(),
+  freeDiskBytes: z.number().optional(),
+  gpus: z.array(HardwareGpuSchema),
+  power: z.enum(["plugged", "battery", "unknown"]),
+  detectionWarnings: z.array(z.string()),
+});
+
+const RuntimeStatusSchema = z.object({
+  engine: z.enum(["whisper", "llama", "parakeet"]),
+  state: z.enum(["ready", "missing", "downloadable", "unsupported", "failed"]),
+  message: z.string(),
+  path: z.string().optional(),
+  version: z.string().optional(),
+  reason: z.string().optional(),
+  action: z.enum(["download-runtime", "choose-another", "open-folder", "retry"]).optional(),
+});
+
+const CompatibilityReasonSchema = z.object({
+  code: z.enum([
+    "enough-memory",
+    "low-memory",
+    "not-enough-memory",
+    "enough-disk",
+    "not-enough-disk",
+    "gpu-available",
+    "cpu-only",
+    "runtime-ready",
+    "runtime-missing",
+    "runtime-unsupported",
+    "hardware-unknown",
+  ]),
+  message: z.string(),
+  action: z.string().optional(),
+});
+
+const ModelCompatibilitySchema = z.object({
+  modelId: z.string(),
+  kind: z.enum(["stt", "llm"]),
+  level: z.enum(["recommended", "works", "limited", "unsupported", "unknown"]),
+  summary: z.string(),
+  reasons: z.array(CompatibilityReasonSchema),
+  estimated: z.object({
+    speed: z.enum(["fast", "good", "slow", "unknown"]),
+    firstLoad: z.enum(["short", "medium", "long", "unknown"]),
+  }),
+});
+
+const ModelCompatibilityReportSchema = z.object({
+  hardware: HardwareProfileSchema,
+  runtimes: z.array(RuntimeStatusSchema),
+  summary: z.object({
+    level: z.enum(["great", "good", "limited", "not-ready", "unknown"]),
+    title: z.string(),
+    message: z.string(),
+  }),
+  recommended: z.object({ stt: z.string().optional(), llm: z.string().optional() }),
+  models: z.array(ModelCompatibilitySchema),
+});
+
+const ModelReadinessSchema = z.object({
+  modelId: z.string(),
+  kind: z.enum(["stt", "llm"]),
+  state: z.enum([
+    "not-installed",
+    "downloading",
+    "verifying",
+    "installed",
+    "runtime-missing",
+    "starting",
+    "ready",
+    "failed",
+    "unsupported",
+  ]),
+  active: z.boolean(),
+  selected: z.boolean(),
+  previousActiveModelId: z.string().optional(),
+  reason: z.string().optional(),
+  nextAction: z.enum(["download", "install-runtime", "retry", "choose-another", "manage-storage"]).optional(),
+});
+
+const ActiveModelSlotSchema = z.object({
+  selectedModelId: z.string().optional(),
+  activeModelId: z.string().optional(),
+  state: z.enum(["none", "starting", "ready", "fallback", "failed"]),
+  message: z.string(),
+});
+
+const ActiveModelReportSchema = z.object({
+  speech: ActiveModelSlotSchema.optional(),
+  language: ActiveModelSlotSchema.optional(),
+});
+
 const HistoryDraftSchema = z.object({
   finalText: z.string(),
   app: z.string(),
@@ -284,6 +390,10 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.contentAddHistory]: z.tuple([HistoryDraftSchema]),
   [CHANNELS.contentReplace]: z.tuple([ContentCollectionSchema, z.array(z.unknown())]),
   [CHANNELS.modelsStatus]: z.tuple([]),
+  [CHANNELS.modelsCompatibility]: z.tuple([]),
+  [CHANNELS.modelsReadiness]: z.tuple([]),
+  [CHANNELS.modelsActive]: z.tuple([]),
+  [CHANNELS.modelsPrepare]: z.tuple([z.string()]),
   [CHANNELS.modelsDownload]: z.tuple([z.string()]),
   [CHANNELS.modelsCancel]: z.tuple([z.string()]),
   [CHANNELS.modelsVerify]: z.tuple([z.string()]),
@@ -327,6 +437,10 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.contentAddHistory]: z.array(HistoryEntrySchema),
   [CHANNELS.contentReplace]: z.void(),
   [CHANNELS.modelsStatus]: z.array(ModelStatusSchema),
+  [CHANNELS.modelsCompatibility]: ModelCompatibilityReportSchema,
+  [CHANNELS.modelsReadiness]: z.array(ModelReadinessSchema),
+  [CHANNELS.modelsActive]: ActiveModelReportSchema,
+  [CHANNELS.modelsPrepare]: z.void(),
   [CHANNELS.modelsDownload]: z.void(),
   [CHANNELS.modelsCancel]: z.void(),
   [CHANNELS.modelsVerify]: z.object({ ok: z.boolean() }),

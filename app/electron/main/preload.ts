@@ -38,6 +38,12 @@ contextBridge.exposeInMainWorld("khonjel", {
     ipcRenderer.on("khonjel:model-progress", listener);
     return () => ipcRenderer.removeListener("khonjel:model-progress", listener);
   },
+  // Local-model runtime readiness/switching relay.
+  onModelRuntime: (callback: (event: unknown) => void) => {
+    const listener = (_event: unknown, payload: unknown) => callback(payload);
+    ipcRenderer.on("khonjel:model-runtime", listener);
+    return () => ipcRenderer.removeListener("khonjel:model-runtime", listener);
+  },
   // Streaming capture: push high-rate 16 kHz PCM frames (one-way, no per-chunk validation) and
   // subscribe to the live transcript the capture session broadcasts.
   capturePushChunk: (sessionId: string, base64Pcm16: string) =>

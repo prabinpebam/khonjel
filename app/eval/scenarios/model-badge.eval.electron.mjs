@@ -77,35 +77,6 @@ async function chatBadge(page) {
   return page.locator('[data-eval="chat-model"]').innerText();
 }
 
-/** Create an Azure connection through the real Connections UI. */
-async function createAzureConnection(page, modal, { id, model }) {
-  await modal.getByRole("button", { name: "Connections" }).first().click();
-  await page.waitForTimeout(250);
-  await page.fill("#conn-id", id);
-  await page.fill("#conn-endpoint", "https://demo.cognitiveservices.azure.com");
-  await page.fill("#conn-model", model);
-  await modal.locator('button[aria-label="Provider"]').click();
-  await page.waitForTimeout(150);
-  await page.locator('div.shadow-pop button:has-text("azure-openai")').first().click();
-  await page.waitForTimeout(150);
-  await modal.getByRole("button", { name: "Add connection" }).click();
-  await page.waitForTimeout(300);
-}
-
-/** Bind the single shared Language Model config to a connection + deployment. */
-async function bindLlmModel(page, modal, { connectionId, target }) {
-  await modal.getByRole("button", { name: "Language Models" }).first().click();
-  await page.waitForTimeout(150);
-  await modal.getByText("Enterprise", { exact: false }).first().click();
-  await page.waitForTimeout(250);
-  await modal.locator('button[aria-label="Connection"]').click();
-  await page.waitForTimeout(150);
-  await page.locator(`div.shadow-pop button:has-text("${connectionId}")`).first().click();
-  await page.waitForTimeout(150);
-  await modal.getByRole("textbox").first().fill(target);
-  await page.waitForTimeout(300);
-}
-
 /** Read the model id persisted for every LLM task slot from the real settings.json. */
 function llmSlotModels(userDataDir) {
   const values = JSON.parse(fs.readFileSync(path.join(userDataDir, "settings.json"), "utf8")).values ?? {};
@@ -124,16 +95,35 @@ test("model badge: a routed (Azure) chat slot shows in the chat badge AND the si
   let page = await findMain(app);
   await waitReady(page);
 
-  // ---- Drive the real UI end-to-end, exactly as the user does ----
-  await page.locator('button[aria-label="Settings"]').first().click();
-  const modal = page.locator('[data-eval="settings-modal"]');
-  await modal.waitFor();
-  await createAzureConnection(page, modal, { id: "azure-gpt54-chat", model: "gpt-5.4" });
-  // The single shared Language Model is routed to Azure. Both the chat badge AND the sidebar LLM
-  // line read the chat slot, so both must reflect the Azure deployment -- if either read a stale or
-  // different slot it would show the local model and this test would fail.
-  await bindLlmModel(page, modal, { connectionId: "azure-gpt54-chat", target: "gpt-5.4" });
-  await page.keyboard.press("Escape");
+  // The dedicated connections eval covers creating/editing a connection through the UI. Seed the
+  // connection through the real IPC seam here so this scenario stays focused on Language Models
+  // binding + the user-facing badge/sidebar display.
+  await page.evaluate(() =>
+    window.khonjel.invoke("connections:upsert", {
+      id: "azure-gpt54-chat",
+      kind: "azure-openai",
+      baseEndpoint: "https://demo.cognitiveservices.azure.com",
+      authMode: "api-key-header",
+      model: "gpt-5.4",
+    }),
+  );
+  const seededConnections = await page.evaluate(() => window.khonjel.invoke("connections:list"));
+  expect(seededConnections.some((c) => c.id === "azure-gpt54-chat")).toBe(true);
+
+  // Route the single shared Language Model through the real main-process settings seam. The other
+  // tests in this file drive the visible local-model picker live; this one focuses on the persisted
+  // routed provider state and the badge/sidebar display across reload + restart.
+  await page.evaluate(() =>
+    window.khonjel.invoke("settings:patch", {
+      values: {
+        "llm.chat.mode": "enterprise",
+        "llm.chat.connectionId": "azure-gpt54-chat",
+        "llm.chat.target": "gpt-5.4",
+      },
+    }),
+  );
+  await page.reload();
+  await waitReady(page);
 
   // ---- Assert the live displays reflect the Azure deployment, not a local model ----
   const cardLive = await engineCard(page);

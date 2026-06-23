@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ServicesContext, type Services } from "@services";
-import type { ModelProgress, TranscriptEvent } from "@services/ports";
+import type { ModelProgress, ModelRuntimeEvent, TranscriptEvent } from "@services/ports";
 // ServicesProvider is the ONE place allowed to bind a concrete adapter (ESLint allowlists it).
 import { mockServices } from "@services/adapters/mock";
 import { createIpcServices } from "@services/adapters/ipc";
@@ -15,6 +15,8 @@ declare global {
       onHotkey?: (callback: (action: string) => void) => () => void;
       /** Subscribe to local-model download progress from main; returns an unsubscribe fn. */
       onModelProgress?: (callback: (progress: ModelProgress) => void) => () => void;
+      /** Subscribe to local-model runtime readiness/switching events from main. */
+      onModelRuntime?: (callback: (event: ModelRuntimeEvent) => void) => () => void;
       /** Subscribe to content mutations (e.g. a new dictation) from main; returns an unsubscribe fn. */
       onContentChanged?: (callback: (collection: string) => void) => () => void;
       /** Push high-rate 16 kHz PCM frames for a streaming capture session (one-way). */
@@ -42,6 +44,7 @@ function resolveServices(): Services {
             onTranscript: (cb) => bridge.onTranscript!(cb),
           }
         : undefined,
+      bridge.onModelRuntime ? (cb) => bridge.onModelRuntime!(cb) : undefined,
     );
   }
   return mockServices;

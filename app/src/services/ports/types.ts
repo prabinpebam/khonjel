@@ -175,6 +175,122 @@ export interface ModelProgress {
   error?: ModelError;
 }
 
+export interface HardwareGpu {
+  name: string;
+  vendor: "nvidia" | "amd" | "intel" | "apple" | "unknown";
+  vramBytes?: number;
+  driverVersion?: string;
+}
+
+export interface HardwareProfile {
+  os: "win32" | "darwin" | "linux";
+  arch: string;
+  cpuName?: string;
+  physicalCores?: number;
+  logicalCores?: number;
+  totalRamBytes?: number;
+  availableRamBytes?: number;
+  freeDiskBytes?: number;
+  gpus: HardwareGpu[];
+  power: "plugged" | "battery" | "unknown";
+  detectionWarnings: string[];
+}
+
+export interface RuntimeStatus {
+  engine: "whisper" | "llama" | "parakeet";
+  state: "ready" | "missing" | "downloadable" | "unsupported" | "failed";
+  message: string;
+  path?: string;
+  version?: string;
+  reason?: string;
+  action?: "download-runtime" | "choose-another" | "open-folder" | "retry";
+}
+
+export type CompatibilityLevel = "recommended" | "works" | "limited" | "unsupported" | "unknown";
+
+export interface CompatibilityReason {
+  code:
+    | "enough-memory"
+    | "low-memory"
+    | "not-enough-memory"
+    | "enough-disk"
+    | "not-enough-disk"
+    | "gpu-available"
+    | "cpu-only"
+    | "runtime-ready"
+    | "runtime-missing"
+    | "runtime-unsupported"
+    | "hardware-unknown";
+  message: string;
+  action?: string;
+}
+
+export interface ModelCompatibility {
+  modelId: string;
+  kind: "stt" | "llm";
+  level: CompatibilityLevel;
+  summary: string;
+  reasons: CompatibilityReason[];
+  estimated: {
+    speed: "fast" | "good" | "slow" | "unknown";
+    firstLoad: "short" | "medium" | "long" | "unknown";
+  };
+}
+
+export interface ModelCompatibilityReport {
+  hardware: HardwareProfile;
+  runtimes: RuntimeStatus[];
+  summary: {
+    level: "great" | "good" | "limited" | "not-ready" | "unknown";
+    title: string;
+    message: string;
+  };
+  recommended: { stt?: string; llm?: string };
+  models: ModelCompatibility[];
+}
+
+export type ModelReadinessState =
+  | "not-installed"
+  | "downloading"
+  | "verifying"
+  | "installed"
+  | "runtime-missing"
+  | "starting"
+  | "ready"
+  | "failed"
+  | "unsupported";
+
+export interface ModelReadiness {
+  modelId: string;
+  kind: "stt" | "llm";
+  state: ModelReadinessState;
+  active: boolean;
+  selected: boolean;
+  previousActiveModelId?: string;
+  reason?: string;
+  nextAction?: "download" | "install-runtime" | "retry" | "choose-another" | "manage-storage";
+}
+
+export interface ActiveModelSlot {
+  selectedModelId?: string;
+  activeModelId?: string;
+  state: "none" | "starting" | "ready" | "fallback" | "failed";
+  message: string;
+}
+
+export interface ActiveModelReport {
+  speech?: ActiveModelSlot;
+  language?: ActiveModelSlot;
+}
+
+export interface ModelRuntimeEvent {
+  modelId: string;
+  kind: "stt" | "llm";
+  state: "starting" | "ready" | "fallback" | "failed";
+  message: string;
+  activeModelId?: string;
+}
+
 /**
  * A streamed transcript update during a long-form capture session (12 §2A.6). `final` is a closed
  * window's text; `partial` is reserved for true streaming engines. `fullText` is the running

@@ -58,6 +58,22 @@ const deps: DispatchDeps = {
   },
   models: {
     status: () => [],
+    compatibility: () => ({
+      hardware: {
+        os: "win32",
+        arch: "x64",
+        gpus: [],
+        power: "unknown",
+        detectionWarnings: [],
+      },
+      runtimes: [],
+      summary: { level: "unknown", title: "Unknown", message: "Unknown" },
+      recommended: {},
+      models: [],
+    }),
+    readiness: () => [],
+    active: () => ({}),
+    prepare: () => undefined,
     download: () => undefined,
     cancel: () => undefined,
     verify: () => ({ ok: true }),

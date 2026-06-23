@@ -10,6 +10,10 @@ import type {
   InsightsAggregate,
   Integration,
   ModelInfo,
+  ModelCompatibilityReport,
+  ModelReadiness,
+  ActiveModelReport,
+  ModelRuntimeEvent,
   ModelProgress,
   ModelStatus,
   ModelStorageReport,
@@ -41,6 +45,9 @@ export type Invoke = (channel: string, ...args: unknown[]) => Promise<unknown>;
 /** Subscribe to main-process progress events (preload `window.khonjel.onModelProgress`). */
 export type SubscribeModelProgress = (callback: (progress: ModelProgress) => void) => () => void;
 
+/** Subscribe to main-process runtime readiness/switching events. */
+export type SubscribeModelRuntime = (callback: (event: ModelRuntimeEvent) => void) => () => void;
+
 /** Subscribe to content-mutation relays (preload `window.khonjel.onContentChanged`). */
 export type SubscribeContentChanged = (callback: (collection: string) => void) => () => void;
 
@@ -55,6 +62,7 @@ export function createIpcServices(
   subscribeModelProgress?: SubscribeModelProgress,
   subscribeContentChanged?: SubscribeContentChanged,
   captureBridge?: CaptureBridge,
+  subscribeModelRuntime?: SubscribeModelRuntime,
 ): Services {
   return {
     profile: {
@@ -118,12 +126,17 @@ export function createIpcServices(
     },
     models: {
       status: () => invoke(CHANNELS.modelsStatus) as Promise<ModelStatus[]>,
+      compatibility: () => invoke(CHANNELS.modelsCompatibility) as Promise<ModelCompatibilityReport>,
+      readiness: () => invoke(CHANNELS.modelsReadiness) as Promise<ModelReadiness[]>,
+      active: () => invoke(CHANNELS.modelsActive) as Promise<ActiveModelReport>,
+      prepare: (id) => invoke(CHANNELS.modelsPrepare, id) as Promise<void>,
       download: (id) => invoke(CHANNELS.modelsDownload, id) as Promise<void>,
       cancel: (id) => invoke(CHANNELS.modelsCancel, id) as Promise<void>,
       verify: (id) => invoke(CHANNELS.modelsVerify, id) as Promise<{ ok: boolean }>,
       remove: (id) => invoke(CHANNELS.modelsRemove, id) as Promise<{ freedBytes: number }>,
       storage: () => invoke(CHANNELS.modelsStorage) as Promise<ModelStorageReport>,
       onProgress: (callback) => subscribeModelProgress?.(callback) ?? (() => {}),
+      onRuntime: (callback) => subscribeModelRuntime?.(callback) ?? (() => {}),
     },
     capture: {
       start: () => invoke(CHANNELS.captureStart) as Promise<string>,

@@ -25,6 +25,9 @@ import type {
   InsightsAggregate,
   Integration,
   ModelInfo,
+  ModelCompatibilityReport,
+  ModelReadiness,
+  ActiveModelReport,
   ModelStatus,
   ModelStorageReport,
   Note,
@@ -91,6 +94,10 @@ export interface DispatchDeps {
   };
   models: {
     status: () => ModelStatus[] | Promise<ModelStatus[]>;
+    compatibility: () => ModelCompatibilityReport | Promise<ModelCompatibilityReport>;
+    readiness: () => ModelReadiness[] | Promise<ModelReadiness[]>;
+    active: () => ActiveModelReport | Promise<ActiveModelReport>;
+    prepare: (id: string) => void | Promise<void>;
     download: (id: string) => void | Promise<void>;
     cancel: (id: string) => void | Promise<void>;
     verify: (id: string) => { ok: boolean } | Promise<{ ok: boolean }>;
@@ -142,6 +149,10 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.contentAddHistory]: (args) => deps.content.addHistory(args[0] as HistoryDraft),
     [CHANNELS.contentReplace]: (args) => deps.content.replace(args[0] as string, args[1] as unknown[]),
     [CHANNELS.modelsStatus]: () => deps.models.status(),
+    [CHANNELS.modelsCompatibility]: () => deps.models.compatibility(),
+    [CHANNELS.modelsReadiness]: () => deps.models.readiness(),
+    [CHANNELS.modelsActive]: () => deps.models.active(),
+    [CHANNELS.modelsPrepare]: (args) => deps.models.prepare(args[0] as string),
     [CHANNELS.modelsDownload]: (args) => deps.models.download(args[0] as string),
     [CHANNELS.modelsCancel]: (args) => deps.models.cancel(args[0] as string),
     [CHANNELS.modelsVerify]: (args) => deps.models.verify(args[0] as string),

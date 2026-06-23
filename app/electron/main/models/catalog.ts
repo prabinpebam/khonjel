@@ -68,6 +68,12 @@ const MANIFESTS: Record<string, ModelManifest> = {
     fileName: "ggml-large-v3-turbo.bin",
     sources: [`${HF}/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin`],
   },
+  "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3": {
+    engine: "parakeet",
+    fileName: "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3",
+    // Not downloadable yet: surfaced as "Not supported yet" by compatibility/readiness.
+    sources: [],
+  },
   "qwen2.5-1.5b-instruct-q4_k_m.gguf": {
     engine: "llama",
     fileName: "qwen2.5-1.5b-instruct-q4_k_m.gguf",

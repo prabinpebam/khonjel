@@ -29,6 +29,7 @@ import { createContentStore } from "./services/content";
 import { createModelIndexStore } from "./models/store";
 import { createDownloader } from "./models/downloader";
 import { createModelService, boundModelIdsFrom } from "./models/service";
+import { buildActiveModelReport, buildModelCompatibilityReport, buildModelReadiness } from "./models/compatibility";
 import {
   nodeModelFs,
   nodeDownloadFs,
@@ -36,6 +37,7 @@ import {
   makeEngineReady,
   modelsDirOf,
 } from "./models/runtime";
+import { detectHardwareProfile } from "./models/hardware";
 import { createSecretStore } from "./secrets/store";
 import { safeStorageCipher } from "./secrets/safeStorageCipher";
 import { createProviderRouter } from "./providers/router";
@@ -138,17 +140,18 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
   // ticks are relayed to the renderer over "khonjel:model-progress" (preload bridges onModelProgress).
   const modelsDir = modelsDirOf(userData);
   mkdirSync(modelsDir, { recursive: true });
+  const engineReady = makeEngineReady({
+    userDataDir: userData,
+    appDir: path.join(__dirname, ".."),
+    isWindows: process.platform === "win32",
+    env: process.env,
+  });
   const modelService = createModelService({
     modelsDir,
     store: createModelIndexStore(fileSettingsIO(path.join(modelsDir, "index.json"))),
     downloader: createDownloader({ fetch: nodeDownloadFetch, fs: nodeDownloadFs() }),
     fs: nodeModelFs(),
-    engineReady: makeEngineReady({
-      userDataDir: userData,
-      appDir: path.join(__dirname, ".."),
-      isWindows: process.platform === "win32",
-      env: process.env,
-    }),
+    engineReady,
     boundModelIds: () => boundModelIdsFrom(settingsStore.get().values),
     emit: (progress) => mainWindow?.webContents.send("khonjel:model-progress", progress),
     // Optional per-id source override (mirror / eval): KHONJEL_MODEL_SOURCES='{"<id>":"<url>"}'.
@@ -302,6 +305,43 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     },
     models: {
       status: () => modelService.status(),
+      compatibility: () =>
+        buildModelCompatibilityReport({
+          hardware: detectHardwareProfile(modelsDir),
+          runtimes: runtimeStatuses(),
+          statuses: modelService.status(),
+        }),
+      readiness: () =>
+        buildModelReadiness({
+          statuses: modelService.status(),
+          runtimes: runtimeStatuses(),
+          selectedModelIds: selectedModelIds(),
+          activeModelIds: activeModelIds(),
+        }),
+      active: () =>
+        buildActiveModelReport({
+          readiness: buildModelReadiness({
+            statuses: modelService.status(),
+            runtimes: runtimeStatuses(),
+            selectedModelIds: selectedModelIds(),
+            activeModelIds: activeModelIds(),
+          }),
+          selectedModelIds: selectedModelIds(),
+          activeModelIds: activeModelIds(),
+        }),
+      prepare: (id) => {
+        const status = modelService.status().find((s) => s.id === id);
+        if (!status) return;
+        emitRuntime({ modelId: id, kind: status.kind, state: "starting", message: `Loading ${status.name}...` });
+        const ready = status.state === "installed" && status.engineReady;
+        emitRuntime({
+          modelId: id,
+          kind: status.kind,
+          state: ready ? "ready" : "failed",
+          message: ready ? `${status.name} is ready.` : `${status.name} is not ready yet.`,
+          activeModelId: ready ? id : undefined,
+        });
+      },
       download: (id) => modelService.download(id),
       cancel: (id) => modelService.cancel(id),
       verify: (id) => modelService.verify(id),
@@ -315,6 +355,48 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
   });
 
   return { dispatch, contentStore, settingsStore, captureManager };
+
+  function selectedModelIds(): { stt?: string; llm?: string } {
+    const values = settingsStore.get().values;
+    return { stt: values["stt.dictation.model"], llm: values["llm.chat.model"] };
+  }
+
+  function activeModelIds(): { stt?: string; llm?: string } {
+    const selected = selectedModelIds();
+    const status = modelService.status();
+    const active = (kind: "stt" | "llm") => {
+      const id = selected[kind];
+      const row = id ? status.find((s) => s.id === id) : undefined;
+      return row?.state === "installed" && row.engineReady ? id : undefined;
+    };
+    return { stt: active("stt"), llm: active("llm") };
+  }
+
+  function runtimeStatuses() {
+    return [
+      {
+        engine: "whisper" as const,
+        state: engineReady("whisper") ? "ready" as const : "missing" as const,
+        message: engineReady("whisper") ? "Speech runtime ready." : "Speech runtime missing. Khonjel can download it.",
+      },
+      {
+        engine: "llama" as const,
+        state: engineReady("llama") ? "ready" as const : "missing" as const,
+        message: engineReady("llama") ? "Language runtime ready." : "Language runtime missing. Khonjel can download it.",
+      },
+      {
+        engine: "parakeet" as const,
+        state: "unsupported" as const,
+        message: "Parakeet local runtime is not bundled yet.",
+      },
+    ];
+  }
+
+  function emitRuntime(event: { modelId: string; kind: "stt" | "llm"; state: "starting" | "ready" | "fallback" | "failed"; message: string; activeModelId?: string }): void {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) win.webContents.send("khonjel:model-runtime", event);
+    }
+  }
 }
 
 function createWindow(startMinimized = false): void {

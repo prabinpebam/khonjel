@@ -81,6 +81,22 @@ const dispatch = createDispatch({
   },
   models: {
     status: () => [],
+    compatibility: () => ({
+      hardware: {
+        os: "linux",
+        arch: "x64",
+        gpus: [],
+        power: "unknown",
+        detectionWarnings: [],
+      },
+      runtimes: [],
+      summary: { level: "unknown", title: "Unknown", message: "Unknown" },
+      recommended: {},
+      models: [],
+    }),
+    readiness: () => [],
+    active: () => ({}),
+    prepare: () => undefined,
     download: () => undefined,
     cancel: () => undefined,
     verify: () => ({ ok: true }),

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { Check } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, ShieldCheck } from "lucide-react";
 import { useServices } from "@services";
-import type { ModelStatus } from "@services/ports";
+import type { ModelCompatibility, ModelReadiness, ModelStatus } from "@services/ports";
 import { useSettingsStore } from "@stores/settings";
 import { useModelsStore } from "@stores/models";
 import { Button } from "@components/ui/button";
@@ -24,11 +24,14 @@ export function LocalModelList({ kind, prefix }: { kind: "stt" | "llm"; prefix: 
   const services = useServices();
   const init = useModelsStore((s) => s.init);
   const statuses = useModelsStore((s) => s.statuses);
+  const compatibility = useModelsStore((s) => s.compatibility);
+  const readiness = useModelsStore((s) => s.readiness);
   const selectedKey = `${prefix}.model`;
   const selected = useSettingsStore((s) => s.values[selectedKey] ?? "");
   const setValue = useSettingsStore((s) => s.setValue);
   const autoSelect = useRef<Set<string>>(new Set());
   const [flash, setFlash] = useState<Record<string, "ok" | "fail">>({});
+  const [showUnavailable, setShowUnavailable] = useState(false);
 
   useEffect(() => {
     init(services);
@@ -44,9 +47,16 @@ export function LocalModelList({ kind, prefix }: { kind: "stt" | "llm"; prefix: 
     }
   }, [statuses, selectedKey, setValue]);
 
-  const rows = Object.values(statuses)
+  const compatibilityById = useMemo(
+    () => Object.fromEntries((compatibility?.models ?? []).map((m) => [m.modelId, m])),
+    [compatibility],
+  );
+
+  const allRows = Object.values(statuses)
     .filter((s) => s.kind === kind)
     .sort((a, b) => Number(b.recommended) - Number(a.recommended) || a.name.localeCompare(b.name));
+  const rows = allRows.filter((s) => showUnavailable || compatibilityById[s.id]?.level !== "unsupported");
+  const hidden = allRows.length - rows.length;
 
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">No on-device models for this engine.</p>;
@@ -59,7 +69,14 @@ export function LocalModelList({ kind, prefix }: { kind: "stt" | "llm"; prefix: 
           key={model.id}
           model={model}
           selected={selected === model.id}
-          onSelect={() => model.state === "installed" && setValue(selectedKey, model.id)}
+          compatibility={compatibilityById[model.id]}
+          readiness={readiness[model.id]}
+          onSelect={() => {
+            if (model.state === "installed" && compatibilityById[model.id]?.level !== "unsupported") {
+              setValue(selectedKey, model.id);
+              void services.models.prepare(model.id);
+            }
+          }}
           onDownload={() => {
             autoSelect.current.add(model.id);
             void services.models.download(model.id);
@@ -83,6 +100,16 @@ export function LocalModelList({ kind, prefix }: { kind: "stt" | "llm"; prefix: 
           }}
         />
       ))}
+      {hidden > 0 ? (
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 self-start text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => setShowUnavailable((v) => !v)}
+        >
+          <ChevronDown className={cn("size-3 transition-transform", showUnavailable && "rotate-180")} />
+          {showUnavailable ? "Hide unavailable and advanced models" : `Show ${hidden} unavailable or advanced models`}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -96,9 +123,11 @@ interface RowProps {
   onRemove: () => void;
   onVerify: () => void;
   flash?: "ok" | "fail";
+  compatibility?: ModelCompatibility;
+  readiness?: ModelReadiness;
 }
 
-function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, onVerify, flash }: RowProps) {
+function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, onVerify, flash, compatibility, readiness }: RowProps) {
   const busy =
     model.state === "downloading" ||
     model.state === "queued" ||
@@ -107,6 +136,9 @@ function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, o
   const pct = model.bytesTotal
     ? Math.min(100, Math.round(((model.bytesDone ?? 0) / model.bytesTotal) * 100))
     : 0;
+  const unsupported = compatibility?.level === "unsupported" || readiness?.state === "unsupported";
+  const readinessText = readinessLabel(readiness, model);
+  const compatibilityText = compatibility?.summary ?? (model.engineReady ? "Works on this PC." : "Runtime missing.");
 
   return (
     <div
@@ -119,13 +151,13 @@ function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, o
         type="button"
         role="radio"
         aria-checked={selected}
-        disabled={model.state !== "installed"}
+        disabled={model.state !== "installed" || unsupported}
         onClick={onSelect}
         aria-label={`Select ${model.name}`}
         className={cn(
           "grid size-4 shrink-0 place-items-center rounded-pill border",
           selected ? "border-accent bg-accent text-primary-foreground" : "border-border",
-          model.state !== "installed" && "opacity-40",
+          (model.state !== "installed" || unsupported) && "opacity-40",
         )}
       >
         {selected ? <Check className="size-3" /> : null}
@@ -141,6 +173,21 @@ function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, o
             </span>
           ) : null}
           {model.inUse && selected ? <span className="text-xs text-accent">In use</span> : null}
+          <span
+            className={cn(
+              "rounded-pill border px-1.5 py-0.5 text-xs",
+              unsupported
+                ? "border-danger text-danger"
+                : compatibility?.level === "limited"
+                  ? "border-warning text-warning"
+                  : "border-accent text-accent",
+            )}
+          >
+            {unsupported ? "Not supported" : compatibility?.level === "recommended" ? "Recommended" : compatibility?.level === "limited" ? "Works, slower" : "Works"}
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <ShieldCheck className="size-3" /> Private
+          </span>
           {flash === "ok" ? <span className="text-xs text-success">Verified</span> : null}
           {flash === "fail" ? <span className="text-xs text-danger">Re-downloading…</span> : null}
         </div>
@@ -165,13 +212,17 @@ function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, o
                   : `${fmt(model.bytesDone)} / ${fmt(model.bytesTotal)}`}
             </span>
           </div>
+        ) : unsupported ? (
+          <p className="mt-0.5 text-xs text-danger">{compatibilityText}</p>
         ) : model.state === "error" ? (
           <p className="mt-0.5 text-xs text-danger">
             {model.error?.message ?? "Couldn't finish downloading."}
           </p>
         ) : model.state === "installed" && !model.engineReady ? (
           <p className="mt-0.5 text-xs text-muted-foreground">Installed — engine not set up yet.</p>
-        ) : null}
+        ) : (
+          <p className="mt-0.5 text-xs text-muted-foreground">{readinessText}</p>
+        )}
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
@@ -194,6 +245,10 @@ function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, o
           <Button variant="ghost" size="sm" onClick={onCancel} aria-label={`Cancel download of ${model.name}`}>
             Cancel
           </Button>
+        ) : unsupported ? (
+          <Button variant="ghost" size="sm" disabled aria-label={`${model.name} is not supported`}>
+            Unavailable
+          </Button>
         ) : model.state === "error" ? (
           <Button variant="secondary" size="sm" onClick={onDownload} aria-label={`Retry ${model.name}`}>
             Retry
@@ -211,4 +266,26 @@ function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, o
       </div>
     </div>
   );
+}
+
+function readinessLabel(readiness: ModelReadiness | undefined, model: ModelStatus): string {
+  if (!readiness) return model.state === "installed" ? "Installed." : "Download needed.";
+  switch (readiness.state) {
+    case "ready":
+      return "Ready for local use.";
+    case "runtime-missing":
+      return readiness.reason ?? "Runtime missing.";
+    case "not-installed":
+      return "Download needed.";
+    case "downloading":
+      return "Downloading model.";
+    case "verifying":
+      return "Verifying download.";
+    case "failed":
+      return readiness.reason ?? "Needs attention.";
+    case "unsupported":
+      return readiness.reason ?? "Not supported yet.";
+    default:
+      return "Installed.";
+  }
 }

@@ -24,6 +24,9 @@ import type {
   InsightsAggregate,
   Integration,
   ModelInfo,
+  ModelCompatibilityReport,
+  ModelReadiness,
+  ActiveModelReport,
   ModelStatus,
   ModelStorageReport,
   Note,
@@ -75,6 +78,10 @@ export const CHANNELS = {
   contentAddHistory: "content:addHistory",
   contentReplace: "content:replace",
   modelsStatus: "models:status",
+  modelsCompatibility: "models:compatibility",
+  modelsReadiness: "models:readiness",
+  modelsActive: "models:active",
+  modelsPrepare: "models:prepare",
   modelsDownload: "models:download",
   modelsCancel: "models:cancel",
   modelsVerify: "models:verify",
@@ -120,6 +127,10 @@ export interface ChannelContract {
   "content:addHistory": { request: [HistoryDraft]; response: HistoryEntry[] };
   "content:replace": { request: [string, unknown[]]; response: void };
   "models:status": { request: []; response: ModelStatus[] };
+  "models:compatibility": { request: []; response: ModelCompatibilityReport };
+  "models:readiness": { request: []; response: ModelReadiness[] };
+  "models:active": { request: []; response: ActiveModelReport };
+  "models:prepare": { request: [string]; response: void };
   "models:download": { request: [string]; response: void };
   "models:cancel": { request: [string]; response: void };
   "models:verify": { request: [string]; response: { ok: boolean } };

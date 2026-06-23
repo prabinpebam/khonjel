@@ -195,6 +195,16 @@ export type {
   ModelStatus,
   ModelStorageReport,
   ModelProgress,
+  HardwareProfile,
+  RuntimeStatus,
+  CompatibilityLevel,
+  ModelCompatibility,
+  ModelCompatibilityReport,
+  ModelReadinessState,
+  ModelReadiness,
+  ActiveModelSlot,
+  ActiveModelReport,
+  ModelRuntimeEvent,
   TranscriptEvent,
 } from "./types";
 
@@ -214,6 +224,10 @@ import type {
   ModelStatus,
   ModelStorageReport,
   ModelProgress,
+  ModelCompatibilityReport,
+  ModelReadiness,
+  ActiveModelReport,
+  ModelRuntimeEvent,
   TranscriptEvent,
 } from "./types";
 
@@ -269,6 +283,10 @@ export interface HistoryDraft {
  */
 export interface ModelManagementService {
   status(): Promise<ModelStatus[]>;
+  compatibility(): Promise<ModelCompatibilityReport>;
+  readiness(): Promise<ModelReadiness[]>;
+  active(): Promise<ActiveModelReport>;
+  prepare(id: string): Promise<void>;
   download(id: string): Promise<void>;
   cancel(id: string): Promise<void>;
   verify(id: string): Promise<{ ok: boolean }>;
@@ -276,6 +294,8 @@ export interface ModelManagementService {
   storage(): Promise<ModelStorageReport>;
   /** Subscribe to live progress; returns an unsubscribe fn. */
   onProgress(callback: (progress: ModelProgress) => void): () => void;
+  /** Subscribe to runtime readiness/switching events; returns an unsubscribe fn. */
+  onRuntime(callback: (event: ModelRuntimeEvent) => void): () => void;
 }
 
 /**

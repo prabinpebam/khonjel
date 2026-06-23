@@ -6,6 +6,7 @@ import { Tabs } from "@components/ui/tabs";
 import { Textarea } from "@components/ui/textarea";
 import { ToggleRow } from "../controls";
 import { InferenceConfigBlock, InferenceModeSelector } from "../inference";
+import { LocalModelSetup } from "../LocalModelSetup";
 
 type Purpose = "cleanup" | "agent" | "note" | "chat";
 
@@ -53,7 +54,10 @@ export function LanguageModelsSettings() {
       </section>
 
       <section className="rounded-md border border-border bg-surface p-5">
+        <LocalModelSetup />
+        <div className="mt-4">
         <InferenceConfigBlock prefix="llm.chat" kind="llm" />
+        </div>
       </section>
 
       <div>

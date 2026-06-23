@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import type { ModelStatus, Services } from "@services/ports";
+import type {
+  ActiveModelReport,
+  ModelCompatibilityReport,
+  ModelReadiness,
+  ModelStatus,
+  Services,
+} from "@services/ports";
 
 /**
  * Live local-model state for the picker (07 §5). Seeded from `models.status()` and kept current by
@@ -8,6 +14,9 @@ import type { ModelStatus, Services } from "@services/ports";
  */
 interface ModelsState {
   statuses: Record<string, ModelStatus>;
+  compatibility: ModelCompatibilityReport | null;
+  readiness: Record<string, ModelReadiness>;
+  active: ActiveModelReport | null;
   services: Services | null;
   /** Idempotent: fetch the initial statuses and subscribe to progress once. */
   init: (services: Services) => void;
@@ -18,6 +27,9 @@ let unsubscribe: (() => void) | null = null;
 
 export const useModelsStore = create<ModelsState>((set, get) => ({
   statuses: {},
+  compatibility: null,
+  readiness: {},
+  active: null,
   services: null,
   init: (services) => {
     if (get().services) return;
@@ -46,11 +58,22 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
         void get().refresh();
       }
     });
+    services.models.onRuntime(() => void get().refresh());
   },
   refresh: async () => {
     const services = get().services;
     if (!services) return;
-    const list = await services.models.status();
-    set({ statuses: Object.fromEntries(list.map((s) => [s.id, s])) });
+    const [list, compatibility, readiness, active] = await Promise.all([
+      services.models.status(),
+      services.models.compatibility(),
+      services.models.readiness(),
+      services.models.active(),
+    ]);
+    set({
+      statuses: Object.fromEntries(list.map((s) => [s.id, s])),
+      compatibility,
+      readiness: Object.fromEntries(readiness.map((r) => [r.modelId, r])),
+      active,
+    });
   },
 }));

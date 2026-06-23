@@ -1,7 +1,13 @@
 import type {
+  ActiveModelReport,
+  HardwareProfile,
+  ModelCompatibilityReport,
   ModelManagementService,
   ModelProgress,
+  ModelReadiness,
+  ModelRuntimeEvent,
   ModelStatus,
+  RuntimeStatus,
 } from "@services/ports";
 import { STT_MODELS, LLM_MODELS } from "@mock/seed";
 
@@ -40,7 +46,28 @@ const status = new Map<string, ModelStatus>(
 );
 
 const listeners = new Set<(p: ModelProgress) => void>();
+const runtimeListeners = new Set<(event: ModelRuntimeEvent) => void>();
 const timers = new Map<string, ReturnType<typeof setInterval>>();
+
+const mockHardware: HardwareProfile = {
+  os: "win32",
+  arch: "x64",
+  cpuName: "Preview PC",
+  physicalCores: 8,
+  logicalCores: 16,
+  totalRamBytes: 16 * 1024 * 1024 * 1024,
+  availableRamBytes: 10 * 1024 * 1024 * 1024,
+  freeDiskBytes: 64 * 1024 * 1024 * 1024,
+  gpus: [{ name: "Preview GPU", vendor: "nvidia", vramBytes: 8 * 1024 * 1024 * 1024 }],
+  power: "plugged",
+  detectionWarnings: [],
+};
+
+const mockRuntimes: RuntimeStatus[] = [
+  { engine: "whisper", state: "ready", message: "Speech runtime ready." },
+  { engine: "llama", state: "ready", message: "Language runtime ready." },
+  { engine: "parakeet", state: "unsupported", message: "Parakeet local runtime is not bundled yet." },
+];
 
 function emit(s: ModelStatus): void {
   const p: ModelProgress = {
@@ -53,6 +80,72 @@ function emit(s: ModelStatus): void {
   for (const cb of listeners) cb(p);
 }
 
+function emitRuntime(event: ModelRuntimeEvent): void {
+  for (const cb of runtimeListeners) cb(event);
+}
+
+function readinessFor(s: ModelStatus): ModelReadiness {
+  const runtimeUnsupported = s.id.includes("parakeet");
+  if (runtimeUnsupported) {
+    return {
+      modelId: s.id,
+      kind: s.kind,
+      state: "unsupported",
+      selected: false,
+      active: false,
+      reason: "Parakeet local runtime is not bundled yet.",
+      nextAction: "choose-another",
+    };
+  }
+  if (s.state === "installed" && s.engineReady) {
+    return { modelId: s.id, kind: s.kind, state: "ready", selected: s.inUse ?? false, active: s.inUse ?? false, reason: "Ready." };
+  }
+  if (s.state === "installed") {
+    return { modelId: s.id, kind: s.kind, state: "runtime-missing", selected: false, active: false, reason: "Runtime missing.", nextAction: "install-runtime" };
+  }
+  if (s.state === "downloading" || s.state === "queued" || s.state === "paused") {
+    return { modelId: s.id, kind: s.kind, state: "downloading", selected: false, active: false, reason: "Downloading model." };
+  }
+  if (s.state === "verifying") {
+    return { modelId: s.id, kind: s.kind, state: "verifying", selected: false, active: false, reason: "Verifying download." };
+  }
+  if (s.state === "error") {
+    return { modelId: s.id, kind: s.kind, state: "failed", selected: false, active: false, reason: s.error?.message ?? "Model needs attention.", nextAction: "retry" };
+  }
+  return { modelId: s.id, kind: s.kind, state: "not-installed", selected: false, active: false, reason: "Download needed.", nextAction: "download" };
+}
+
+function compatibility(): ModelCompatibilityReport {
+  const models = [...status.values()].map((s) => {
+    const unsupported = s.id.includes("parakeet");
+    return {
+      modelId: s.id,
+      kind: s.kind,
+      level: unsupported ? "unsupported" as const : s.recommended ? "recommended" as const : "works" as const,
+      summary: unsupported ? "Not supported yet. Parakeet runtime is not bundled in this version." : s.recommended ? "Recommended for this PC." : `${s.name} works on this PC.`,
+      reasons: unsupported
+        ? [{ code: "runtime-unsupported" as const, message: "Parakeet local runtime is not bundled yet." }]
+        : [
+            { code: "runtime-ready" as const, message: "Runtime ready." },
+            { code: "enough-disk" as const, message: "Enough free disk space." },
+            { code: "enough-memory" as const, message: "Enough memory." },
+          ],
+      estimated: { speed: s.recommended ? "fast" as const : "good" as const, firstLoad: s.kind === "llm" ? "medium" as const : "short" as const },
+    };
+  });
+  return {
+    hardware: mockHardware,
+    runtimes: mockRuntimes,
+    summary: {
+      level: "great",
+      title: "Great for local models",
+      message: "This PC can run the recommended private local setup.",
+    },
+    recommended: { stt: "ggml-small.bin", llm: "qwen2.5-3b-instruct-q4_k_m.gguf" },
+    models,
+  };
+}
+
 function stopTimer(id: string): void {
   const t = timers.get(id);
   if (t) {
@@ -63,6 +156,18 @@ function stopTimer(id: string): void {
 
 export const mockModelService: ModelManagementService = {
   status: async () => [...status.values()],
+  compatibility: async () => compatibility(),
+  readiness: async () => [...status.values()].map(readinessFor),
+  active: async (): Promise<ActiveModelReport> => ({
+    speech: { selectedModelId: "ggml-small.bin", activeModelId: "ggml-small.bin", state: "ready", message: "Ready." },
+    language: { selectedModelId: "qwen2.5-3b-instruct-q4_k_m.gguf", activeModelId: "qwen2.5-3b-instruct-q4_k_m.gguf", state: "ready", message: "Ready." },
+  }),
+  prepare: async (id) => {
+    const s = status.get(id);
+    if (!s) return;
+    emitRuntime({ modelId: id, kind: s.kind, state: "starting", message: `Loading ${s.name}...` });
+    window.setTimeout(() => emitRuntime({ modelId: id, kind: s.kind, state: "ready", message: `${s.name} is ready.`, activeModelId: id }), 300);
+  },
   download: async (id) => {
     const s = status.get(id);
     if (!s || s.state === "installed" || s.state === "downloading") return;
@@ -131,5 +236,9 @@ export const mockModelService: ModelManagementService = {
   onProgress: (callback) => {
     listeners.add(callback);
     return () => listeners.delete(callback);
+  },
+  onRuntime: (callback) => {
+    runtimeListeners.add(callback);
+    return () => runtimeListeners.delete(callback);
   },
 };

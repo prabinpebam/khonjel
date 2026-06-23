@@ -3,6 +3,7 @@ import { SettingGroup } from "@components/common/SettingRow";
 import { Tabs } from "@components/ui/tabs";
 import { ToggleRow } from "../controls";
 import { InferenceConfigBlock, InferenceModeSelector } from "../inference";
+import { LocalModelSetup } from "../LocalModelSetup";
 
 type SttTab = "dictation" | "note";
 
@@ -32,7 +33,10 @@ export function SpeechToTextSettings() {
         </section>
 
         <section className="rounded-md border border-border bg-surface p-5">
+          <LocalModelSetup compact={tab !== "dictation"} />
+          <div className="mt-4">
           <InferenceConfigBlock prefix={prefix} kind="stt" />
+          </div>
         </section>
 
         {tab === "dictation" ? (
