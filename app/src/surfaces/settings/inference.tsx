@@ -11,6 +11,7 @@ import { Select } from "@components/ui/select";
 import { ProviderIcon } from "@components/brand/provider-icon";
 import { cn } from "@lib/utils";
 import { LocalModelList } from "./LocalModelList";
+import { AccelerationCard } from "./AccelerationCard";
 
 export type InferenceMode = "cloud" | "providers" | "local" | "self-hosted" | "enterprise";
 
@@ -121,7 +122,11 @@ export function InferenceConfigBlock({
       <Field label="Model">
         <LocalModelList kind={kind} prefix={prefix} />
       </Field>
-      <p className="text-xs text-tertiary-foreground">Runs on device. GPU auto-detected.</p>
+      {kind === "llm" ? (
+        <AccelerationCard />
+      ) : (
+        <p className="text-xs text-tertiary-foreground">Runs on device. Voice typing runs on the CPU.</p>
+      )}
     </div>
   );
 }

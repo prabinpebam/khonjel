@@ -21,6 +21,10 @@ export const DETECTOR_CATALOG = [
   { code: "LISTENING_FEEDBACK_LATE", severity: "critical", category: "workflow", rule: "Hotkey to 'listening' must be < 100 ms.", source: "S5" },
   { code: "OUTPUT_NOT_DELIVERED", severity: "critical", category: "output-delivery", rule: "A computed result must be visible at its destination.", source: "S5-S7" },
   { code: "PROVIDER_KEY_LEAKED_TO_RENDERER", severity: "critical", category: "privacy", rule: "Provider keys must never be observable in the renderer.", source: "Azure/privacy" },
+  // GPU acceleration (gpu-acceleration 06 §3):
+  { code: "ACCEL_STATUS_DISHONEST", severity: "critical", category: "rendering", rule: "Status must never claim GPU/auto-detected without proof.", source: "gpu/honest-status" },
+  { code: "ACCEL_FALLBACK_AS_ERROR", severity: "warning", category: "error-handling", rule: "A CPU fallback must be calm, not styled as an error.", source: "gpu/fallback" },
+  { code: "ACCEL_CTA_DEADEND", severity: "critical", category: "workflow", rule: "The Turn-on CTA must reach a terminal state (no stuck spinner).", source: "gpu/flow" },
 ];
 
 const SEVERITY_KEYS = ["critical", "warning", "info"];
