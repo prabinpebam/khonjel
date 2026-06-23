@@ -5,6 +5,7 @@ import type { ChatMessage } from "@services/ports";
 import { useDictationField } from "@hooks/useDictationField";
 import { useActiveModel } from "@hooks/useActiveModel";
 import { PageHeader } from "@components/common/PageHeader";
+import { MicWaveform } from "@components/common/MicWaveform";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { Textarea } from "@components/ui/textarea";
@@ -17,7 +18,10 @@ export function Chat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
-  const dictation = useDictationField(input, setInput);
+  const levelRef = useRef(0);
+  const dictation = useDictationField(input, setInput, {
+    onLevel: (n) => (levelRef.current = n),
+  });
   const llm = useActiveModel("llm.chat", "llm");
   const loadedRef = useRef(false);
 
@@ -129,6 +133,9 @@ export function Chat() {
           >
             {dictation.status === "transcribing" ? <Loader2 className="animate-spin" /> : <Mic />}
           </Button>
+          {dictation.status === "recording" && (
+            <MicWaveform levelRef={levelRef} active barCount={20} className="h-9 w-16 shrink-0" />
+          )}
           <Textarea
             rows={1}
             value={input}

@@ -5,6 +5,7 @@
  * Chromium renderer.
  */
 import { encodeWavBase64, downsampleTo16k, floatTo16BitPCM, bytesToBase64 } from "./wav";
+import { AutoGain, applyGainLimited } from "./agc";
 
 export interface Recorder {
   /** Stop capture and resolve a base64 16kHz mono WAV of everything recorded (empty in streaming mode). */
@@ -16,8 +17,14 @@ export interface Recorder {
 export interface RecordingOptions {
   /** Specific input device id. Empty/"default" captures the system default microphone. */
   deviceId?: string;
-  /** Called ~per audio block with the current RMS level (0..1) for a live meter/waveform. */
+  /** Called ~per audio block with a normalized 0..1 level (post auto-gain) for a live meter/waveform. */
   onLevel?: (level: number) => void;
+  /**
+   * Auto gain control (default on): normalize the captured level so quiet and loud speakers both land
+   * at a healthy volume, with a soft limiter that prevents the recorded audio from clipping. When off,
+   * fall back to the browser's built-in AGC and leave the samples untouched.
+   */
+  autoGain?: boolean;
   /**
    * Streaming mode (12 §2A): called ~4x/s with a base64 batch of 16 kHz mono 16-bit PCM frames. When
    * set, the recorder does NOT accumulate the whole session (bounded memory) and `stop()` returns "".
@@ -50,10 +57,14 @@ export async function resolveMicDeviceId(
 }
 
 export async function startRecording(opts: RecordingOptions = {}): Promise<Recorder> {
+  // Our software AGC owns the gain; let the browser's AGC step aside so they do not fight. When our
+  // AGC is disabled, fall back to the browser's built-in auto gain.
+  const softwareAgc = opts.autoGain !== false;
   const audio: MediaTrackConstraints = {
     channelCount: 1,
     echoCancellation: true,
     noiseSuppression: true,
+    autoGainControl: !softwareAgc,
   };
   if (opts.deviceId && opts.deviceId !== "default") audio.deviceId = { exact: opts.deviceId };
   const stream = await navigator.mediaDevices.getUserMedia({ audio });
@@ -68,6 +79,9 @@ export async function startRecording(opts: RecordingOptions = {}): Promise<Recor
   let pcmBatch: Int16Array[] = []; // streaming: batched 16k PCM awaiting flush
   let batchLen = 0;
   const BATCH_SAMPLES = 4000; // ~250 ms at 16 kHz
+  // Auto gain runs continuously so the meter is always normalized (no visual clipping); whether the
+  // gain is applied to the recorded samples depends on `softwareAgc`.
+  const agc = new AutoGain();
 
   const flushBatch = () => {
     if (batchLen === 0 || !opts.onChunk) return;
@@ -84,23 +98,21 @@ export async function startRecording(opts: RecordingOptions = {}): Promise<Recor
 
   processor.onaudioprocess = (event) => {
     const block = event.inputBuffer.getChannelData(0);
-    if (opts.onLevel) {
-      let sum = 0;
-      for (let i = 0; i < block.length; i++) {
-        const v = block[i] ?? 0;
-        sum += v * v;
-      }
-      opts.onLevel(Math.sqrt(sum / block.length));
-    }
+    // Advance the auto-gain and surface a normalized 0..1 level for the waveform.
+    const { gain, level } = agc.process(block);
+    if (opts.onLevel) opts.onLevel(level);
+    // A fresh, gain-normalized (and soft-limited, so non-clipping) copy of the block for downstream.
+    // The limiter caps peaks below 1.0 even on a sudden shout, so the recording never hard-clips.
+    const samples = softwareAgc ? applyGainLimited(block, gain) : new Float32Array(block);
     if (streaming) {
       // Downsample + quantize each block immediately and stream it; never hold the whole session.
-      const i16 = floatTo16BitPCM(downsampleTo16k(new Float32Array(block), ctx.sampleRate));
+      const i16 = floatTo16BitPCM(downsampleTo16k(samples, ctx.sampleRate));
       pcmBatch.push(i16);
       batchLen += i16.length;
       if (batchLen >= BATCH_SAMPLES) flushBatch();
     } else {
-      // Copy: the underlying buffer is reused across callbacks.
-      chunks.push(new Float32Array(block));
+      // `samples` is already a copy, safe to retain (the input buffer is reused across callbacks).
+      chunks.push(samples);
     }
   };
   source.connect(processor);

@@ -33,6 +33,7 @@ export function useDictation(
   const { capture, inference, content } = useServices();
   const micDevice = useSettingsStore((s) => s.values["micDevice"] ?? "default");
   const preferBuiltIn = useSettingsStore((s) => s.toggles["preferBuiltInMic"] ?? false);
+  const autoGain = useSettingsStore((s) => s.toggles["mic.autoGain"] ?? true);
   const saveHistory = useSettingsStore((s) => s.toggles["saveHistory"] ?? true);
   const cleanupEnabled = useSettingsStore((s) => s.toggles["llm.cleanup.enabled"] ?? true);
   const [status, setStatus] = useState<DictationStatus>("idle");
@@ -72,6 +73,7 @@ export function useDictation(
       });
       const recorder = await startRecording({
         deviceId,
+        autoGain,
         onLevel: opts.onLevel,
         onChunk: (chunk) => capture.pushChunk(sessionId!, chunk),
       });

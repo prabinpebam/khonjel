@@ -25,11 +25,12 @@ export interface SegmenterConfig {
 
 export const DEFAULT_SEGMENTER: SegmenterConfig = {
   sampleRate: 16000,
-  // Close on a ~0.5 s pause (a natural phrase/sentence boundary), so live updates land frequently
-  // *and* at clean boundaries (no mid-word splits) — the live-vs-quality balance (12 §2A.3).
-  silenceTailMs: 500,
-  // A run-on talker with no pause still flushes a window this often.
-  maxWindowSec: 7,
+  // Close on a short (~0.35 s) pause so a window flushes the moment you draw breath — the live
+  // transcript should feel near-instant. The final cleanup re-joins windows, so a slightly eager
+  // split costs nothing in quality (12 §2A.3).
+  silenceTailMs: 350,
+  // A run-on talker with no pause still flushes a window this often, so text never lags far behind.
+  maxWindowSec: 4,
   silenceRmsThreshold: 0.012,
   minSegmentMs: 300,
 };

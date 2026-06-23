@@ -5,6 +5,7 @@ import type { Folder, Note } from "@services/ports";
 import { useAsync } from "@hooks/useAsync";
 import { useDictationField } from "@hooks/useDictationField";
 import { PageHeader } from "@components/common/PageHeader";
+import { MicWaveform } from "@components/common/MicWaveform";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 import { Textarea } from "@components/ui/textarea";
@@ -48,15 +49,20 @@ export function Notes() {
   const selected = notes.find((note) => note.id === selectedId) ?? null;
   const selectedIdValue = selected?.id ?? null;
 
-  const dictation = useDictationField(selected?.body ?? "", (next) => {
-    setNotes((prev) =>
-      prev.map((n) =>
-        n.id === selectedIdValue
-          ? { ...n, body: next, preview: preview(next), updatedAt: new Date().toISOString() }
-          : n,
-      ),
-    );
-  });
+  const levelRef = useRef(0);
+  const dictation = useDictationField(
+    selected?.body ?? "",
+    (next) => {
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === selectedIdValue
+            ? { ...n, body: next, preview: preview(next), updatedAt: new Date().toISOString() }
+            : n,
+        ),
+      );
+    },
+    { onLevel: (n) => (levelRef.current = n) },
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -203,6 +209,9 @@ export function Notes() {
                   onChange={(e) => updateSelected({ title: e.target.value })}
                   className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-foreground outline-none"
                 />
+                {dictation.status === "recording" && (
+                  <MicWaveform levelRef={levelRef} active barCount={18} className="h-8 w-16 shrink-0" />
+                )}
                 <Button
                   variant={dictation.status === "recording" ? "destructive" : "ghost"}
                   size="icon"

@@ -1,56 +1,9 @@
-import { useEffect, useRef, type MutableRefObject } from "react";
+import { useEffect, useRef } from "react";
 import { Loader2, Mic, Square } from "lucide-react";
 import { useServices } from "@services";
 import { useDictation } from "@hooks/useDictation";
+import { MicWaveform } from "@components/common/MicWaveform";
 import { cn } from "@lib/utils";
-
-const BAR_COUNT = 28;
-
-/**
- * Live input-level meter. The recorder pushes RMS levels into `levelRef`; a rAF loop scrolls a
- * rolling history so the bars animate smoothly even though levels arrive only every audio block.
- */
-function Waveform({ levelRef, active }: { levelRef: MutableRefObject<number>; active: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const historyRef = useRef<number[]>(new Array<number>(BAR_COUNT).fill(0));
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    let raf = 0;
-
-    const draw = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-        canvas.width = Math.round(w * dpr);
-        canvas.height = Math.round(h * dpr);
-      }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
-
-      const history = historyRef.current;
-      history.push(active ? Math.min(1, levelRef.current * 6) : 0);
-      history.shift();
-
-      ctx.fillStyle = getComputedStyle(canvas).color;
-      const gap = 2;
-      const barW = (w - gap * (BAR_COUNT - 1)) / BAR_COUNT;
-      for (let i = 0; i < BAR_COUNT; i++) {
-        const level = history[i] ?? 0;
-        const barH = Math.max(2, level * h);
-        ctx.fillRect(i * (barW + gap), (h - barH) / 2, barW, barH);
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  }, [active, levelRef]);
-
-  return <canvas ref={canvasRef} className="h-7 w-40 text-accent" />;
-}
 
 /**
  * The floating dictation bar (Khonjel Bar) — the app's core capture surface. Runs in its own
@@ -159,7 +112,7 @@ export function FloatingBar() {
             <Mic className="size-4" />
           )}
         </button>
-        <Waveform levelRef={levelRef} active={recording} />
+        <MicWaveform levelRef={levelRef} active={recording} />
         <span
           className={cn(
             "min-w-20 max-w-44 truncate text-sm font-medium",
