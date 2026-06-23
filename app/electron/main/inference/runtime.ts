@@ -25,6 +25,7 @@ export interface InferenceRuntimeConfig {
   appDir: string;
   isWindows: boolean;
   env: Record<string, string | undefined>;
+  selectedModelId?: () => string | undefined;
 }
 
 export type InferenceMode = "endpoint" | "spawned" | "stub";
@@ -34,6 +35,9 @@ export interface InferenceRuntime {
   engine: InferenceEngine;
   /** Resolve + swap in the real engine. Resolves to the mode that was selected. */
   start: () => Promise<InferenceMode>;
+  /** Warm/switch to a specific local model id; keeps the previous engine if startup fails. */
+  prepareModel: (modelId: string) => Promise<InferenceMode>;
+  activeModelId: () => string | undefined;
   /** Stop a spawned server (no-op for endpoint/stub modes). */
   stop: () => void;
 }
@@ -44,10 +48,20 @@ interface ResolvedPaths {
   modelPath?: string;
 }
 
-function firstGguf(dirs: string[]): string | undefined {
-  for (const dir of dirs) {
+export function resolveModelPath(opts: {
+  dirs: string[];
+  selectedModelId?: string;
+  filesByDir?: (dir: string) => string[];
+}): string | undefined {
+  const filesByDir = opts.filesByDir ?? ((dir: string) => readdirSync(dir));
+  for (const dir of opts.dirs) {
     try {
-      const hit = readdirSync(dir).find((f) => f.toLowerCase().endsWith(".gguf"));
+      const files = filesByDir(dir);
+      const selected = opts.selectedModelId
+        ? files.find((f) => f.toLowerCase() === opts.selectedModelId?.toLowerCase())
+        : undefined;
+      if (selected) return join(dir, selected);
+      const hit = files.find((f) => f.toLowerCase().endsWith(".gguf"));
       if (hit) return join(dir, hit);
     } catch {
       // dir does not exist
@@ -56,7 +70,7 @@ function firstGguf(dirs: string[]): string | undefined {
   return undefined;
 }
 
-function resolvePaths(cfg: InferenceRuntimeConfig): ResolvedPaths {
+function resolvePaths(cfg: InferenceRuntimeConfig, modelId?: string): ResolvedPaths {
   const endpoint = cfg.env.KHONJEL_LLAMA_ENDPOINT;
   if (endpoint) return { endpoint };
 
@@ -70,7 +84,10 @@ function resolvePaths(cfg: InferenceRuntimeConfig): ResolvedPaths {
 
   const modelPath =
     cfg.env.KHONJEL_LLM_MODEL ??
-    firstGguf([join(cfg.userDataDir, "models"), join(cfg.appDir, "models")]);
+    resolveModelPath({
+      dirs: [join(cfg.userDataDir, "models"), join(cfg.appDir, "models")],
+      selectedModelId: modelId ?? cfg.selectedModelId?.(),
+    });
 
   return { binPath, modelPath };
 }
@@ -85,6 +102,7 @@ function gpuLayers(env: Record<string, string | undefined>): number | undefined 
 export function createInferenceRuntime(cfg: InferenceRuntimeConfig): InferenceRuntime {
   let backing: InferenceEngine = stubInferenceEngine;
   let stopServer: (() => void) | undefined;
+  let activeModel: string | undefined;
 
   const engine: InferenceEngine = {
     refine: (text) => backing.refine(text),
@@ -93,8 +111,8 @@ export function createInferenceRuntime(cfg: InferenceRuntimeConfig): InferenceRu
     chat: (messages) => (backing.chat ? backing.chat(messages) : Promise.resolve("")),
   };
 
-  const start = async (): Promise<InferenceMode> => {
-    const paths = resolvePaths(cfg);
+  const startFor = async (modelId?: string): Promise<InferenceMode> => {
+    const paths = resolvePaths(cfg, modelId);
 
     if (paths.endpoint) {
       // User-managed server: forward an explicit token if they set one.
@@ -102,6 +120,7 @@ export function createInferenceRuntime(cfg: InferenceRuntimeConfig): InferenceRu
         createLlamaEngine({ endpoint: paths.endpoint, apiKey: cfg.env.KHONJEL_LLAMA_API_KEY }),
         stubInferenceEngine,
       );
+      activeModel = modelId;
       return "endpoint";
     }
 
@@ -116,23 +135,28 @@ export function createInferenceRuntime(cfg: InferenceRuntimeConfig): InferenceRu
           gpuLayers: gpuLayers(cfg.env),
           apiKey,
         });
-        stopServer = handle.stop;
+        const previousStop = stopServer;
         backing = withFallback(
           createLlamaEngine({ endpoint: handle.endpoint, apiKey }),
           stubInferenceEngine,
         );
+        stopServer = handle.stop;
+        activeModel = modelId ?? cfg.selectedModelId?.();
+        previousStop?.();
         return "spawned";
       } catch {
-        // keep the deterministic stub
+        // Keep the current engine (or deterministic stub if no engine has ever started).
       }
     }
 
-    return "stub";
+    return backing === stubInferenceEngine ? "stub" : "spawned";
   };
+
+  const start = (): Promise<InferenceMode> => startFor();
 
   const stop = (): void => {
     if (stopServer) stopServer();
   };
 
-  return { engine, start, stop };
+  return { engine, start, prepareModel: (modelId) => startFor(modelId), activeModelId: () => activeModel, stop };
 }

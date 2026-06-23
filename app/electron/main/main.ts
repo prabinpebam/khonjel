@@ -329,11 +329,23 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
           selectedModelIds: selectedModelIds(),
           activeModelIds: activeModelIds(),
         }),
-      prepare: (id) => {
+      prepare: async (id) => {
         const status = modelService.status().find((s) => s.id === id);
         if (!status) return;
         emitRuntime({ modelId: id, kind: status.kind, state: "starting", message: `Loading ${status.name}...` });
         const ready = status.state === "installed" && status.engineReady;
+        if (ready && status.kind === "llm") {
+          const mode = await inferenceRuntime.prepareModel(id);
+          const switched = mode !== "stub";
+          emitRuntime({
+            modelId: id,
+            kind: status.kind,
+            state: switched ? "ready" : "failed",
+            message: switched ? `${status.name} is ready.` : `${status.name} could not be loaded.`,
+            activeModelId: switched ? id : undefined,
+          });
+          return;
+        }
         emitRuntime({
           modelId: id,
           kind: status.kind,
@@ -365,6 +377,10 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     const selected = selectedModelIds();
     const status = modelService.status();
     const active = (kind: "stt" | "llm") => {
+      if (kind === "llm") {
+        const runtimeActive = inferenceRuntime.activeModelId();
+        if (runtimeActive) return runtimeActive;
+      }
       const id = selected[kind];
       const row = id ? status.find((s) => s.id === id) : undefined;
       return row?.state === "installed" && row.engineReady ? id : undefined;
@@ -449,14 +465,17 @@ function createWindow(startMinimized = false): void {
 }
 
 void app.whenReady().then(() => {
+  let selectedLlmModelId = (): string | undefined => undefined;
   inferenceRuntime = createInferenceRuntime({
     userDataDir: app.getPath("userData"),
     appDir: path.join(__dirname, ".."),
     isWindows: process.platform === "win32",
     env: process.env,
+    selectedModelId: () => selectedLlmModelId(),
   });
   hotkeyManager = createHotkeyManager();
   const built = buildDispatch(inferenceRuntime, () => registerHotkeys());
+  selectedLlmModelId = () => built.settingsStore.get().values["llm.chat.model"];
   // The single allow-listed request/response bridge. The preload sends the contract version on
   // every call (rejected on mismatch); `dispatch` then validates channel + payload (unknown
   // channel -> not_found; bad payload -> validation). Together these are the allow-list.

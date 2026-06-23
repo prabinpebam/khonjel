@@ -93,6 +93,13 @@ test("floating bar: an always-on-top, non-focusable capture window exists and th
   await expect(bar.locator('button[aria-label="Stop dictation"]')).toBeVisible({ timeout: 8000 });
   await expect(bar.getByText("Listening")).toBeVisible();
 
+  // End the capture before closing the app. Closing while the fake mic is still active can leave the
+  // Electron worker in a half-shutdown state and make the following no-STT dismissal scenario flaky.
+  await app.evaluate(() => globalThis.__khonjelTriggerDictation?.());
+  await expect
+    .poll(async () => (await barWindowProps(app))?.visible, { timeout: 12000 })
+    .toBe(false);
+
   await app.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });
 });
