@@ -28,6 +28,8 @@ import type {
   TranscriptionRequest,
   TranscriptionResult,
   UploadJob,
+  GpuProfile,
+  AccelerationPlan,
 } from "@services/ports";
 import { CHANNELS } from "@ipc/ipc-contract";
 
@@ -143,6 +145,11 @@ export function createIpcServices(
       stop: (id) => invoke(CHANNELS.captureStop, id) as Promise<{ text: string }>,
       pushChunk: (id, base64Pcm16) => captureBridge?.pushChunk(id, base64Pcm16),
       onTranscript: (callback) => captureBridge?.onTranscript(callback) ?? (() => {}),
+    },
+    acceleration: {
+      profile: () => invoke(CHANNELS.accelerationProfile) as Promise<GpuProfile>,
+      rescan: () => invoke(CHANNELS.accelerationRescan) as Promise<GpuProfile>,
+      plan: () => invoke(CHANNELS.accelerationPlan) as Promise<AccelerationPlan>,
     },
   };
 }

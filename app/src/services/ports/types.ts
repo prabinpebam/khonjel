@@ -303,3 +303,85 @@ export interface TranscriptEvent {
   text: string;
   fullText: string;
 }
+
+/* ------------------------------------------------------------------ *
+ * GPU acceleration (docs/product-spec/04-architecture-and-delivery/   *
+ * gpu-acceleration). Local-model GPU support: detect -> decide ->     *
+ * provision -> validate -> run, with graceful CPU fallback.           *
+ * ------------------------------------------------------------------ */
+
+export type GpuVendor = "nvidia" | "amd" | "intel" | "apple" | "unknown";
+
+/** A local inference engine that can be accelerated. */
+export type AccelerationEngine = "llama" | "whisper";
+
+/** An engine build variant targeting a compute API. One per engine. */
+export type Backend = "cuda-13.3" | "cuda-12.4" | "vulkan" | "metal" | "hip" | "sycl" | "cpu";
+
+/** User-facing acceleration setting. `auto` is the default (smart, zero-click). */
+export type AccelerationMode = "auto" | "on" | "off";
+
+/** Which detection tier/source contributed a field (for diagnostics + confidence). */
+export type GpuDetectionSource = "os" | "nvidia-smi" | "registry" | "system_profiler" | "lspci";
+
+export interface GpuDevice {
+  /** Ordinal for multi-GPU machines. */
+  index: number;
+  name: string;
+  vendor: GpuVendor;
+  /** PCI vendor id (e.g. "10DE" NVIDIA, "1002" AMD, "8086" Intel). */
+  vendorId?: string;
+  /** Accurate VRAM where a trustworthy source exists; undefined when unknown. */
+  vramBytes?: number;
+  /** Apple Silicon shares system RAM as GPU memory. */
+  unifiedMemory?: boolean;
+  driverVersion?: string;
+  /** NVIDIA compute capability, e.g. "8.9". */
+  computeCapability?: string;
+  /** Max CUDA version the installed driver supports, e.g. "13.0". */
+  maxCudaVersion?: string;
+  isIntegrated?: boolean;
+  source: GpuDetectionSource[];
+}
+
+export interface GpuProfile {
+  os: "win32" | "darwin" | "linux";
+  arch: string;
+  devices: GpuDevice[];
+  /** The device we plan to use (discrete > integrated, most accurate VRAM). */
+  primary?: GpuDevice;
+  /** ISO timestamp; drives cache invalidation. */
+  detectedAt: string;
+  warnings: string[];
+}
+
+export interface BackendCandidate {
+  backend: Backend;
+  /** Plain-language rationale, e.g. "Best for your NVIDIA graphics card". */
+  reason: string;
+  confidence: "high" | "medium" | "low";
+  /** Soft driver gate (ordering/tips only; the probe is the hard gate). */
+  minDriver?: string;
+  /** Extra parts the backend needs, e.g. ["cudart-12.4"]. */
+  requires?: string[];
+}
+
+export type AccelerationLevel = "gpu-great" | "gpu-ok" | "cpu-only" | "unknown";
+
+export interface AccelerationPlan {
+  /** Ordered best-first candidate backends for the local LLM. */
+  llm: BackendCandidate[];
+  /** Ordered best-first candidate backends for local STT. */
+  stt: BackendCandidate[];
+  recommendedLevel: AccelerationLevel;
+  /** Plain-language summary for the acceleration card. */
+  summary: string;
+  /** Pre-commit benefit hint from VRAM + model fit, e.g. "5-10x". */
+  estimatedSpeedup?: string;
+  /** Total bytes to fetch to enable the recommended backend (engine + redist). */
+  downloadBytes?: number;
+  /** Installed footprint of the recommended backend. */
+  diskBytes?: number;
+  /** False when already provisioned or offline-ready (no download needed). */
+  requiresDownload: boolean;
+}

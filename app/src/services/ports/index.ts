@@ -207,6 +207,16 @@ export type {
   ModelRuntimeEvent,
   HardwareGpu,
   TranscriptEvent,
+  GpuVendor,
+  AccelerationEngine,
+  Backend,
+  AccelerationMode,
+  GpuDetectionSource,
+  GpuDevice,
+  GpuProfile,
+  BackendCandidate,
+  AccelerationLevel,
+  AccelerationPlan,
 } from "./types";
 
 import type {
@@ -231,6 +241,8 @@ import type {
   ModelRuntimeEvent,
   TranscriptEvent,
 } from "./types";
+
+import type { GpuProfile, AccelerationPlan } from "./types";
 
 /**
  * Read-only content the views render. Async: the mock resolves immediately; the real ipc adapter
@@ -312,6 +324,22 @@ export interface CaptureService {
   onTranscript(callback: (event: TranscriptEvent) => void): () => void;
 }
 
+/**
+ * GPU acceleration (gpu-acceleration spec). Turns the user's GPU into real speedups for the local
+ * LLM (llama.cpp) and STT (whisper.cpp), with automatic detection, smart backend selection,
+ * validated provisioning, and graceful CPU fallback. Phase 1 ships the read-only detection +
+ * recommendation surface; provisioning / runtime / test verbs grow in later phases. Gated behind a
+ * feature flag until the full lifecycle lands.
+ */
+export interface AccelerationService {
+  /** The cached GPU profile; triggers async detection when the cache is stale. */
+  profile(): Promise<GpuProfile>;
+  /** Force a fresh hardware re-scan (Advanced "Re-scan hardware"). */
+  rescan(): Promise<GpuProfile>;
+  /** The smart recommendation: best backend per engine, level, estimate, and download size. */
+  plan(): Promise<AccelerationPlan>;
+}
+
 /** The full set of ports available to the app at runtime. */
 export interface Services {
   profile: ProfileService;
@@ -324,4 +352,5 @@ export interface Services {
   secrets: SecretsService;
   models: ModelManagementService;
   capture: CaptureService;
+  acceleration: AccelerationService;
 }

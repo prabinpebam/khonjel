@@ -39,6 +39,8 @@ import type {
   TranscriptionRequest,
   TranscriptionResult,
   UploadJob,
+  GpuProfile,
+  AccelerationPlan,
 } from "../../src/services/ports";
 
 /** Bumped only on breaking channel changes; preload sends it, main rejects mismatches. */
@@ -89,6 +91,9 @@ export const CHANNELS = {
   modelsStorage: "models:storage",
   captureStart: "capture:start",
   captureStop: "capture:stop",
+  accelerationProfile: "acceleration:profile",
+  accelerationRescan: "acceleration:rescan",
+  accelerationPlan: "acceleration:plan",
 } as const;
 
 export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
@@ -138,6 +143,9 @@ export interface ChannelContract {
   "models:storage": { request: []; response: ModelStorageReport };
   "capture:start": { request: []; response: string };
   "capture:stop": { request: [string]; response: { text: string } };
+  "acceleration:profile": { request: []; response: GpuProfile };
+  "acceleration:rescan": { request: []; response: GpuProfile };
+  "acceleration:plan": { request: []; response: AccelerationPlan };
 }
 
 export type RequestOf<C extends Channel> = ChannelContract[C]["request"];

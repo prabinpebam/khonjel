@@ -356,6 +356,52 @@ const ContentCollectionSchema = z.enum([
   "integrations",
 ]);
 
+// ---- GPU acceleration (bounded; audit F3) ----
+const GpuVendorSchema = z.enum(["nvidia", "amd", "intel", "apple", "unknown"]);
+const BackendSchema = z.enum(["cuda-13.3", "cuda-12.4", "vulkan", "metal", "hip", "sycl", "cpu"]);
+
+const GpuDeviceSchema = z.object({
+  index: z.number().int().min(0).max(64),
+  name: z.string().max(200),
+  vendor: GpuVendorSchema,
+  vendorId: z.string().max(8).optional(),
+  vramBytes: z.number().nonnegative().optional(),
+  unifiedMemory: z.boolean().optional(),
+  driverVersion: z.string().max(64).optional(),
+  computeCapability: z.string().max(16).optional(),
+  maxCudaVersion: z.string().max(16).optional(),
+  isIntegrated: z.boolean().optional(),
+  source: z.array(z.enum(["os", "nvidia-smi", "registry", "system_profiler", "lspci"])).max(8),
+});
+
+const GpuProfileSchema = z.object({
+  os: z.enum(["win32", "darwin", "linux"]),
+  arch: z.string().max(32),
+  devices: z.array(GpuDeviceSchema).max(16),
+  primary: GpuDeviceSchema.optional(),
+  detectedAt: z.string().max(40),
+  warnings: z.array(z.string().max(300)).max(16),
+});
+
+const BackendCandidateSchema = z.object({
+  backend: BackendSchema,
+  reason: z.string().max(300),
+  confidence: z.enum(["high", "medium", "low"]),
+  minDriver: z.string().max(64).optional(),
+  requires: z.array(z.string().max(64)).max(8).optional(),
+});
+
+const AccelerationPlanSchema = z.object({
+  llm: z.array(BackendCandidateSchema).max(8),
+  stt: z.array(BackendCandidateSchema).max(8),
+  recommendedLevel: z.enum(["gpu-great", "gpu-ok", "cpu-only", "unknown"]),
+  summary: z.string().max(300),
+  estimatedSpeedup: z.string().max(32).optional(),
+  downloadBytes: z.number().nonnegative().optional(),
+  diskBytes: z.number().nonnegative().optional(),
+  requiresDownload: z.boolean(),
+});
+
 /** Request argument tuples (Phase 0 channels take no arguments; settings:patch takes a patch). */
 export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.profileGet]: z.tuple([]),
@@ -401,6 +447,9 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.modelsStorage]: z.tuple([]),
   [CHANNELS.captureStart]: z.tuple([]),
   [CHANNELS.captureStop]: z.tuple([z.string()]),
+  [CHANNELS.accelerationProfile]: z.tuple([]),
+  [CHANNELS.accelerationRescan]: z.tuple([]),
+  [CHANNELS.accelerationPlan]: z.tuple([]),
 };
 
 /** Response payload schemas. */
@@ -448,4 +497,7 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.modelsStorage]: ModelStorageReportSchema,
   [CHANNELS.captureStart]: z.string(),
   [CHANNELS.captureStop]: z.object({ text: z.string() }),
+  [CHANNELS.accelerationProfile]: GpuProfileSchema,
+  [CHANNELS.accelerationRescan]: GpuProfileSchema,
+  [CHANNELS.accelerationPlan]: AccelerationPlanSchema,
 };

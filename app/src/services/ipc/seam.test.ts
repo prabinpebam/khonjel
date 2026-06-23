@@ -1,8 +1,23 @@
 import { describe, it, expect } from "vitest";
-import type { ConnectionProfile, Services } from "@services/ports";
+import type { ConnectionProfile, Services, AccelerationPlan, GpuProfile } from "@services/ports";
 import { mockServices } from "@services/adapters/mock";
 import { createIpcServices } from "@services/adapters/ipc";
 import { createDispatch } from "@ipc/dispatch";
+
+const GPU_PROFILE: GpuProfile = {
+  os: "linux",
+  arch: "x64",
+  devices: [],
+  detectedAt: "2026-06-23T00:00:00.000Z",
+  warnings: [],
+};
+const GPU_PLAN: AccelerationPlan = {
+  llm: [{ backend: "cpu", reason: "Runs on the processor.", confidence: "low" }],
+  stt: [{ backend: "cpu", reason: "Runs on the processor.", confidence: "low" }],
+  recommendedLevel: "cpu-only",
+  summary: "Running on the CPU.",
+  requiresDownload: false,
+};
 
 /**
  * BE3 — adapter parity (Phase 0, T0.4). The mock and the real `ipc` adapter must satisfy the
@@ -106,6 +121,11 @@ const dispatch = createDispatch({
   capture: {
     start: () => "s1",
     stop: () => ({ text: "" }),
+  },
+  acceleration: {
+    profile: () => GPU_PROFILE,
+    rescan: () => GPU_PROFILE,
+    plan: () => GPU_PLAN,
   },
 });
 const ipcServices = createIpcServices((channel, ...args) => dispatch(channel, ...args));

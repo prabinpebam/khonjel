@@ -40,6 +40,8 @@ import type {
   TranscriptionRequest,
   TranscriptionResult,
   UploadJob,
+  GpuProfile,
+  AccelerationPlan,
 } from "../../src/services/ports";
 
 export interface DispatchDeps {
@@ -108,6 +110,11 @@ export interface DispatchDeps {
     start: () => string | Promise<string>;
     stop: (sessionId: string) => { text: string } | Promise<{ text: string }>;
   };
+  acceleration: {
+    profile: () => GpuProfile | Promise<GpuProfile>;
+    rescan: () => GpuProfile | Promise<GpuProfile>;
+    plan: () => AccelerationPlan | Promise<AccelerationPlan>;
+  };
   // Grows one slice per phase (meetings, transcription, agent, ...).
 }
 
@@ -160,6 +167,9 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.modelsStorage]: () => deps.models.storage(),
     [CHANNELS.captureStart]: () => deps.capture.start(),
     [CHANNELS.captureStop]: (args) => deps.capture.stop(args[0] as string),
+    [CHANNELS.accelerationProfile]: () => deps.acceleration.profile(),
+    [CHANNELS.accelerationRescan]: () => deps.acceleration.rescan(),
+    [CHANNELS.accelerationPlan]: () => deps.acceleration.plan(),
   };
 
   return async function dispatch(channel: string, ...args: unknown[]): Promise<unknown> {

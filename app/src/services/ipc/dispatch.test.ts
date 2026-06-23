@@ -1,6 +1,22 @@
 import { describe, it, expect } from "vitest";
 import { createDispatch, type DispatchDeps } from "@ipc/dispatch";
 import { isIpcError } from "@ipc/ipc-contract";
+import type { AccelerationPlan, GpuProfile } from "@services/ports";
+
+const GPU_PROFILE: GpuProfile = {
+  os: "win32",
+  arch: "x64",
+  devices: [],
+  detectedAt: "2026-06-23T00:00:00.000Z",
+  warnings: [],
+};
+const GPU_PLAN: AccelerationPlan = {
+  llm: [{ backend: "cpu", reason: "Runs on the processor.", confidence: "low" }],
+  stt: [{ backend: "cpu", reason: "Runs on the processor.", confidence: "low" }],
+  recommendedLevel: "cpu-only",
+  summary: "Running on the CPU.",
+  requiresDownload: false,
+};
 
 /**
  * BE1/BE2 — the pure dispatch layer (Phase 0, T0.5). Deps are injected so handlers stay pure
@@ -83,6 +99,11 @@ const deps: DispatchDeps = {
   capture: {
     start: () => "s1",
     stop: () => ({ text: "" }),
+  },
+  acceleration: {
+    profile: () => GPU_PROFILE,
+    rescan: () => GPU_PROFILE,
+    plan: () => GPU_PLAN,
   },
 };
 

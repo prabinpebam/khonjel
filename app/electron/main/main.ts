@@ -38,6 +38,7 @@ import {
   modelsDirOf,
 } from "./models/runtime";
 import { detectHardwareProfile } from "./models/hardware";
+import { createNodeAccelerationService } from "./acceleration/node-io";
 import { createSecretStore } from "./secrets/store";
 import { safeStorageCipher } from "./secrets/safeStorageCipher";
 import { createProviderRouter } from "./providers/router";
@@ -140,6 +141,7 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
   // ticks are relayed to the renderer over "khonjel:model-progress" (preload bridges onModelProgress).
   const modelsDir = modelsDirOf(userData);
   mkdirSync(modelsDir, { recursive: true });
+  const accelerationService = createNodeAccelerationService(path.join(userData, "runtime"));
   const engineReady = makeEngineReady({
     userDataDir: userData,
     appDir: path.join(__dirname, ".."),
@@ -363,6 +365,11 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     capture: {
       start: () => captureManager.start(),
       stop: (id) => captureManager.stop(id),
+    },
+    acceleration: {
+      profile: () => accelerationService.profile(),
+      rescan: () => accelerationService.rescan(),
+      plan: () => accelerationService.plan(),
     },
   });
 
