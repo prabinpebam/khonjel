@@ -1,6 +1,12 @@
 # GPU Acceleration — Spec Set
 
-> **Status:** Implementation-ready specification for review (pre-implementation).
+> **Status:** **Implemented (phases 1-7).** Detection, the capability->backend decision, the pinned
+> artifact manifest + provisioning pipeline, the validation probe + rollback/crash-loop guard, the
+> offload/`-ngl` + OOM ladder, the full typed contracts, and the one-click UX are built and covered by
+> BE1 unit tests plus browser + Electron EDD. CPU stays the floor: activating a *downloaded* GPU
+> backend is gated on pinned artifact hashes (a release step that records each asset's sha256), so
+> until those are populated, `enable` fails gracefully to CPU. See
+> [06 implementation plan](06-edd-tdd-and-implementation-plan.md).
 > **Audience:** Electron/backend engineers, frontend engineers, UX, EDD authors.
 > **Theme:** No-compromise GPU acceleration for **all** local models, with automatic detection,
 > smart environment setup, automatic rollback, a friendly test/validate experience, and graceful
