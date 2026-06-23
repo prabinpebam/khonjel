@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { CheckCircle2, Cpu, Download, HardDrive, Info, ShieldCheck, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Cpu, Download, HardDrive, Info, MonitorUp, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useServices } from "@services";
 import { useModelsStore } from "@stores/models";
 import type { ModelStatus } from "@services/ports";
@@ -15,6 +15,12 @@ function fmt(bytes?: number): string {
 
 function shortModelName(model?: ModelStatus): string {
   return model?.name ?? "Not selected";
+}
+
+function gpuSummary(gpus: { name: string; vramBytes?: number }[]): string {
+  const gpu = gpus.find((g) => /nvidia|geforce|rtx|gtx|amd|radeon|intel|iris/i.test(g.name)) ?? gpus[0];
+  if (!gpu) return "No GPU detected";
+  return gpu.vramBytes ? `${gpu.name} · ${fmt(gpu.vramBytes)}` : gpu.name;
 }
 
 export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
@@ -78,8 +84,9 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <SetupFact icon={<Cpu />} label="Computer" value={compatibility.hardware.cpuName ?? compatibility.hardware.arch} />
+          <SetupFact icon={<MonitorUp />} label="Graphics" value={gpuSummary(compatibility.hardware.gpus)} />
           <SetupFact icon={<HardDrive />} label="Free space" value={fmt(compatibility.hardware.freeDiskBytes)} />
           <SetupFact
             icon={<Info />}

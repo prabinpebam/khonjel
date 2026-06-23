@@ -205,6 +205,7 @@ export type {
   ActiveModelSlot,
   ActiveModelReport,
   ModelRuntimeEvent,
+  HardwareGpu,
   TranscriptEvent,
 } from "./types";
 

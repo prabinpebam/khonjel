@@ -115,7 +115,7 @@ describe("model compatibility", () => {
     const report = buildModelCompatibilityReport({ hardware: hardware(), runtimes, statuses: baseStatuses });
     const parakeet = report.models.find((m) => m.modelId === "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3");
     expect(parakeet?.level).toBe("unsupported");
-    expect(parakeet?.summary).toMatch(/not supported/i);
+    expect(parakeet?.summary).toMatch(/runtime is not bundled/i);
     expect(parakeet?.reasons.some((r) => r.code === "runtime-unsupported")).toBe(true);
   });
 

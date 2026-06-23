@@ -155,7 +155,7 @@ function compatibilityFor(model: ModelStatus, hardware: HardwareProfile, runtime
   let level: CompatibilityLevel = model.recommended ? "recommended" : "works";
   const runtime = runtimeFromList(model, runtimes);
   if (req.support === "not-yet-supported" || runtime?.state === "unsupported") {
-    reasons.push({ code: "runtime-unsupported", message: `${model.name} is not supported in this version.` });
+    reasons.push({ code: "runtime-unsupported", message: runtime?.message || `${model.name} runtime is not bundled in this version.` });
     level = "unsupported";
   } else if (runtime?.state && runtime.state !== "ready") {
     reasons.push({ code: "runtime-missing", message: runtime.message || "Runtime missing." });
@@ -197,7 +197,7 @@ function compatibilityFor(model: ModelStatus, hardware: HardwareProfile, runtime
     modelId: model.id,
     kind: model.kind,
     level,
-    summary: summaryFor(level, model.name),
+    summary: reasons.find((r) => r.code === "runtime-unsupported")?.message ?? summaryFor(level, model.name),
     reasons,
     estimated: {
       speed: level === "recommended" ? "fast" : level === "works" ? "good" : level === "limited" ? "slow" : "unknown",
