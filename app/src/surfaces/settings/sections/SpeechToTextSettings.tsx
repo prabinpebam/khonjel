@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useSettingsStore } from "@stores/settings";
-import { SettingGroup } from "@components/common/SettingRow";
 import { Tabs } from "@components/ui/tabs";
-import { ToggleRow } from "../controls";
 import { InferenceConfigBlock, InferenceModeSelector } from "../inference";
 import { LocalModelSetup } from "../LocalModelSetup";
 import { AccelerationCard } from "../AccelerationCard";
@@ -44,16 +42,6 @@ export function SpeechToTextSettings() {
           ) : null}
           <InferenceConfigBlock prefix={prefix} kind="stt" />
         </section>
-
-        {tab === "dictation" ? (
-          <SettingGroup label="Options">
-            <ToggleRow
-              title="Transcription preview"
-              subtitle="Show the floating bar while you speak."
-              settingKey="stt.dictation.preview"
-            />
-          </SettingGroup>
-        ) : null}
       </div>
     </div>
   );

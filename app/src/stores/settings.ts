@@ -34,7 +34,6 @@ const DEFAULT_TOGGLES: Record<string, boolean> = {
   saveHistory: true,
   includeDiscarded: false,
   "transforms.optIn": true,
-  "stt.dictation.preview": true,
   "stt.note.diarization": true,
   "stt.note.speakerLabels": true,
   "llm.cleanup.enabled": true,

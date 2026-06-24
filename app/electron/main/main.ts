@@ -763,10 +763,10 @@ void app.whenReady().then(() => {
     floatingBarWindow.on("closed", () => {
       floatingBarWindow = null;
     });
-    // If the bar is pinned (preview on + auto-hide off), show it once it has loaded.
+    // The bar is always shown during dictation (no headless mode); pin it on load when auto-hide is off.
     floatingBarWindow.webContents.once("did-finish-load", () => {
       const s = built.settingsStore.get();
-      if ((s.toggles["stt.dictation.preview"] ?? true) && !(s.toggles.floatingAutoHide ?? true)) {
+      if (!(s.toggles.floatingAutoHide ?? true)) {
         showFloatingBar();
       }
     });
@@ -793,15 +793,14 @@ void app.whenReady().then(() => {
     floatingBarWindow.showInactive();
   }
 
-  // The dictation hotkey is a session toggle: the first press shows the bar (when the HUD is on) and
-  // starts a capture; the next press ends it. `dictationActive` tracks the session so this also works
-  // when the HUD preview is off (there is no window visibility to toggle on). Reset when the bar idles.
+  // The dictation hotkey is a session toggle: the first press shows the bar and starts a capture; the
+  // next press ends it. The floating bar is always shown while dictating -- there is no hidden mode.
+  // `dictationActive` tracks the session. Reset when the bar idles.
   let dictationActive = false;
   function triggerDictation(): void {
     if (!dictationActive) {
       dictationActive = true;
-      const preview = built.settingsStore.get().toggles["stt.dictation.preview"] ?? true;
-      if (preview) showFloatingBar();
+      showFloatingBar();
       floatingBarWindow?.webContents.send("khonjel:hotkey", "dictation:start");
     } else {
       dictationActive = false;
