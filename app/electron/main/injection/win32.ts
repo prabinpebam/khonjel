@@ -33,11 +33,12 @@ const MUTE_CS = `using System;using System.Runtime.InteropServices;public class 
 // Serialize mute/unmute so a quick start->stop can never land out of order (stuck muted).
 let audioOp: Promise<unknown> = Promise.resolve();
 
-/** Set the default playback device's master mute on/off (Windows). Fire-and-forget + ordered. */
-export function setSystemMute(muted: boolean): void {
-  if (!isWindows) return;
+/** Set the default playback device's master mute on/off (Windows). Ordered; resolves when applied. */
+export function setSystemMute(muted: boolean): Promise<void> {
+  if (!isWindows) return Promise.resolve();
   const script = `Add-Type -TypeDefinition '${MUTE_CS}'; [KhonjelAudio]::SetMute($${muted ? "true" : "false"})`;
   audioOp = audioOp.then(() => powershell(script).catch(() => undefined));
+  return audioOp.then(() => undefined);
 }
 
 /** Synchronous unmute for shutdown safety, so quitting mid-recording can't leave audio muted. */

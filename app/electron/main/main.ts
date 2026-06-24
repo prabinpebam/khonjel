@@ -83,14 +83,19 @@ if (process.env.KHONJEL_EVAL === "1") {
   app.commandLine.appendSwitch("use-fake-device-for-media-stream");
 }
 
+// Dictation is started/stopped by a GLOBAL hotkey, so the renderer never gets a user gesture and
+// Chromium's autoplay policy would keep the Web Audio context suspended -- silencing the dictation
+// start/stop cues. Allow audio without a gesture so the beeps actually play. Must be set pre-ready.
+app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
+
 // Mute other system audio while a dictation capture is live (Win32 Core Audio) so the recording is
 // clean, and always restore it when recording stops. Module-scoped so shutdown can guarantee a
 // restore. Skipped under KHONJEL_EVAL so the test suite never mutes the machine running it.
 let dictationMuted = false;
-function setDictationMute(muted: boolean): void {
+function setDictationMute(muted: boolean): Promise<void> {
   dictationMuted = muted;
-  if (process.env.KHONJEL_EVAL === "1") return;
-  win32.setSystemMute(muted);
+  if (process.env.KHONJEL_EVAL === "1") return Promise.resolve();
+  return win32.setSystemMute(muted);
 }
 
 /**
@@ -816,13 +821,25 @@ void app.whenReady().then(() => {
     if (autoHide) floatingBarWindow?.hide();
   });
 
-  // The bar reports when the mic is actually recording, so other system audio can be muted for a
-  // clean capture (gated by the "pause media" setting) and reliably restored when recording stops.
+  // The bar reports when the mic is actually recording. We (a) play the dictation cues and (b) mute
+  // other system audio for a clean capture (gated by "pause media") -- ORDER MATTERS: the mute hits
+  // the master endpoint, which would also swallow our own beep, so the "ready" cue plays BEFORE we
+  // mute and the "stopped" cue plays only AFTER the endpoint is restored. Both gated by "dictation
+  // sounds"; the unmute always runs on stop regardless of the setting.
+  const sendDictationCue = (kind: "start" | "stop"): void => {
+    if (!(built.settingsStore.get().toggles.dictationSounds ?? true)) return;
+    floatingBarWindow?.webContents.send("khonjel:hotkey", `cue:${kind}`);
+  };
   ipcOn("recording:active", (_event, active: unknown) => {
     if (active) {
-      if (built.settingsStore.get().toggles.pauseMedia ?? true) setDictationMute(true);
+      sendDictationCue("start"); // endpoint not muted yet -> audible
+      if (built.settingsStore.get().toggles.pauseMedia ?? true) void setDictationMute(true);
+    } else if (dictationMuted) {
+      // We muted on start: restore first, then beep so the "stopped" cue isn't muted with it.
+      void setDictationMute(false).then(() => sendDictationCue("stop"));
     } else {
-      setDictationMute(false); // always restore on stop, regardless of the setting
+      sendDictationCue("stop");
+      void setDictationMute(false); // safety restore (no-op when already unmuted)
     }
   });
 

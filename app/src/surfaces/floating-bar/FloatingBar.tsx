@@ -3,6 +3,7 @@ import { Loader2, Mic, Square } from "lucide-react";
 import { useServices } from "@services";
 import { useDictation } from "@hooks/useDictation";
 import { MicWaveform } from "@components/common/MicWaveform";
+import { playStartCue, playStopCue } from "@lib/audio/cues";
 import { cn } from "@lib/utils";
 
 /**
@@ -42,6 +43,11 @@ export function FloatingBar() {
           api.cancel();
           window.electronAPI?.floatingIdle?.();
         }
+      } else if (action === "cue:start") {
+        // Main sequences the cues around the system-audio mute so the beeps aren't muted with it.
+        playStartCue();
+      } else if (action === "cue:stop") {
+        playStopCue();
       }
     });
   }, []);

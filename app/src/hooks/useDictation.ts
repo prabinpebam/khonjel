@@ -8,7 +8,6 @@ import { useRef, useState } from "react";
 import { useServices } from "@services";
 import { useSettingsStore } from "@stores/settings";
 import { startRecording, resolveMicDeviceId, type Recorder } from "@lib/audio/recorder";
-import { playStartCue, playStopCue } from "@lib/audio/cues";
 
 export type DictationStatus = "idle" | "recording" | "transcribing" | "error";
 
@@ -38,7 +37,6 @@ export function useDictation(
   const saveHistory = useSettingsStore((s) => s.toggles["saveHistory"] ?? true);
   const cleanupEnabled = useSettingsStore((s) => s.toggles["llm.cleanup.enabled"] ?? true);
   const transcriptionLanguage = useSettingsStore((s) => s.values["transcriptionLanguage"] ?? "en-US");
-  const dictationSounds = useSettingsStore((s) => s.toggles["dictationSounds"] ?? true);
   const [status, setStatus] = useState<DictationStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [partialText, setPartialText] = useState("");
@@ -90,7 +88,6 @@ export function useDictation(
       sessionIdRef.current = sessionId;
       startedAtRef.current = Date.now();
       setStatus("recording");
-      if (dictationSounds) playStartCue();
     } catch (e) {
       unsubscribe();
       if (sessionId) void capture.stop(sessionId);
@@ -122,7 +119,6 @@ export function useDictation(
     recorderRef.current = null;
     sessionIdRef.current = null;
     setStatus("transcribing");
-    if (dictationSounds) playStopCue();
     try {
       const durationSec = Math.max(0, Math.round((Date.now() - startedAtRef.current) / 1000));
       await recorder.stop(); // flush the last frames + tear down the mic
