@@ -39,15 +39,30 @@ export function recommendedModel(kind: ModelKind): ModelInfo | undefined {
  * verify exactly; when absent we accept a fully-transferred file (content-length complete). The
  * first `sources[]` entry matches the URL the fetch scripts already use, so an in-app download and
  * `npm run fetch:*` pull byte-identical files. Cloud catalog entries have NO manifest.
+ *
+ * A model is usually a single file (`fileName` + `sources`). A few engines (sherpa-onnx Parakeet)
+ * ship as a SET of files; those declare `files[]` and `fileName` names the per-model directory the
+ * parts land in (`<modelsDir>/<fileName>/<part>`). Multi-file models leave `sources` empty.
  */
-export interface ModelManifest {
-  engine: "whisper" | "parakeet" | "llama";
-  /** Canonical on-disk filename we always write to (independent of the remote name). */
-  fileName: string;
-  /** Ordered mirrors; sources[0] == the script URL today. */
+export interface ModelFile {
+  /** On-disk filename within the model directory. */
+  name: string;
+  /** Ordered mirrors for this individual part. */
   sources: string[];
   bytes?: number;
   sha256?: string;
+}
+
+export interface ModelManifest {
+  engine: "whisper" | "parakeet" | "llama";
+  /** Single-file: the on-disk filename. Multi-file: the per-model directory name. */
+  fileName: string;
+  /** Ordered mirrors; sources[0] == the script URL today. Empty for multi-file models. */
+  sources: string[];
+  bytes?: number;
+  sha256?: string;
+  /** When present, a multi-file model: each part lands in `<modelsDir>/<fileName>/<part.name>`. */
+  files?: ModelFile[];
 }
 
 const HF = "https://huggingface.co";
@@ -70,9 +85,28 @@ const MANIFESTS: Record<string, ModelManifest> = {
   },
   "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3": {
     engine: "parakeet",
-    fileName: "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3",
-    // Not downloadable yet: surfaced as "Not supported yet" by compatibility/readiness.
+    // Multi-file model: the parts live in <modelsDir>/<fileName>/. The int8 export is the default
+    // (smallest, real-time on CPU). Pinned checksums must be filled at build (verify-model-pins.mjs).
+    fileName: "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8",
     sources: [],
+    files: [
+      {
+        name: "encoder.int8.onnx",
+        sources: [`${HF}/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/main/encoder.int8.onnx`],
+      },
+      {
+        name: "decoder.int8.onnx",
+        sources: [`${HF}/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/main/decoder.int8.onnx`],
+      },
+      {
+        name: "joiner.int8.onnx",
+        sources: [`${HF}/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/main/joiner.int8.onnx`],
+      },
+      {
+        name: "tokens.txt",
+        sources: [`${HF}/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/main/tokens.txt`],
+      },
+    ],
   },
   "qwen2.5-1.5b-instruct-q4_k_m.gguf": {
     engine: "llama",

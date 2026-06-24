@@ -128,6 +128,62 @@ describe("createModelService", () => {
   });
 });
 
+describe("createModelService (multi-file models)", () => {
+  const PARAKEET = "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3";
+  const MODEL_DIR = join("/models", "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8");
+  const PARTS = ["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"];
+
+  it("downloads every part and installs to the aggregate size", async () => {
+    const { service } = build();
+    expect(stateOf(service, PARAKEET)).toBe("not-installed");
+    service.download(PARAKEET);
+    await vi.waitFor(() => expect(stateOf(service, PARAKEET)).toBe("installed"));
+    // 4 parts * 100 bytes each from the fake downloader.
+    expect(service.status().find((s) => s.id === PARAKEET)?.installedBytes).toBe(400);
+  });
+
+  it("fails the whole model when any single part fails", async () => {
+    let n = 0;
+    const flaky: Downloader = {
+      download: async (_task, onTick) => {
+        n += 1;
+        if (n === 2) return { ok: false, code: "offline", message: "no net" };
+        onTick(100, 100);
+        return { ok: true, bytes: 100 };
+      },
+    };
+    const { service } = build({ downloader: flaky });
+    service.download(PARAKEET);
+    await vi.waitFor(() => expect(stateOf(service, PARAKEET)).toBe("error"));
+  });
+
+  it("reconciles to installed only when ALL parts are present on disk", () => {
+    const { service, setSize } = build();
+    setSize(join(MODEL_DIR, "encoder.int8.onnx"), 10);
+    setSize(join(MODEL_DIR, "decoder.int8.onnx"), 10);
+    service.reconcile();
+    expect(stateOf(service, PARAKEET)).toBe("not-installed"); // joiner + tokens still missing
+    setSize(join(MODEL_DIR, "joiner.int8.onnx"), 10);
+    setSize(join(MODEL_DIR, "tokens.txt"), 10);
+    service.reconcile();
+    expect(stateOf(service, PARAKEET)).toBe("installed");
+  });
+
+  it("removes every part and frees the aggregate bytes", async () => {
+    const removed: string[] = [];
+    const { fs } = fakeFs();
+    const tracking: ModelServiceFs = { ...fs, remove: (p) => removed.push(p) };
+    const { service } = build({ fs: tracking });
+    service.download(PARAKEET);
+    await vi.waitFor(() => expect(stateOf(service, PARAKEET)).toBe("installed"));
+    const { freedBytes } = service.remove(PARAKEET);
+    expect(freedBytes).toBe(400);
+    expect(stateOf(service, PARAKEET)).toBe("not-installed");
+    // Each part path under the model directory was removed.
+    for (const part of PARTS) expect(removed).toContain(join(MODEL_DIR, part));
+  });
+});
+
 describe("boundModelIdsFrom", () => {
   it("collects real model ids from slot settings, ignoring unknown values", () => {
     const set = boundModelIdsFrom({

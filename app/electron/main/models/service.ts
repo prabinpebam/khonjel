@@ -14,7 +14,7 @@ import type {
   ModelProgress,
   ModelStatus,
 } from "../../../src/services/ports";
-import { localModels, modelKindOf, modelManifest, type ModelManifest } from "./catalog";
+import { localModels, modelKindOf, modelManifest, type ModelFile, type ModelManifest } from "./catalog";
 import type { ModelIndexStore } from "./store";
 import type { Downloader } from "./downloader";
 
@@ -80,6 +80,37 @@ function messageFor(code: ModelErrorCode): string {
 export function createModelService(deps: ModelServiceDeps): ModelService {
   const finalPathOf = (m: ModelManifest): string => join(deps.modelsDir, m.fileName);
   const partPathOf = (m: ModelManifest): string => `${finalPathOf(m)}.part`;
+  // For a multi-file model `fileName` is the per-model directory; each part lives inside it.
+  const partFinalPath = (m: ModelManifest, file: ModelFile): string => join(finalPathOf(m), file.name);
+
+  /** Total download size when every part is pinned; undefined falls back to the catalog label. */
+  function manifestTotalBytes(m: ModelManifest): number | undefined {
+    if (m.files && m.files.length > 0) {
+      return m.files.every((f) => f.bytes != null)
+        ? m.files.reduce((sum, f) => sum + (f.bytes ?? 0), 0)
+        : undefined;
+    }
+    return m.bytes;
+  }
+
+  /** Whether a model is fully present on disk + its installed byte count (single- or multi-file). */
+  function installedOnDisk(m: ModelManifest): { present: boolean; bytes: number } {
+    if (m.files && m.files.length > 0) {
+      let bytes = 0;
+      for (const file of m.files) {
+        const finalPath = partFinalPath(m, file);
+        const size = deps.fs.size(finalPath);
+        if (!deps.fs.exists(finalPath) || size <= 0) return { present: false, bytes: 0 };
+        if (file.bytes != null && size !== file.bytes) return { present: false, bytes: 0 };
+        bytes += size;
+      }
+      return { present: true, bytes };
+    }
+    const finalPath = finalPathOf(m);
+    const size = deps.fs.size(finalPath);
+    const present = deps.fs.exists(finalPath) && size > 0 && (m.bytes == null || size === m.bytes);
+    return { present, bytes: present ? size : 0 };
+  }
 
   const controllers = new Map<string, AbortController>();
   const queue: string[] = [];
@@ -99,21 +130,19 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
 
   function reconcile(): void {
     for (const { info, manifest } of localModels()) {
-      const finalPath = finalPathOf(manifest);
-      const present = deps.fs.exists(finalPath) && deps.fs.size(finalPath) > 0;
-      const sizeOk = manifest.bytes == null || deps.fs.size(finalPath) === manifest.bytes;
+      const { present, bytes } = installedOnDisk(manifest);
       const entry = deps.store.get(info.id);
-      if (present && sizeOk) {
+      if (present) {
         if (!entry || entry.state !== "installed") {
           deps.store.patch(info.id, {
             state: "installed",
-            installedBytes: deps.fs.size(finalPath),
+            installedBytes: bytes,
             bytesDone: undefined,
             errorCode: undefined,
           });
         }
       } else if (entry?.state === "installed") {
-        // The file vanished out from under us.
+        // The file(s) vanished out from under us.
         deps.store.patch(info.id, { state: "not-installed", installedBytes: undefined });
       }
     }
@@ -133,6 +162,10 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
   async function runDownload(id: string): Promise<void> {
     const manifest = modelManifest(id);
     if (!manifest) return;
+    if (manifest.files && manifest.files.length > 0) {
+      await runMultiFileDownload(id, manifest);
+      return;
+    }
     const url = deps.sourceFor?.(id) ?? manifest.sources[0];
     if (!url) {
       deps.store.patch(id, { state: "error", errorCode: "source-unavailable", bytesDone: undefined });
@@ -188,6 +221,78 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
     progress(id);
   }
 
+  /**
+   * Multi-file model: pull each part into the model directory one at a time, reusing the same
+   * resumable/verified downloader. Readiness = all parts present; a single part failure fails the
+   * whole model. Progress aggregates bytes across parts. No archive, no extraction.
+   */
+  async function runMultiFileDownload(id: string, manifest: ModelManifest): Promise<void> {
+    const files = manifest.files ?? [];
+    const totalBytes = manifestTotalBytes(manifest) ?? labelBytes(catalogLabel(id));
+    if (deps.fs.freeBytes(deps.modelsDir) < totalBytes) {
+      deps.store.patch(id, { state: "error", errorCode: "disk-full", bytesDone: undefined });
+      progress(id);
+      return;
+    }
+    deps.fs.ensureDir(finalPathOf(manifest)); // the per-model directory
+    deps.store.patch(id, { state: "downloading", bytesTotal: totalBytes, bytesDone: 0, errorCode: undefined });
+    progress(id);
+
+    const controller = new AbortController();
+    controllers.set(id, controller);
+    let base = 0;
+    for (const file of files) {
+      const finalPath = partFinalPath(manifest, file);
+      // Resume a part already fully on disk (an earlier interrupted multi-file pull).
+      const existing = deps.fs.size(finalPath);
+      if (deps.fs.exists(finalPath) && existing > 0 && (file.bytes == null || existing === file.bytes)) {
+        base += existing;
+        deps.store.patch(id, { state: "downloading", bytesDone: base, bytesTotal: totalBytes });
+        progress(id);
+        continue;
+      }
+      const url = file.sources[0];
+      if (!url) {
+        controllers.delete(id);
+        deps.store.patch(id, { state: "error", errorCode: "source-unavailable", bytesDone: undefined });
+        progress(id);
+        return;
+      }
+      const captured = base;
+      const outcome = await deps.downloader.download(
+        { url, partPath: `${finalPath}.part`, finalPath, expectedBytes: file.bytes, sha256: file.sha256 },
+        (bytesDone) => {
+          deps.store.patch(id, { state: "downloading", bytesDone: captured + bytesDone, bytesTotal: totalBytes });
+          progress(id);
+        },
+        controller.signal,
+      );
+      if (controller.signal.aborted) {
+        controllers.delete(id);
+        deps.fs.remove(`${finalPath}.part`);
+        deps.store.patch(id, { state: "not-installed", bytesDone: undefined, errorCode: undefined });
+        progress(id);
+        return;
+      }
+      if (!outcome.ok) {
+        controllers.delete(id);
+        deps.store.patch(id, { state: "error", errorCode: outcome.code, bytesDone: undefined });
+        progress(id);
+        return;
+      }
+      base += outcome.bytes;
+    }
+    controllers.delete(id);
+    deps.store.patch(id, {
+      state: "installed",
+      installedBytes: base,
+      bytesDone: undefined,
+      verifiedAt: new Date().toISOString(),
+      errorCode: undefined,
+    });
+    progress(id);
+  }
+
   function catalogLabel(id: string): string {
     for (const { info } of localModels()) if (info.id === id) return info.sizeLabel;
     return "";
@@ -217,7 +322,7 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
         kind,
         state: entry?.state ?? "not-installed",
         bytesDone: entry?.bytesDone,
-        bytesTotal: entry?.bytesTotal ?? manifest.bytes,
+        bytesTotal: entry?.bytesTotal ?? manifestTotalBytes(manifest),
         engineReady: deps.engineReady(manifest.engine),
         error,
         installedBytes: entry?.installedBytes,
@@ -258,6 +363,28 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
       // blocks the event loop (otherwise the success/failure tick coalesces and nothing is shown).
       await new Promise((resolve) => setImmediate(resolve));
 
+      if (manifest.files && manifest.files.length > 0) {
+        const ok = manifest.files.every((file) => {
+          const partPath = partFinalPath(manifest, file);
+          const present = deps.fs.exists(partPath) && deps.fs.size(partPath) > 0;
+          const sizeOk = present && (file.bytes == null || deps.fs.size(partPath) === file.bytes);
+          const hashOk =
+            present &&
+            (!file.sha256 || deps.fs.sha256(partPath).toLowerCase() === file.sha256.toLowerCase());
+          return sizeOk && hashOk;
+        });
+        if (ok) {
+          deps.store.patch(id, { state: "installed", verifiedAt: new Date().toISOString(), errorCode: undefined });
+          progress(id);
+          return { ok: true };
+        }
+        deps.fs.remove(finalPathOf(manifest)); // drop the whole model dir, then re-download
+        deps.store.patch(id, { state: "not-installed", installedBytes: undefined });
+        progress(id);
+        enqueueDownload(id);
+        return { ok: false };
+      }
+
       const present = deps.fs.exists(finalPath) && deps.fs.size(finalPath) > 0;
       const sizeOk = present && (manifest.bytes == null || deps.fs.size(finalPath) === manifest.bytes);
       const hashOk =
@@ -282,10 +409,19 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
       if (controller) controller.abort();
       const idx = queue.indexOf(id);
       if (idx >= 0) queue.splice(idx, 1);
-      const finalPath = finalPathOf(manifest);
-      const freed = deps.fs.exists(finalPath) ? deps.fs.size(finalPath) : deps.store.get(id)?.installedBytes ?? 0;
-      deps.fs.remove(finalPath);
-      deps.fs.remove(partPathOf(manifest));
+      const onDisk = installedOnDisk(manifest);
+      const freed = onDisk.bytes || deps.store.get(id)?.installedBytes || 0;
+      if (manifest.files && manifest.files.length > 0) {
+        for (const file of manifest.files) {
+          const partPath = partFinalPath(manifest, file);
+          deps.fs.remove(partPath);
+          deps.fs.remove(`${partPath}.part`);
+        }
+        deps.fs.remove(finalPathOf(manifest)); // the now-empty model directory
+      } else {
+        deps.fs.remove(finalPathOf(manifest));
+        deps.fs.remove(partPathOf(manifest));
+      }
       deps.store.patch(id, {
         state: "not-installed",
         installedBytes: undefined,

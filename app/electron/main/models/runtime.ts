@@ -8,7 +8,7 @@ import {
   existsSync,
   statSync,
   mkdirSync,
-  unlinkSync,
+  rmSync,
   appendFileSync,
   readFileSync,
   renameSync,
@@ -34,7 +34,8 @@ function sizeOf(path: string): number {
 
 function removeQuietly(path: string): void {
   try {
-    unlinkSync(path);
+    // recursive handles a multi-file model directory; force no-ops when the path is already gone.
+    rmSync(path, { recursive: true, force: true });
   } catch {
     // already gone / best-effort
   }
