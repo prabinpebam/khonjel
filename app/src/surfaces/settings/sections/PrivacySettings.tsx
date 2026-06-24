@@ -3,7 +3,7 @@ import { useServices } from "@services";
 import { SettingGroup, SettingRow } from "@components/common/SettingRow";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
-import { SelectRow, ToggleRow } from "../controls";
+import { ToggleRow } from "../controls";
 
 export function PrivacySettings() {
   const { content } = useServices();
@@ -19,7 +19,7 @@ export function PrivacySettings() {
     };
   }, [content]);
 
-  async function clearAudio() {
+  async function clearUploads() {
     await content.saveUploads([]);
     setUploadCount(0);
   }
@@ -32,63 +32,38 @@ export function PrivacySettings() {
           subtitle="No data is collected."
           control={<Badge variant="neutral">Off</Badge>}
         />
+        <SettingRow
+          title="Audio storage"
+          subtitle="Recordings are transcribed in memory and never written to disk."
+          control={<Badge variant="success">Never stored</Badge>}
+        />
       </SettingGroup>
 
-      <SettingGroup label="Audio retention">
-        <SelectRow
-          title="Keep audio for"
-          settingKey="audioRetentionDays"
-          options={[
-            { value: "0", label: "Disabled" },
-            { value: "7", label: "7 days" },
-            { value: "14", label: "14 days" },
-            { value: "30", label: "30 days" },
-            { value: "60", label: "60 days" },
-            { value: "90", label: "90 days" },
-          ]}
-        />
+      <SettingGroup label="Data retention">
+        <ToggleRow title="Save transcription history" settingKey="saveHistory" />
         <SettingRow
-          title="Storage usage"
+          title="Upload transcripts"
           subtitle={
             uploadCount === 0
-              ? "No stored recordings."
-              : `${uploadCount} recording${uploadCount === 1 ? "" : "s"} on device.`
+              ? "No upload transcripts stored."
+              : `${uploadCount} upload transcript${uploadCount === 1 ? "" : "s"} stored.`
           }
           control={
             <Button
               variant="ghost"
               size="sm"
               className="text-danger hover:text-danger"
-              onClick={() => void clearAudio()}
+              onClick={() => void clearUploads()}
               disabled={uploadCount === 0}
             >
-              Clear all audio
+              Clear uploads
             </Button>
           }
         />
       </SettingGroup>
 
-      <SettingGroup label="Data retention">
-        <ToggleRow title="Save transcription history" settingKey="saveHistory" />
-        <ToggleRow
-          title="Include discarded transcriptions"
-          subtitle="Items marked 'do not save' are kept for 7 days."
-          settingKey="includeDiscarded"
-        />
-      </SettingGroup>
-
       <SettingGroup label="Permissions">
         <MicPermissionRow />
-        <SettingRow
-          title="Accessibility"
-          subtitle="Required to inject text into other apps."
-          control={<Badge variant="neutral">Managed by OS</Badge>}
-        />
-        <SettingRow
-          title="System audio"
-          subtitle="Needed to capture meeting audio."
-          control={<Badge variant="neutral">Managed by OS</Badge>}
-        />
       </SettingGroup>
     </div>
   );

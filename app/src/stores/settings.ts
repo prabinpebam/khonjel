@@ -32,7 +32,6 @@ const DEFAULT_TOGGLES: Record<string, boolean> = {
   autoLearnDictionary: true,
   cloudBackup: false,
   saveHistory: true,
-  includeDiscarded: false,
   "transforms.optIn": true,
   "stt.note.diarization": true,
   "stt.note.speakerLabels": true,
@@ -48,7 +47,6 @@ const DEFAULT_VALUES: Record<string, string> = {
   uiLanguage: "en",
   transcriptionLanguage: "en-US",
   micDevice: "default",
-  audioRetentionDays: "30",
   loggingLevel: "info",
   // Must be a registrable global accelerator (a non-modifier key + modifiers). A modifier-only
   // chord like "Ctrl+Win" cannot be bound by Electron's globalShortcut and would silently die.
