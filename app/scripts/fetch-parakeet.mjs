@@ -44,8 +44,11 @@ const args = new Map(
   }),
 );
 
-const FALLBACK_TAG = "v1.10.46";
+// Binaries live in a *version* release; the repo's /releases/latest points at an asr-models tag, so
+// pin the version (override with --tag=vX.Y.Z). Verified asset names for v1.13.3 (see fetch script PR).
+const BIN_TAG = args.get("tag") ?? "v1.13.3";
 const PROVIDER = args.get("provider") === "cuda" ? "cuda" : "cpu";
+const SKIP_MODEL = args.get("skip-model") === "true";
 const MODEL_VARIANT = args.get("model") ?? "v3-int8"; // v3-int8 (25 EU langs) | v2-int8 (English)
 
 const HF = "https://huggingface.co";
@@ -55,19 +58,6 @@ const MODEL_REPO = `${HF}/csukuangfj/${MODEL_ID}/resolve/main`;
 const MODEL_FILES = ["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"];
 
 const UA = { "User-Agent": "khonjel-fetch-parakeet" };
-
-async function latestTag() {
-  try {
-    const res = await fetch("https://api.github.com/repos/k2-fsa/sherpa-onnx/releases/latest", {
-      headers: UA,
-    });
-    if (!res.ok) return FALLBACK_TAG;
-    const json = await res.json();
-    return typeof json.tag_name === "string" ? json.tag_name : FALLBACK_TAG;
-  } catch {
-    return FALLBACK_TAG;
-  }
-}
 
 async function download(url, dest) {
   const part = `${dest}.part`;
@@ -142,8 +132,9 @@ async function fetchBinary() {
     return;
   }
   mkdirSync(VENDOR_DIR, { recursive: true });
-  const tag = await latestTag();
-  const suffix = PROVIDER === "cuda" ? "win-x64-cuda-shared" : "win-x64-shared";
+  const tag = BIN_TAG;
+  // CPU: the shared (dynamic onnxruntime) Release build that bundles the executables + DLLs.
+  const suffix = PROVIDER === "cuda" ? "win-x64-cuda" : "win-x64-shared-MD-Release";
   const archiveName = `sherpa-onnx-${tag}-${suffix}.tar.bz2`;
   const url =
     args.get("archive-url") ??
@@ -184,7 +175,11 @@ async function fetchModel() {
 async function main() {
   console.log(`fetch-parakeet: provider=${PROVIDER}, model=${MODEL_ID}`);
   await fetchBinary();
-  await fetchModel();
+  if (SKIP_MODEL) {
+    console.log("\n[model] skipped (--skip-model). Download the model in-app, or rerun without the flag.");
+  } else {
+    await fetchModel();
+  }
   console.log(
     "\nDone. Launch the app (npm run electron); Parakeet will use the local sherpa-onnx model.",
   );

@@ -45,11 +45,12 @@ test("parakeet: real seam reports a downloadable model + fetchable runtime (stub
     expect(pr.state).toBe("not-installed");
     expect(pr.nextAction).toBe("download");
 
-    // 2) Runtime status: "missing" (the binary can be fetched), NOT a hardcoded "unsupported".
+    // 2) Runtime status: fetchable ("missing") or "ready" once the sherpa binary is installed -
+    // never a hardcoded "unsupported" dead-end (which is what the pre-integration stub returned).
     const report = await page.evaluate(() => window.khonjel.invoke("models:compatibility"));
     const runtime = report.runtimes.find((r) => r.engine === "parakeet");
     expect(runtime).toBeTruthy();
-    expect(runtime.state).toBe("missing");
+    expect(runtime.state).not.toBe("unsupported");
     expect(report.models.some((m) => m.modelId === PARAKEET_ID)).toBe(true);
 
     // The app is responsive (no crash) after exercising the real model seam.
