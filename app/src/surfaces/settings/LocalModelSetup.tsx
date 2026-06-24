@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useServices } from "@services";
 import { useModelsStore } from "@stores/models";
+import { useSettingsStore } from "@stores/settings";
 import type { ModelReadiness, ModelStatus } from "@services/ports";
 import { Button } from "@components/ui/button";
 import { cn } from "@lib/utils";
@@ -49,6 +50,10 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
   const readiness = useModelsStore((s) => s.readiness);
   const active = useModelsStore((s) => s.active);
   const runtimeEvents = useModelsStore((s) => s.runtimeEvents);
+  // The models the user is actually using (selected/in-use), so the card reflects the live engine
+  // choice rather than always the recommended one.
+  const selectedStt = useSettingsStore((s) => s.values["stt.dictation.model"]);
+  const selectedLlm = useSettingsStore((s) => s.values["llm.chat.model"]);
 
   // "idle" = nothing in flight; "running" = a setup we kicked off is progressing; "error" = it failed.
   const [phase, setPhase] = useState<"idle" | "running" | "error">("idle");
@@ -64,8 +69,11 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
     init(services);
   }, [init, services]);
 
-  const sttId = compatibility?.recommended.stt;
-  const llmId = compatibility?.recommended.llm;
+  // Prefer the user's SELECTED local model; fall back to the recommended one for first-run setup
+  // (nothing local selected yet). This keeps the card showing the engine that's in use - e.g.
+  // Parakeet - instead of always Whisper, and stops a non-selected engine from looking unset.
+  const sttId = (selectedStt && statuses[selectedStt] ? selectedStt : undefined) ?? compatibility?.recommended.stt;
+  const llmId = (selectedLlm && statuses[selectedLlm] ? selectedLlm : undefined) ?? compatibility?.recommended.llm;
 
   const fail = (e: unknown) => {
     setError(errMsg(e));
@@ -112,11 +120,17 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
 
   if (!compatibility) return null;
 
-  const recommendedStt = sttId ? statuses[sttId] : undefined;
-  const recommendedLlm = llmId ? statuses[llmId] : undefined;
-  const targets = [recommendedStt, recommendedLlm].filter((m): m is ModelStatus => Boolean(m));
-  const speechReady = sttId ? readiness[sttId]?.state === "ready" : false;
-  const languageReady = llmId ? readiness[llmId]?.state === "ready" : false;
+  const sttModel = sttId ? statuses[sttId] : undefined;
+  const llmModel = llmId ? statuses[llmId] : undefined;
+  const targets = [sttModel, llmModel].filter((m): m is ModelStatus => Boolean(m));
+  // "Ready" = the engine can actually run this model: the model is installed AND its runtime binary
+  // is present (engineReady), OR the readiness report already says ready. Using engineReady - not
+  // the selected/active-gated readiness state - means switching the selected engine doesn't make an
+  // already-installed, runnable engine look like it "needs setup".
+  const usable = (m?: ModelStatus, r?: ModelReadiness): boolean =>
+    r?.state === "ready" || (m?.state === "installed" && m.engineReady === true);
+  const speechReady = usable(sttModel, sttId ? readiness[sttId] : undefined);
+  const languageReady = usable(llmModel, llmId ? readiness[llmId] : undefined);
   const allReady = speechReady && languageReady;
 
   const anyBusy = targets.some((m) => BUSY_STATES.has(m.state));
@@ -240,19 +254,19 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <RecommendedCard
               title="Speech model"
-              model={recommendedStt}
+              model={sttModel}
               readiness={sttId ? readiness[sttId] : undefined}
               detail={active?.speech?.message ?? "Turns voice into text."}
-              pending={phase === "running" && recommendedStt?.state === "installed" && !speechReady}
-              onRetry={() => recommendedStt && startSetup(recommendedStt.id)}
+              pending={phase === "running" && sttModel?.state === "installed" && !speechReady}
+              onRetry={() => sttModel && startSetup(sttModel.id)}
             />
             <RecommendedCard
               title="Language model"
-              model={recommendedLlm}
+              model={llmModel}
               readiness={llmId ? readiness[llmId] : undefined}
               detail={active?.language?.message ?? "Cleans up text and powers chat."}
-              pending={phase === "running" && recommendedLlm?.state === "installed" && !languageReady}
-              onRetry={() => recommendedLlm && startSetup(recommendedLlm.id)}
+              pending={phase === "running" && llmModel?.state === "installed" && !languageReady}
+              onRetry={() => llmModel && startSetup(llmModel.id)}
             />
           </div>
         ) : null}
@@ -355,11 +369,11 @@ function RecommendedCard({
   const downloading = state === "downloading" || state === "queued" || state === "paused";
   const verifying = state === "verifying";
   const failed = state === "error" || rstate === "failed";
-  const ready = rstate === "ready";
+  const ready = rstate === "ready" || (state === "installed" && model?.engineReady === true);
   // Only show the "Setting up" spinner while we are actively preparing the runtime, not when an
   // installed model is simply idle-and-not-yet-prepared (that reads as "Needs setup").
   const settingUp = pending && state === "installed" && !ready && !failed;
-  const runtimeMissing = state === "installed" && rstate === "runtime-missing" && !settingUp;
+  const runtimeMissing = state === "installed" && model?.engineReady !== true && !ready && !settingUp;
   const busy = downloading || verifying || settingUp;
   const pct = pctOf(model);
 
