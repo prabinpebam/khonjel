@@ -28,6 +28,7 @@
     "build:electron": "node scripts/build-electron.mjs",
     "fetch:llama": "node scripts/fetch-llama.mjs",
     "fetch:whisper": "node scripts/fetch-whisper.mjs",
+    "fetch:parakeet": "node scripts/fetch-parakeet.mjs",
     "electron": "npm run build && npm run build:electron && electron .",
     "electron:dev": "npm run build:electron && electron . --dev-server",
     "package": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --win portable",
