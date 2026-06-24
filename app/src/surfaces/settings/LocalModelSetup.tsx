@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import {
   CheckCircle2,
   Cpu,
@@ -52,8 +52,12 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
   // "idle" = nothing in flight; "running" = a setup we kicked off is progressing; "error" = it failed.
   const [phase, setPhase] = useState<"idle" | "running" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  // Models we have already kicked `prepare()` for in this run (so we do it exactly once each).
-  const prepared = useRef<Set<string>>(new Set());
+  // Two-phase prepare tracking: `kicked` = prepare started (once each), `done` = it resolved. A
+  // target only counts as "settled" once prepare is DONE, so the card keeps showing "Setting up"
+  // while the engine runtime downloads (prepare can take a while) instead of settling early.
+  const prepareKicked = useRef<Set<string>>(new Set());
+  const prepareDone = useRef<Set<string>>(new Set());
+  const [tick, bumpTick] = useReducer((n: number) => n + 1, 0);
 
   useEffect(() => {
     init(services);
@@ -81,24 +85,29 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
         setPhase("error");
         return;
       }
-      if (st?.state === "installed" && readiness[id]?.state !== "ready" && !prepared.current.has(id)) {
-        prepared.current.add(id);
-        void services.models.prepare(id).catch(fail);
+      if (st?.state === "installed" && readiness[id]?.state !== "ready" && !prepareKicked.current.has(id)) {
+        prepareKicked.current.add(id);
+        void services.models
+          .prepare(id)
+          .catch(() => {})
+          .finally(() => {
+            prepareDone.current.add(id);
+            bumpTick();
+          });
       }
     }
 
-    // Stop when every target is settled: either fully ready, OR installed but its on-device engine
-    // runtime cannot be made ready (missing/failed) and we already attempted prepare. Otherwise the
-    // card would spin at "Setting up… 100%" forever when a model downloads but its engine binary is
-    // absent (prepare reports `failed`, so readiness never reaches "ready").
+    // Stop when every target is settled: fully ready, OR prepare has finished and the engine still
+    // can't be readied. Using "prepare done" (not just "kicked") keeps the card on "Setting up" while
+    // the engine runtime actually downloads, instead of settling at "Setting up… 100%".
     if (
-      ids.every((id) => isTargetSettled(statuses[id], readiness[id]?.state, prepared.current.has(id)))
+      ids.every((id) => isTargetSettled(statuses[id], readiness[id]?.state, prepareDone.current.has(id)))
     ) {
       setPhase("idle");
       void refresh();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, statuses, readiness, sttId, llmId]);
+  }, [phase, statuses, readiness, sttId, llmId, tick]);
 
   if (!compatibility) return null;
 
@@ -130,7 +139,13 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
 
   const startSetup = (only?: string) => {
     setError(null);
-    if (!only) prepared.current.clear();
+    if (only) {
+      prepareKicked.current.delete(only);
+      prepareDone.current.delete(only);
+    } else {
+      prepareKicked.current.clear();
+      prepareDone.current.clear();
+    }
     const ids = (only ? [only] : [sttId, llmId]).filter((x): x is string => Boolean(x));
     if (ids.length === 0) return;
     setPhase("running");
@@ -139,8 +154,14 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
       if (snap.readiness[id]?.state === "ready") continue;
       const st = snap.statuses[id];
       if (st?.state === "installed") {
-        prepared.current.add(id);
-        void services.models.prepare(id).catch(fail);
+        prepareKicked.current.add(id);
+        void services.models
+          .prepare(id)
+          .catch(() => {})
+          .finally(() => {
+            prepareDone.current.add(id);
+            bumpTick();
+          });
       } else if (!st || !BUSY_STATES.has(st.state)) {
         void services.models.download(id).catch(fail);
       }

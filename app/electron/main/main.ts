@@ -36,9 +36,11 @@ import {
   nodeModelFs,
   nodeDownloadFs,
   nodeDownloadFetch,
+  nodeRuntimeInstallIO,
   makeEngineReady,
   modelsDirOf,
 } from "./models/runtime";
+import { createRuntimeInstaller } from "./models/runtime-install";
 import { detectHardwareProfile } from "./models/hardware";
 import { createNodeAccelerationManager } from "./acceleration/node-io";
 import { createSecretStore } from "./secrets/store";
@@ -157,6 +159,14 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     appDir: path.join(__dirname, ".."),
     isWindows: process.platform === "win32",
     env: process.env,
+  });
+  // Fetches a missing engine binary on demand (whisper.cpp / llama.cpp release), so local models
+  // are usable without a manual `npm run fetch:*`.
+  const runtimeInstaller = createRuntimeInstaller({
+    runtimeDir: path.join(userData, "runtime"),
+    platform: process.platform,
+    arch: process.arch,
+    io: nodeRuntimeInstallIO(process.platform === "win32"),
   });
   const modelService = createModelService({
     modelsDir,
@@ -360,9 +370,39 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
           activeModelIds: activeModelIds(),
         }),
       prepare: async (id) => {
-        const status = modelService.status().find((s) => s.id === id);
-        if (!status) return;
-        emitRuntime({ modelId: id, kind: status.kind, state: "starting", message: `Loading ${status.name}...` });
+        const status0 = modelService.status().find((s) => s.id === id);
+        if (!status0) return;
+        const engine = modelManifest(id)?.engine;
+        emitRuntime({ modelId: id, kind: status0.kind, state: "starting", message: `Setting up ${status0.name}...` });
+
+        // The model is downloaded but its engine binary is missing: fetch it now (the "Khonjel can
+        // download it" promise) so local models actually run instead of getting stuck on "engine
+        // needed". On failure we report it and stop; the setup card surfaces an honest state.
+        if (engine && status0.state === "installed" && !engineReady(engine)) {
+          try {
+            const label = status0.kind === "stt" ? "speech" : "language";
+            await runtimeInstaller.install(engine, (done, total) => {
+              const pct = total > 0 ? ` ${Math.floor((done / total) * 100)}%` : "";
+              emitRuntime({
+                modelId: id,
+                kind: status0.kind,
+                state: "starting",
+                message: `Downloading the ${label} engine...${pct}`,
+              });
+            });
+          } catch (e) {
+            emitRuntime({
+              modelId: id,
+              kind: status0.kind,
+              state: "failed",
+              message: e instanceof Error ? e.message : "Couldn't set up the engine.",
+            });
+            return;
+          }
+        }
+
+        // Re-read status: engineReady may have just flipped after the runtime install.
+        const status = modelService.status().find((s) => s.id === id) ?? status0;
         const ready = status.state === "installed" && status.engineReady;
         if (ready && status.kind === "llm") {
           const mode = await inferenceRuntime.prepareModel(id);

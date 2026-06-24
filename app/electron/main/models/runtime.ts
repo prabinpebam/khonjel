@@ -12,17 +12,21 @@ import {
   writeSync,
   readFileSync,
   renameSync,
+  createWriteStream,
   openSync,
   fsyncSync,
   closeSync,
   statfsSync,
 } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import type { DownloadFetch, DownloadFs } from "./downloader";
 import type { ModelServiceFs } from "./service";
 import type { ModelManifest } from "./catalog";
+import type { RuntimeInstallIO } from "./runtime-install";
 
 function sizeOf(path: string): number {
   try {
@@ -187,4 +191,52 @@ export function makeEngineReady(cfg: ModelRuntimeConfig): (engine: ModelManifest
 
 export function modelsDirOf(userDataDir: string): string {
   return join(userDataDir, "models");
+}
+
+/** Real network + filesystem + unzip for the engine-runtime installer (mirrors the fetch scripts). */
+export function nodeRuntimeInstallIO(isWindows: boolean): RuntimeInstallIO {
+  return {
+    resolveLatestTag: async (api, fallback) => {
+      try {
+        const res = await fetch(api, { headers: { "User-Agent": "khonjel" } });
+        if (!res.ok) return fallback;
+        const json = (await res.json()) as { tag_name?: unknown };
+        return typeof json.tag_name === "string" ? json.tag_name : fallback;
+      } catch {
+        return fallback;
+      }
+    },
+    downloadFile: async (url, dest, onProgress) => {
+      const res = await fetch(url, { headers: { "User-Agent": "khonjel" }, redirect: "follow" });
+      if (!res.ok || !res.body) throw new Error(`Download failed (HTTP ${res.status}).`);
+      const total = Number(res.headers.get("content-length") ?? 0);
+      let done = 0;
+      const body = Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]);
+      body.on("data", (chunk: Buffer) => {
+        done += chunk.length;
+        onProgress(done, total);
+      });
+      const part = `${dest}.part`;
+      await pipeline(body, createWriteStream(part));
+      renameSync(part, dest);
+    },
+    extractZip: (zip, dir) => {
+      if (isWindows) {
+        execFileSync(
+          "powershell",
+          [
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            `Expand-Archive -Path '${zip}' -DestinationPath '${dir}' -Force`,
+          ],
+          { windowsHide: true, stdio: "ignore" },
+        );
+      } else {
+        execFileSync("unzip", ["-o", zip, "-d", dir], { stdio: "ignore" });
+      }
+    },
+    exists: (p) => existsSync(p),
+    ensureDir: (d) => mkdirSync(d, { recursive: true }),
+  };
 }
