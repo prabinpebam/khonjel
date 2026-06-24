@@ -3,6 +3,7 @@ import type {
   ActiveModelReport,
   ModelCompatibilityReport,
   ModelReadiness,
+  ModelRuntimeEvent,
   ModelStatus,
   Services,
 } from "@services/ports";
@@ -17,6 +18,8 @@ interface ModelsState {
   compatibility: ModelCompatibilityReport | null;
   readiness: Record<string, ModelReadiness>;
   active: ActiveModelReport | null;
+  /** Latest engine-runtime event per model (download/load progress + ready/failed), for the UI. */
+  runtimeEvents: Record<string, ModelRuntimeEvent>;
   services: Services | null;
   /** Idempotent: fetch the initial statuses and subscribe to progress once. */
   init: (services: Services) => void;
@@ -30,6 +33,7 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
   compatibility: null,
   readiness: {},
   active: null,
+  runtimeEvents: {},
   services: null,
   init: (services) => {
     if (get().services) return;
@@ -58,7 +62,14 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
         void get().refresh();
       }
     });
-    services.models.onRuntime(() => void get().refresh());
+    services.models.onRuntime((event) => {
+      // Keep the latest runtime event per model so the setup card can show "downloading engine N%"
+      // and failure reasons. Only re-pull the full snapshot on a terminal transition (not per tick).
+      set((state) => ({ runtimeEvents: { ...state.runtimeEvents, [event.modelId]: event } }));
+      if (event.state === "ready" || event.state === "failed" || event.state === "fallback") {
+        void get().refresh();
+      }
+    });
   },
   refresh: async () => {
     const services = get().services;

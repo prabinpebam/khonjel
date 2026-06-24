@@ -48,6 +48,7 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
   const compatibility = useModelsStore((s) => s.compatibility);
   const readiness = useModelsStore((s) => s.readiness);
   const active = useModelsStore((s) => s.active);
+  const runtimeEvents = useModelsStore((s) => s.runtimeEvents);
 
   // "idle" = nothing in flight; "running" = a setup we kicked off is progressing; "error" = it failed.
   const [phase, setPhase] = useState<"idle" | "running" | "error">("idle");
@@ -137,6 +138,18 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
   );
   const pct = totalBytes > 0 ? Math.min(100, Math.round((doneBytes / totalBytes) * 100)) : 0;
 
+  // Engine (runtime) phase: models are downloaded; the engine binary is being fetched by prepare().
+  const modelsDownloading = targets.some((m) => BUSY_STATES.has(m.state));
+  const engineEvent = targetIds.map((id) => runtimeEvents[id]).find((e) => e?.state === "starting");
+  const engineFailed = targetIds.map((id) => runtimeEvents[id]).find((e) => e?.state === "failed");
+  // Surface a failed setup (download error OR engine-install failure) as a retryable error.
+  const failedMessage =
+    phase === "error"
+      ? (error ?? "Setup failed. Try again.")
+      : !running && !allReady && engineFailed
+        ? engineFailed.message
+        : null;
+
   const startSetup = (only?: string) => {
     setError(null);
     if (only) {
@@ -170,12 +183,12 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
 
   const onPrimary = () => {
     if (running) return;
-    // "Ready" and "engine missing" both just re-check current state (in case the runtime was
-    // installed since); only a not-yet-downloaded setup kicks off downloads.
-    if (allReady || enginesMissing) {
+    if (allReady) {
+      // Already set up: just re-scan (e.g. picks up a runtime installed outside the app).
       void refresh();
       return;
     }
+    // Not fully ready (a model and/or its engine still needs setting up): do the whole setup.
     startSetup();
   };
 
@@ -267,38 +280,42 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
           >
             {running ? (
               <Loader2 className="animate-spin" />
-            ) : phase === "error" ? (
-              <RotateCcw />
-            ) : allReady || enginesMissing ? (
+            ) : failedMessage || allReady ? (
               <RotateCcw />
             ) : (
               <Download />
             )}
             {running
-              ? `Setting up… ${pct}%`
-              : phase === "error"
+              ? modelsDownloading
+                ? `Setting up… ${pct}%`
+                : "Setting up the engine…"
+              : failedMessage
                 ? "Retry setup"
-                : allReady || enginesMissing
+                : allReady
                   ? "Recheck local models"
-                  : "Download recommended setup"}
+                  : enginesMissing
+                    ? "Finish setup"
+                    : "Download recommended setup"}
           </Button>
           <span
             role="status"
             aria-live="polite"
             className={cn(
               "text-xs",
-              phase === "error" ? "text-danger" : enginesMissing ? "text-warning" : "text-tertiary-foreground",
+              failedMessage ? "text-danger" : enginesMissing ? "text-warning" : "text-tertiary-foreground",
             )}
           >
-            {phase === "error"
-              ? (error ?? "Setup failed. Try again.")
+            {failedMessage
+              ? failedMessage
               : running
-                ? `Downloading your private models… ${fmt(doneBytes)} / ${fmt(totalBytes)}`
+                ? modelsDownloading
+                  ? `Downloading your private models… ${fmt(doneBytes)} / ${fmt(totalBytes)}`
+                  : (engineEvent?.message ?? "Setting up the on-device engine…")
                 : allReady
                   ? "Ready for private dictation."
                   : enginesMissing
-                    ? "Models downloaded. The on-device engine isn’t set up on this computer yet."
-                    : "Downloads continue in the background if you close Settings."}
+                    ? "Almost done — click Finish setup to get the on-device engine."
+                    : "Khonjel will download everything needed to dictate privately on this device."}
           </span>
         </div>
       </div>
