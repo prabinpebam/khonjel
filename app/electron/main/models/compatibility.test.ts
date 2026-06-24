@@ -129,6 +129,24 @@ describe("model compatibility", () => {
     expect(llm?.level).toBe("unsupported");
     expect(llm?.reasons.some((r) => r.code === "not-enough-disk")).toBe(true);
   });
+
+  it("keeps models downloadable (not unsupported) when the runtime is missing but installable", () => {
+    const missing: RuntimeStatus[] = [
+      { engine: "whisper", state: "missing", message: "Speech runtime missing. Khonjel can download it." },
+      { engine: "llama", state: "missing", message: "Language runtime missing. Khonjel can download it." },
+      { engine: "parakeet", state: "missing", message: "Parakeet runtime missing." },
+    ];
+    const report = buildModelCompatibilityReport({ hardware: hardware(), runtimes: missing, statuses: baseStatuses });
+    // A missing-but-installable runtime must NOT hide the catalog or break the recommendation.
+    expect(report.recommended.stt).toBe("ggml-small.bin");
+    expect(report.recommended.llm).toBe("qwen2.5-3b-instruct-q4_k_m.gguf");
+    expect(report.models.find((m) => m.modelId === "ggml-small.bin")?.level).not.toBe("unsupported");
+    expect(report.models.find((m) => m.modelId === "qwen2.5-3b-instruct-q4_k_m.gguf")?.level).not.toBe("unsupported");
+    expect(report.summary.level).not.toBe("not-ready");
+    const stt = report.models.find((m) => m.modelId === "ggml-small.bin");
+    expect(stt?.reasons.some((r) => r.code === "runtime-missing")).toBe(true);
+    expect(stt?.reasons.some((r) => r.code === "runtime-unsupported")).toBe(false);
+  });
 });
 
 describe("model readiness", () => {

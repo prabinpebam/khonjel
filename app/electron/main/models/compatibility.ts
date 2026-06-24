@@ -157,8 +157,14 @@ function compatibilityFor(model: ModelStatus, hardware: HardwareProfile, runtime
   if (req.support === "not-yet-supported" || runtime?.state === "unsupported") {
     reasons.push({ code: "runtime-unsupported", message: runtime?.message || `${model.name} runtime is not bundled in this version.` });
     level = "unsupported";
-  } else if (runtime?.state && runtime.state !== "ready") {
-    reasons.push({ code: "runtime-missing", message: runtime.message || "Runtime missing." });
+  } else if (runtime?.state === "missing" || runtime?.state === "downloadable") {
+    // The runtime binary is not installed yet but CAN be set up — keep the model selectable and
+    // downloadable. (Marking it "unsupported" here is what made the whole local catalog vanish and
+    // the recommended setup have nothing to pick when no engine binary is present.) Readiness still
+    // surfaces "runtime-missing" so the UI guides the user through setup.
+    reasons.push({ code: "runtime-missing", message: runtime.message || "Runtime will be set up when you download." });
+  } else if (runtime?.state === "failed") {
+    reasons.push({ code: "runtime-missing", message: runtime.message || "Runtime failed to start." });
     level = "unsupported";
   } else {
     reasons.push({ code: "runtime-ready", message: "Runtime ready." });

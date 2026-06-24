@@ -40,7 +40,8 @@ test("local model setup: real Electron reports hardware compatibility and render
     expect(Array.isArray(report.models)).toBe(true);
     expect(report.models.some((m) => m.kind === "stt")).toBe(true);
     expect(report.models.some((m) => m.kind === "llm")).toBe(true);
-    expect(report.models.some((m) => m.level === "unsupported")).toBe(true);
+    // A missing runtime binary must NOT make every model unsupported (that hid the whole catalog).
+    expect(report.models.some((m) => m.level !== "unsupported")).toBe(true);
 
     const readiness = await page.evaluate(() => window.khonjel.invoke("models:readiness"));
     expect(Array.isArray(readiness)).toBe(true);
@@ -57,9 +58,10 @@ test("local model setup: real Electron reports hardware compatibility and render
     await expect(setup.locator('[data-eval="hardware-summary"]')).toContainText(/local models/i);
     await expect(modal.getByText(/Private/).first()).toBeVisible();
 
-    await modal.getByRole("button", { name: /Show .* unavailable or advanced models/ }).click();
-    await expect(modal.getByText(/Parakeet TDT/)).toBeVisible();
-    await expect(modal.getByText(/Not supported|not bundled/i).first()).toBeVisible();
+    // The local model list shows downloadable on-device models (no longer hidden behind an
+    // "unsupported" disclosure just because the runtime binary is not installed yet).
+    await expect(modal.getByText(/Whisper Small|Whisper Base/).first()).toBeVisible();
+    await expect(modal.getByRole("button", { name: /^Download Whisper/ }).first()).toBeVisible();
   } finally {
     await app.close();
     fs.rmSync(userDataDir, { recursive: true, force: true });
