@@ -62,6 +62,7 @@ const mockPlan: AccelerationPlan = {
 function createMockAccelerationService(): AccelerationService {
   let mode: AccelerationMode = "auto";
   let llmOnGpu = false;
+  let sttOnGpu = false;
   let notice: AccelerationState["notice"];
   const stateListeners = new Set<(s: AccelerationState) => void>();
   const progressListeners = new Set<(e: AccelerationProgress) => void>();
@@ -71,8 +72,11 @@ function createMockAccelerationService(): AccelerationService {
       llmOnGpu && mode !== "off"
         ? { engine: "llama", device: "gpu", activeBackend: "cuda-13.3", state: "active", message: "Running language model on the GPU.", metrics: { device: "gpu", backend: "cuda-13.3", tokensPerSec: 132 } }
         : { engine: "llama", device: "cpu", state: "none", message: "Running language model on the CPU." };
-    const stt: EngineAcceleration = { engine: "whisper", device: "cpu", state: "none", message: "Running voice typing on the CPU." };
-    const gpuActive = llm.device === "gpu";
+    const stt: EngineAcceleration =
+      sttOnGpu && mode !== "off"
+        ? { engine: "whisper", device: "gpu", activeBackend: "cuda-12.4", state: "active", message: "Running voice typing on the GPU.", metrics: { device: "gpu", backend: "cuda-12.4", realtimeFactor: 2.1 } }
+        : { engine: "whisper", device: "cpu", state: "none", message: "Running voice typing on the CPU." };
+    const gpuActive = llm.device === "gpu" || stt.device === "gpu";
     const summary = mode === "off" ? "Running on the CPU (acceleration is off)." : gpuActive ? "Running on your graphics card." : "Running on the CPU.";
     return { mode, llm, stt, gpuActive, online: true, notice, summary };
   }
@@ -88,17 +92,20 @@ function createMockAccelerationService(): AccelerationService {
   }
 
   async function enable(engine: AccelerationEngine): Promise<void> {
-    emit({ engine, backend: "cuda-13.3", state: "planning", message: "Checking your graphics card" });
-    emit({ engine, backend: "cuda-13.3", state: "downloading", bytesDone: 148 * MIB, bytesTotal: 250 * MIB, message: "Downloading GPU support" });
-    emit({ engine, backend: "cuda-13.3", state: "probing", message: "Testing it on your machine" });
-    llmOnGpu = true;
-    notice = { kind: "enabled", message: "Your graphics card is now making Khonjel about 7x faster." };
-    emit({ engine, backend: "cuda-13.3", state: "active", message: "Acceleration is on." });
+    const backend = engine === "whisper" ? "cuda-12.4" : "cuda-13.3";
+    emit({ engine, backend, state: "planning", message: "Checking your graphics card" });
+    emit({ engine, backend, state: "downloading", bytesDone: 148 * MIB, bytesTotal: 250 * MIB, message: "Downloading GPU support" });
+    emit({ engine, backend, state: "probing", message: "Testing it on your machine" });
+    if (engine === "whisper") sttOnGpu = true;
+    else llmOnGpu = true;
+    notice = { kind: "enabled", message: "Your graphics card is now making Khonjel faster." };
+    emit({ engine, backend, state: "active", message: "Acceleration is on." });
     notifyState();
   }
 
-  async function disable(): Promise<void> {
-    llmOnGpu = false;
+  async function disable(engine: AccelerationEngine): Promise<void> {
+    if (engine === "whisper") sttOnGpu = false;
+    else llmOnGpu = false;
     notifyState();
   }
 
@@ -109,7 +116,10 @@ function createMockAccelerationService(): AccelerationService {
     state: async () => computeState(),
     setMode: async (next) => {
       mode = next;
-      if (mode === "off") llmOnGpu = false;
+      if (mode === "off") {
+        llmOnGpu = false;
+        sttOnGpu = false;
+      }
       notifyState();
     },
     enable,
@@ -124,9 +134,10 @@ function createMockAccelerationService(): AccelerationService {
       stt: { ok: true, message: "Works on GPU.", metrics: { device: "gpu", realtimeFactor: 2.1 } },
       summary: "Your GPU is about 7x faster. Everything works.",
     }),
-    removeGpuBackends: () => disable(),
+    removeGpuBackends: (engine) => disable(engine),
     reset: async () => {
       llmOnGpu = false;
+      sttOnGpu = false;
       mode = "auto";
       notifyState();
     },

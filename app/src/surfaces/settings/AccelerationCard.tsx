@@ -28,8 +28,8 @@ export function AccelerationCard() {
   const progress = useAccelerationStore((s) => s.progress);
   const lastTest = useAccelerationStore((s) => s.lastTest);
   const busy = useAccelerationStore((s) => s.busy);
-  const enable = useAccelerationStore((s) => s.enable);
-  const disable = useAccelerationStore((s) => s.disable);
+  const enableAll = useAccelerationStore((s) => s.enableAll);
+  const disableAll = useAccelerationStore((s) => s.disableAll);
   const rescan = useAccelerationStore((s) => s.rescan);
   const runTest = useAccelerationStore((s) => s.runTest);
 
@@ -107,7 +107,7 @@ export function AccelerationCard() {
 
         <div className="flex flex-wrap items-center gap-2">
           {view === "gpu-off" && (
-            <Button data-eval="accel-cta" size="sm" onClick={() => void enable("llama")}>
+            <Button data-eval="accel-cta" size="sm" onClick={() => void enableAll()}>
               Turn on GPU acceleration
             </Button>
           )}
@@ -121,7 +121,7 @@ export function AccelerationCard() {
               <Button data-eval="accel-test" size="sm" variant="outline" onClick={() => void runTest()}>
                 <Gauge className="size-3.5" /> Test again
               </Button>
-              <Button data-eval="accel-turn-off" size="sm" variant="ghost" onClick={() => void disable("llama")}>
+              <Button data-eval="accel-turn-off" size="sm" variant="ghost" onClick={() => void disableAll()}>
                 <Power className="size-3.5" /> Turn off
               </Button>
             </>
@@ -187,7 +187,7 @@ const MODE_OPTIONS: { value: AccelerationMode; label: string }[] = [
 function AdvancedSection() {
   const state = useAccelerationStore((s) => s.state);
   const setMode = useAccelerationStore((s) => s.setMode);
-  const removeGpu = useAccelerationStore((s) => s.removeGpu);
+  const disableAll = useAccelerationStore((s) => s.disableAll);
   const reset = useAccelerationStore((s) => s.reset);
   const mode = state?.mode ?? "auto";
 
@@ -213,7 +213,7 @@ function AdvancedSection() {
           </div>
         </fieldset>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => void removeGpu("llama")}>
+          <Button size="sm" variant="outline" onClick={() => void disableAll()}>
             Remove GPU support
           </Button>
           <Button size="sm" variant="ghost" onClick={() => void reset()}>

@@ -19,6 +19,7 @@ import type { InferenceEngine } from "../services/inference";
 import { stubInferenceEngine } from "../services/inference";
 import { createLlamaEngine, withFallback } from "./llama";
 import { startLlamaServer } from "./llama-server";
+import { activeLlamaGpu } from "../acceleration/active-backend";
 
 export interface InferenceRuntimeConfig {
   userDataDir: string;
@@ -46,6 +47,8 @@ interface ResolvedPaths {
   endpoint?: string;
   binPath?: string;
   modelPath?: string;
+  /** -ngl to launch with (GPU backend or env override); undefined/0 keeps the CPU path. */
+  gpuLayers?: number;
 }
 
 export function resolveModelPath(opts: {
@@ -74,14 +77,6 @@ function resolvePaths(cfg: InferenceRuntimeConfig, modelId?: string): ResolvedPa
   const endpoint = cfg.env.KHONJEL_LLAMA_ENDPOINT;
   if (endpoint) return { endpoint };
 
-  const exe = cfg.isWindows ? "llama-server.exe" : "llama-server";
-  const binCandidates = [
-    cfg.env.KHONJEL_LLAMA_SERVER,
-    join(cfg.userDataDir, "runtime", "llama", exe),
-    join(cfg.appDir, "vendor", "llama", exe),
-  ].filter((p): p is string => Boolean(p));
-  const binPath = binCandidates.find((p) => existsSync(p));
-
   const modelPath =
     cfg.env.KHONJEL_LLM_MODEL ??
     resolveModelPath({
@@ -89,7 +84,23 @@ function resolvePaths(cfg: InferenceRuntimeConfig, modelId?: string): ResolvedPa
       selectedModelId: modelId ?? cfg.selectedModelId?.(),
     });
 
-  return { binPath, modelPath };
+  const exe = cfg.isWindows ? "llama-server.exe" : "llama-server";
+  const runtimeDir = join(cfg.userDataDir, "runtime");
+
+  // Precedence: an explicit binary override (power users / evals) wins; then an active GPU backend
+  // (the user turned on acceleration); then the proven CPU runtime/vendor binary.
+  if (cfg.env.KHONJEL_LLAMA_SERVER && existsSync(cfg.env.KHONJEL_LLAMA_SERVER)) {
+    return { binPath: cfg.env.KHONJEL_LLAMA_SERVER, modelPath, gpuLayers: gpuLayers(cfg.env) };
+  }
+  const gpu = modelPath
+    ? activeLlamaGpu({ runtimeDir, isWindows: cfg.isWindows, modelPath, envOverride: cfg.env.KHONJEL_LLM_GPU_LAYERS })
+    : undefined;
+  if (gpu) return { binPath: gpu.binPath, modelPath, gpuLayers: gpu.gpuLayers };
+
+  const binCandidates = [join(runtimeDir, "llama", exe), join(cfg.appDir, "vendor", "llama", exe)];
+  const binPath = binCandidates.find((p) => existsSync(p));
+
+  return { binPath, modelPath, gpuLayers: gpuLayers(cfg.env) };
 }
 
 function gpuLayers(env: Record<string, string | undefined>): number | undefined {
@@ -132,7 +143,7 @@ export function createInferenceRuntime(cfg: InferenceRuntimeConfig): InferenceRu
           binPath: paths.binPath,
           modelPath: paths.modelPath,
           ctxSize: 4096,
-          gpuLayers: gpuLayers(cfg.env),
+          gpuLayers: paths.gpuLayers,
           apiKey,
         });
         const previousStop = stopServer;

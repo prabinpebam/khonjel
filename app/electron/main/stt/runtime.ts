@@ -12,6 +12,7 @@ import { execFile } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { createWhisperTranscriber, type Transcriber } from "./whisper";
+import { activeWhisperGpuDirs } from "../acceleration/active-backend";
 
 export interface WhisperRuntimeConfig {
   userDataDir: string;
@@ -43,10 +44,13 @@ function execFileRun(bin: string, args: string[]): Promise<string> {
 
 export function resolveTranscriber(cfg: WhisperRuntimeConfig): Transcriber | undefined {
   const names = cfg.isWindows ? ["whisper-cli.exe", "main.exe"] : ["whisper-cli", "main"];
+  // Prefer the active GPU whisper backend (acceleration on), then the CPU runtime, then vendored.
   // The whisper.cpp Windows zip nests its binaries under Release/; support both layouts.
+  const runtimeDir = join(cfg.userDataDir, "runtime");
   const dirs = [
-    join(cfg.userDataDir, "runtime", "whisper"),
-    join(cfg.userDataDir, "runtime", "whisper", "Release"),
+    ...activeWhisperGpuDirs(runtimeDir, cfg.isWindows),
+    join(runtimeDir, "whisper"),
+    join(runtimeDir, "whisper", "Release"),
     join(cfg.appDir, "vendor", "whisper"),
     join(cfg.appDir, "vendor", "whisper", "Release"),
   ];

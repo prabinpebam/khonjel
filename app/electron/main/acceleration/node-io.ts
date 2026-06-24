@@ -5,6 +5,7 @@
  * (which stays pure + BE1-testable); `main.ts` calls `createNodeAccelerationService`.
  */
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,9 +13,25 @@ import { detectGpuProfile, type DetectEnv, type DetectIo } from "./detect";
 import { createAccelerationService, defaultAvailableBackends, type AccelerationApi } from "./service";
 import { createAccelerationManager, type AccelerationManager } from "./manager";
 import { emptyIndex, type EngineBackends } from "./backends";
-import { BACKEND_MANIFEST, findArtifact } from "./manifest";
+import { BACKEND_ALLOWED_HOSTS, BACKEND_MANIFEST, findArtifact } from "./manifest";
 import { installArtifact, ProvisionError, type ProvisionIo } from "./provision";
+import { nodeRuntimeInstallIO } from "../models/runtime";
+import { probeBackend } from "./probe-io";
+import { runAccelerationBenchmark } from "./benchmark-io";
 import type { AccelerationEngine, AccelerationMode, GpuProfile } from "../../../src/services/ports";
+
+/** Defence in depth: never fetch a backend part from a non-HTTPS or non-allow-listed origin. */
+function assertAllowedHost(url: string): void {
+  let host: string | undefined;
+  try {
+    host = new URL(url).host;
+  } catch {
+    host = undefined;
+  }
+  if (!url.startsWith("https://") || !host || !BACKEND_ALLOWED_HOSTS.includes(host)) {
+    throw new ProvisionError("download_failed", "Refused to fetch GPU support from an untrusted source.");
+  }
+}
 
 function run(cmd: string, args: string[], timeoutMs = 3500): string | undefined {
   try {
@@ -133,17 +150,37 @@ export function createNodeAccelerationManager(opts: {
     }
   }
 
+  const installIo = nodeRuntimeInstallIO(process.platform === "win32");
   const provisionIo: ProvisionIo = {
     freeDiskBytes: () => freeBytesOf(runtimeDir),
-    download: async () => {
-      throw new ProvisionError("download_failed", "Downloading GPU support isn't wired in this build yet.");
+    download: async (url, destPath, sha256, onProgress) => {
+      assertAllowedHost(url);
+      await installIo.downloadFile(url, destPath, (done) => onProgress?.(done));
+      // Pinned parts are hash-verified (defence in depth). Unpinned parts rely on HTTPS + an
+      // allow-listed host + the post-extract expectFiles assertion (the CPU installer's floor).
+      if (sha256 && sha256.length === 64) {
+        const actual = createHash("sha256").update(fs.readFileSync(destPath)).digest("hex");
+        if (actual.toLowerCase() !== sha256.toLowerCase()) {
+          try {
+            fs.rmSync(destPath, { force: true });
+          } catch {
+            // best-effort cleanup of the bad file
+          }
+          throw new ProvisionError("download_failed", "The GPU files couldn't be verified.");
+        }
+      }
     },
-    extractZip: async () => {
-      throw new ProvisionError("unknown", "Extracting GPU support isn't wired in this build yet.");
-    },
+    extractZip: async (zipPath, destDir) => installIo.extractZip(zipPath, destDir),
     fileExists: (p) => fs.existsSync(p),
     ensureDir: (p) => fs.mkdirSync(p, { recursive: true }),
-    atomicActivate: (staging, finalDir) => fs.renameSync(staging, finalDir),
+    atomicActivate: (staging, finalDir) => {
+      try {
+        fs.rmSync(finalDir, { recursive: true, force: true });
+      } catch {
+        // no prior install to replace
+      }
+      fs.renameSync(staging, finalDir);
+    },
     removeDir: (p) => {
       try {
         fs.rmSync(p, { recursive: true, force: true });
@@ -166,14 +203,24 @@ export function createNodeAccelerationManager(opts: {
       all[engine] = index;
       saveAll(all);
     },
-    provision: async (engine: AccelerationEngine, backend) => {
+    provision: async (engine: AccelerationEngine, backend, onProgress) => {
       const profile = await base.profile();
       const artifact = findArtifact(BACKEND_MANIFEST, { engine, backend, os: profile.os, arch: profile.arch });
       if (!artifact) throw new ProvisionError("not_pinned", "GPU support isn't available for this system yet.");
-      const result = await installArtifact(artifact, path.join(runtimeDir, engine), provisionIo);
+      const io: ProvisionIo = { ...provisionIo, onProgress: (e) => onProgress(e.bytesDone, e.bytesTotal) };
+      // allowUnpinned: ship now at the CPU-installer integrity floor; real sha256 pins land at release.
+      const result = await installArtifact(artifact, path.join(runtimeDir, engine), io, { allowUnpinned: true });
       return { dir: result.dir, version: artifact.version };
     },
-    probe: async (_engine, backend) => ({ ok: false, backend, message: "GPU support could not be validated." }),
+    probe: async (engine, backend, dir) =>
+      probeBackend({
+        engine,
+        backend,
+        dir,
+        modelsDir: path.join(path.dirname(runtimeDir), "models"),
+        isWindows: process.platform === "win32",
+        profile: await base.profile(),
+      }),
     removeDirs: (dirs) => {
       for (const dir of dirs) provisionIo.removeDir(dir);
     },
@@ -185,11 +232,12 @@ export function createNodeAccelerationManager(opts: {
       }
     },
     isOnline: () => true,
-    runBenchmark: async () => ({
-      ok: false,
-      llm: { ok: false, message: "GPU acceleration is not active." },
-      stt: { ok: false, message: "GPU acceleration is not active." },
-      summary: "Running on the CPU.",
-    }),
+    runBenchmark: () =>
+      runAccelerationBenchmark({
+        runtimeDir,
+        modelsDir: path.join(path.dirname(runtimeDir), "models"),
+        isWindows: process.platform === "win32",
+        loadBackends: (engine) => loadAll()[engine] ?? emptyIndex(engine),
+      }),
   });
 }

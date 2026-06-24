@@ -17,25 +17,25 @@ test("GPU acceleration: honest status, one-click turn-on, and a real speed check
     feature: "acceleration",
     scenario: "gpu-acceleration",
     userGoal: "Turn on GPU acceleration in one click and see proof it actually works.",
-    taskFlow: ["Open settings", "Language Models", "Local", "Honest status", "Turn on GPU", "Reach On", "Speed check"],
+    taskFlow: ["Open settings", "Speech-to-Text", "Local", "Honest status", "Turn on GPU", "Reach On", "Speed check"],
   });
 
   await page.goto("/");
   await page.waitForSelector('[data-eval="app-shell"][data-eval-ready="true"]', { timeout: 15000 });
   await recorder.capture("baseline");
 
-  // Open Settings -> Language Models -> Local (where the local LLM acceleration card lives).
+  // Open Settings -> Speech-to-Text -> Local (where the optional GPU acceleration card lives).
   await page.locator('button[aria-label="Settings"]').first().click();
   const modal = page.locator('[data-eval="settings-modal"]');
   await expect(modal, "settings modal visible").toBeVisible({ timeout: 5000 });
 
-  const lang = modal.getByRole("button", { name: /language model/i });
+  const lang = modal.getByRole("button", { name: /speech-to-text/i });
   if (await lang.count()) await lang.first().click();
   const local = modal.getByRole("button", { name: /^local$/i });
   if (await local.count()) await local.first().click();
 
   const card = page.locator('[data-eval="acceleration-card"]');
-  await expect(card, "acceleration card renders in Local language-model settings").toBeVisible({ timeout: 8000 });
+  await expect(card, "acceleration card renders in Local speech-to-text settings").toBeVisible({ timeout: 8000 });
   await recorder.capture("card-visible");
 
   // Honesty: the old dishonest claim must be gone.

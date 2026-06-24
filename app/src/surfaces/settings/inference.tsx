@@ -11,7 +11,6 @@ import { Select } from "@components/ui/select";
 import { ProviderIcon } from "@components/brand/provider-icon";
 import { cn } from "@lib/utils";
 import { LocalModelList } from "./LocalModelList";
-import { AccelerationCard } from "./AccelerationCard";
 
 export type InferenceMode = "cloud" | "providers" | "local" | "self-hosted" | "enterprise";
 
@@ -123,10 +122,10 @@ export function InferenceConfigBlock({
         <LocalModelList kind={kind} prefix={prefix} />
       </Field>
       {kind === "llm" ? (
-        <AccelerationCard />
-      ) : (
-        <p className="text-xs text-tertiary-foreground">Runs on device. Voice typing runs on the CPU.</p>
-      )}
+        <p className="text-xs text-tertiary-foreground">
+          GPU acceleration is shared with dictation. Turn it on under Speech-to-Text.
+        </p>
+      ) : null}
     </div>
   );
 }

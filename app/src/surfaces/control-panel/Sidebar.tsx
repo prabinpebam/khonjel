@@ -4,6 +4,7 @@ import { NAV_ITEMS } from "@config/nav";
 import { useUiStore } from "@stores/ui";
 import { useServices } from "@services";
 import { useActiveModel } from "@hooks/useActiveModel";
+import { useAccelerationStore } from "@stores/acceleration";
 import { Button } from "@components/ui/button";
 import { cn } from "@lib/utils";
 import khonjelMark from "@/assets/brand/khonjel-mark.svg?raw";
@@ -15,11 +16,18 @@ export function Sidebar() {
   const openSettings = useUiStore((s) => s.openSettings);
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
-  const { profile } = useServices();
+  const services = useServices();
+  const { profile } = services;
   const stt = useActiveModel("stt.dictation", "stt");
   // The LLM line mirrors the chat badge (the user-facing language model).
   const llm = useActiveModel("llm.chat", "llm");
+  const accelInit = useAccelerationStore((s) => s.init);
+  const accelState = useAccelerationStore((s) => s.state);
   const [name, setName] = useState("You");
+
+  useEffect(() => {
+    accelInit(services);
+  }, [accelInit, services]);
 
   useEffect(() => {
     let live = true;
@@ -117,6 +125,15 @@ export function Sidebar() {
             <span className="mt-1.5 flex items-center gap-1.5">
               <span className="size-2 rounded-pill bg-success" aria-hidden />
               <span className="text-xs text-tertiary-foreground">Ready</span>
+              <span
+                data-eval="engine-accel"
+                className={cn(
+                  "ml-auto rounded-pill border px-1.5 text-xs font-medium",
+                  accelState?.gpuActive ? "border-accent text-accent" : "border-border text-tertiary-foreground",
+                )}
+              >
+                {accelState?.gpuActive ? "GPU" : "CPU"}
+              </span>
             </span>
           </button>
         ) : null}

@@ -60,9 +60,21 @@ function fileNameOf(url: string): string {
   return segments[segments.length - 1] || "part.zip";
 }
 
-/** Acquire + install an artifact into `<engineDir>/<backend>-<version>`. Resolves with its dir. */
-export async function installArtifact(a: BackendArtifact, engineDir: string, io: ProvisionIo): Promise<{ dir: string }> {
-  if (!isPinned(a)) {
+/**
+ * Acquire + install an artifact into `<engineDir>/<backend>-<version>`. Resolves with its dir.
+ *
+ * Integrity: a pinned artifact is hash-verified (defense in depth). When `allowUnpinned` is set the
+ * installer accepts an as-yet-unpinned artifact at the SAME integrity floor as the in-app CPU engine
+ * installer (HTTPS + allow-listed host, enforced by the injected `download`, plus the post-extract
+ * `expectFiles` assertion). Real sha256 pins are filled at release to upgrade this to full pinning.
+ */
+export async function installArtifact(
+  a: BackendArtifact,
+  engineDir: string,
+  io: ProvisionIo,
+  opts: { allowUnpinned?: boolean } = {},
+): Promise<{ dir: string }> {
+  if (!isPinned(a) && !opts.allowUnpinned) {
     throw new ProvisionError("not_pinned", "GPU support isn't available in this version yet.");
   }
   const pre = diskPreflight(io.freeDiskBytes(), a);

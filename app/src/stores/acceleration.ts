@@ -26,6 +26,9 @@ interface AccelerationStore {
   setMode: (mode: AccelerationMode) => Promise<void>;
   enable: (engine?: AccelerationEngine) => Promise<void>;
   disable: (engine?: AccelerationEngine) => Promise<void>;
+  /** Turn acceleration on/off for BOTH local engines (chat + dictation) in one action. */
+  enableAll: () => Promise<void>;
+  disableAll: () => Promise<void>;
   rescan: () => Promise<void>;
   runTest: () => Promise<void>;
   removeGpu: (engine?: AccelerationEngine) => Promise<void>;
@@ -85,6 +88,27 @@ export const useAccelerationStore = create<AccelerationStore>((set, get) => ({
     const services = get().services;
     if (!services) return;
     await services.acceleration.disable(engine);
+    await get().refresh();
+  },
+
+  enableAll: async () => {
+    const services = get().services;
+    if (!services) return;
+    // One button, both local engines (best-effort): chat/cleanup (broad GPU support) first, then
+    // dictation (NVIDIA-only). A backend that isn't supported quietly stays on the CPU floor.
+    set({ busy: true, progress: null });
+    await services.acceleration.enable("llama");
+    set({ busy: true }); // re-assert across the second leg (the first leg's terminal event clears it)
+    await services.acceleration.enable("whisper");
+    await get().refresh();
+    set({ busy: false });
+  },
+
+  disableAll: async () => {
+    const services = get().services;
+    if (!services) return;
+    await services.acceleration.disable("llama");
+    await services.acceleration.disable("whisper");
     await get().refresh();
   },
 

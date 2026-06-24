@@ -5,6 +5,7 @@ import { Tabs } from "@components/ui/tabs";
 import { ToggleRow } from "../controls";
 import { InferenceConfigBlock, InferenceModeSelector } from "../inference";
 import { LocalModelSetup } from "../LocalModelSetup";
+import { AccelerationCard } from "../AccelerationCard";
 
 type SttTab = "dictation" | "note";
 
@@ -36,8 +37,9 @@ export function SpeechToTextSettings() {
 
         <section className="rounded-md border border-border bg-surface p-5">
           {mode === "local" ? (
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col gap-4">
               <LocalModelSetup compact={tab !== "dictation"} />
+              {tab === "dictation" ? <AccelerationCard /> : null}
             </div>
           ) : null}
           <InferenceConfigBlock prefix={prefix} kind="stt" />

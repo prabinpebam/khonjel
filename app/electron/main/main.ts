@@ -455,6 +455,11 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
   });
   accelerationManager.onState((state) => {
     for (const win of BrowserWindow.getAllWindows()) win.webContents.send("khonjel:acceleration-state", state);
+    // A backend just toggled on/off (or the mode changed): re-resolve both local engines so the
+    // change takes effect live. whisper re-resolves on the next dictation; llama hot-swaps its
+    // server now (start() keeps the current engine if the new binary fails to spawn).
+    whisperTranscriber = undefined;
+    void inferenceRuntime.start();
   });
 
   return { dispatch, contentStore, settingsStore, captureManager };
