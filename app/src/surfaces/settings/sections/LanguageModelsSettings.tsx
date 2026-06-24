@@ -7,6 +7,7 @@ import { Textarea } from "@components/ui/textarea";
 import { ToggleRow } from "../controls";
 import { InferenceConfigBlock, InferenceModeSelector } from "../inference";
 import { LocalModelSetup } from "../LocalModelSetup";
+import { AccelerationCard } from "../AccelerationCard";
 
 type Purpose = "cleanup" | "agent" | "note" | "chat";
 
@@ -55,8 +56,9 @@ export function LanguageModelsSettings() {
 
       <section className="rounded-md border border-border bg-surface p-5">
         {chatMode === "local" ? (
-          <div className="mb-4">
+          <div className="mb-4 flex flex-col gap-4">
             <LocalModelSetup />
+            <AccelerationCard />
           </div>
         ) : null}
         <InferenceConfigBlock prefix="llm.chat" kind="llm" />

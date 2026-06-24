@@ -121,11 +121,6 @@ export function InferenceConfigBlock({
       <Field label="Model">
         <LocalModelList kind={kind} prefix={prefix} />
       </Field>
-      {kind === "llm" ? (
-        <p className="text-xs text-tertiary-foreground">
-          GPU acceleration is shared with dictation. Turn it on under Speech-to-Text.
-        </p>
-      ) : null}
     </div>
   );
 }
