@@ -180,14 +180,25 @@ export function ConnectionsSettings() {
       </section>
 
       <section>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-foreground">
             {editing ? `Edit "${editingId}"` : "Add a connection"}
           </h3>
           {editing ? (
-            <Button variant="ghost" size="sm" onClick={startNew}>
-              <X /> New connection
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={startNew}>
+                <Plus /> New connection
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Close editor"
+                title="Close"
+                onClick={startNew}
+              >
+                <X />
+              </Button>
+            </div>
           ) : null}
         </div>
         <div className="rounded-md border border-border bg-surface p-5">
