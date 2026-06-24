@@ -21,6 +21,9 @@ export function Sidebar() {
   const stt = useActiveModel("stt.dictation", "stt");
   // The LLM line mirrors the chat badge (the user-facing language model).
   const llm = useActiveModel("llm.chat", "llm");
+  // GPU/CPU acceleration only applies to on-device inference; the pill is hidden when both the
+  // speech and language slots are routed to the cloud (nothing runs locally to accelerate).
+  const hasLocalModel = stt.isLocal || llm.isLocal;
   const accelInit = useAccelerationStore((s) => s.init);
   const accelState = useAccelerationStore((s) => s.state);
   const [name, setName] = useState("You");
@@ -125,15 +128,17 @@ export function Sidebar() {
             <span className="mt-1.5 flex items-center gap-1.5">
               <span className="size-2 rounded-pill bg-success" aria-hidden />
               <span className="text-xs text-tertiary-foreground">Ready</span>
-              <span
-                data-eval="engine-accel"
-                className={cn(
-                  "ml-auto rounded-pill border px-1.5 text-xs font-medium",
-                  accelState?.gpuActive ? "border-accent text-accent" : "border-border text-tertiary-foreground",
-                )}
-              >
-                {accelState?.gpuActive ? "GPU" : "CPU"}
-              </span>
+              {hasLocalModel ? (
+                <span
+                  data-eval="engine-accel"
+                  className={cn(
+                    "ml-auto rounded-pill border px-1.5 text-xs font-medium",
+                    accelState?.gpuActive ? "border-accent text-accent" : "border-border text-tertiary-foreground",
+                  )}
+                >
+                  {accelState?.gpuActive ? "GPU" : "CPU"}
+                </span>
+              ) : null}
             </span>
           </button>
         ) : null}
