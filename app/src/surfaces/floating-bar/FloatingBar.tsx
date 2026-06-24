@@ -78,16 +78,14 @@ export function FloatingBar() {
   const recording = dictation.status === "recording";
   const transcribing = dictation.status === "transcribing";
   const errored = dictation.status === "error";
-  // Show the live, growing transcript (most recent words) while it streams in (12 §2A); fall back to
-  // the status word before any text has arrived.
-  const live = dictation.partialText.trim();
-  const liveTail = live.length > 64 ? `… ${live.slice(-64)}` : live;
+  // Keep the bar compact: show a short status word, not the live transcript (the streaming text
+  // overflows this pill and breaks the layout; the transcript is injected at the cursor instead).
   const label = errored
     ? (dictation.error ?? "Something went wrong")
     : transcribing
-      ? liveTail || "Transcribing"
+      ? "Transcribing"
       : recording
-        ? liveTail || "Listening"
+        ? "Listening"
         : "Click to dictate";
 
   return (
