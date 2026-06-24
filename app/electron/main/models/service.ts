@@ -128,6 +128,21 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
     });
   }
 
+  // Network chunks arrive thousands per second. Writing the durable index (a synchronous full
+  // read + stringify + write of index.json) AND sending an IPC event on EVERY chunk blocks the main
+  // process and freezes the UI. During a transfer we instead emit a lightweight progress event at
+  // most every PROGRESS_THROTTLE_MS and skip the per-chunk index write entirely — resume reads the
+  // real .part size from disk (downloader.partSize), so the persisted bytesDone is only cosmetic.
+  // State transitions (downloading start, installed, error) still persist + emit via progress().
+  const PROGRESS_THROTTLE_MS = 150;
+  let lastProgressEmit = 0;
+  function emitDownloadProgress(id: string, bytesDone: number, bytesTotal: number | undefined): void {
+    const now = Date.now();
+    if (now - lastProgressEmit < PROGRESS_THROTTLE_MS) return;
+    lastProgressEmit = now;
+    deps.emit({ id, state: "downloading", bytesDone, bytesTotal, error: undefined });
+  }
+
   function reconcile(): void {
     for (const { info, manifest } of localModels()) {
       const { present, bytes } = installedOnDisk(manifest);
@@ -181,6 +196,7 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
     deps.fs.ensureDir(deps.modelsDir);
     deps.store.patch(id, { state: "downloading", bytesTotal: manifest.bytes ?? need, bytesDone: 0, errorCode: undefined });
     progress(id);
+    lastProgressEmit = 0;
 
     const controller = new AbortController();
     controllers.set(id, controller);
@@ -193,10 +209,7 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
         expectedBytes: manifest.bytes,
         sha256: manifest.sha256,
       },
-      (bytesDone, bytesTotal) => {
-        deps.store.patch(id, { state: "downloading", bytesDone, bytesTotal: bytesTotal ?? manifest.bytes });
-        progress(id);
-      },
+      (bytesDone, bytesTotal) => emitDownloadProgress(id, bytesDone, bytesTotal ?? manifest.bytes),
       controller.signal,
     );
     controllers.delete(id);
@@ -237,6 +250,7 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
     deps.fs.ensureDir(finalPathOf(manifest)); // the per-model directory
     deps.store.patch(id, { state: "downloading", bytesTotal: totalBytes, bytesDone: 0, errorCode: undefined });
     progress(id);
+    lastProgressEmit = 0;
 
     const controller = new AbortController();
     controllers.set(id, controller);
@@ -261,10 +275,7 @@ export function createModelService(deps: ModelServiceDeps): ModelService {
       const captured = base;
       const outcome = await deps.downloader.download(
         { url, partPath: `${finalPath}.part`, finalPath, expectedBytes: file.bytes, sha256: file.sha256 },
-        (bytesDone) => {
-          deps.store.patch(id, { state: "downloading", bytesDone: captured + bytesDone, bytesTotal: totalBytes });
-          progress(id);
-        },
+        (bytesDone) => emitDownloadProgress(id, captured + bytesDone, totalBytes),
         controller.signal,
       );
       if (controller.signal.aborted) {

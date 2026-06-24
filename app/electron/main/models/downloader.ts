@@ -100,7 +100,10 @@ export function createDownloader(deps: { fetch: DownloadFetch; fs: DownloadFs })
         onTick(done, bytesTotal);
         if (res.body) {
           for await (const chunk of res.body) {
-            if (signal.aborted) return { ok: false, code: "internal", message: "Cancelled." };
+            if (signal.aborted) {
+              deps.fs.removePart(task.partPath);
+              return { ok: false, code: "internal", message: "Cancelled." };
+            }
             deps.fs.appendChunk(task.partPath, chunk);
             done += chunk.length;
             onTick(done, bytesTotal);
@@ -128,7 +131,10 @@ export function createDownloader(deps: { fetch: DownloadFetch; fs: DownloadFs })
         deps.fs.finalize(task.partPath, task.finalPath);
         return { ok: true, bytes: finalSize };
       } catch (err) {
-        if (signal.aborted) return { ok: false, code: "internal", message: "Cancelled." };
+        if (signal.aborted) {
+          deps.fs.removePart(task.partPath);
+          return { ok: false, code: "internal", message: "Cancelled." };
+        }
         return { ok: false, ...classifyError(err) };
       }
     },

@@ -9,7 +9,7 @@ import {
   statSync,
   mkdirSync,
   rmSync,
-  appendFileSync,
+  writeSync,
   readFileSync,
   renameSync,
   openSync,
@@ -58,24 +58,61 @@ function freeBytes(dir: string): number {
 }
 
 export function nodeDownloadFs(): DownloadFs {
-  return {
-    partSize: (partPath) => sizeOf(partPath),
-    appendChunk: (partPath, chunk) => appendFileSync(partPath, Buffer.from(chunk)),
-    removePart: (partPath) => removeQuietly(partPath),
-    sha256: (path) => sha256Hex(path),
-    finalize: (partPath, finalPath) => {
-      // fsync is best-effort durability — some platforms (Windows) reject it on certain handles.
-      // The atomic rename is the step that must succeed.
+  // Keep ONE open append handle per .part file for the life of the transfer, so each chunk is a
+  // single write() syscall instead of open + write + close. Per-chunk open/close on a multi-GB
+  // download is thousands of syscalls that block the main thread. Closed on finalize/removePart and
+  // flushed before any size/hash read so the on-disk view is consistent.
+  const handles = new Map<string, number>();
+  const flush = (partPath: string): void => {
+    const fd = handles.get(partPath);
+    if (fd !== undefined) {
       try {
-        const fd = openSync(partPath, "r+");
-        try {
-          fsyncSync(fd);
-        } finally {
-          closeSync(fd);
-        }
+        fsyncSync(fd);
       } catch {
-        // ignore: proceed to the rename
+        // best-effort
       }
+    }
+  };
+  const closeHandle = (partPath: string): void => {
+    const fd = handles.get(partPath);
+    if (fd === undefined) return;
+    handles.delete(partPath);
+    try {
+      fsyncSync(fd);
+    } catch {
+      // best-effort
+    }
+    try {
+      closeSync(fd);
+    } catch {
+      // best-effort
+    }
+  };
+  return {
+    partSize: (partPath) => {
+      flush(partPath);
+      return sizeOf(partPath);
+    },
+    appendChunk: (partPath, chunk) => {
+      let fd = handles.get(partPath);
+      if (fd === undefined) {
+        mkdirSync(dirname(partPath), { recursive: true });
+        fd = openSync(partPath, "a"); // append: creates if absent, preserves prior bytes (resume)
+        handles.set(partPath, fd);
+      }
+      writeSync(fd, Buffer.from(chunk));
+    },
+    removePart: (partPath) => {
+      closeHandle(partPath);
+      removeQuietly(partPath);
+    },
+    sha256: (partPath) => {
+      flush(partPath);
+      return sha256Hex(partPath);
+    },
+    finalize: (partPath, finalPath) => {
+      // Close (fsync + close) before renaming — Windows cannot rename a file that is still open.
+      closeHandle(partPath);
       renameSync(partPath, finalPath);
     },
   };

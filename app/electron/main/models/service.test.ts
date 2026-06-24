@@ -73,6 +73,23 @@ describe("createModelService", () => {
     expect(emitted.map((e) => e.state)).toContain("installed");
   });
 
+  it("throttles per-chunk progress so a large download cannot flood the UI / disk", async () => {
+    // A real download delivers thousands of chunks; emitting (and persisting) on every one freezes
+    // the app. The service must collapse them into a handful of throttled progress events.
+    const flood: Downloader = {
+      download: async (_task, onTick) => {
+        for (let i = 1; i <= 2000; i++) onTick(i, 2000);
+        return { ok: true, bytes: 2000 };
+      },
+    };
+    const { service, emitted } = build({ downloader: flood });
+    service.download(ID);
+    await vi.waitFor(() => expect(stateOf(service, ID)).toBe("installed"));
+    const downloadingEmits = emitted.filter((e) => e.state === "downloading").length;
+    expect(downloadingEmits).toBeLessThan(20);
+    expect(emitted.map((e) => e.state)).toContain("installed");
+  });
+
   it("removes an installed model and frees its bytes", async () => {
     const { service } = build();
     service.download(ID);
