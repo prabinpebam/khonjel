@@ -2,7 +2,7 @@
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, session, shell, Tray, type IpcMainEvent } from "electron";
 import * as path from "node:path";
-import { writeFileSync, unlinkSync, mkdirSync, rmSync, readdirSync, existsSync } from "node:fs";
+import { writeFileSync, unlinkSync, mkdirSync, rmSync, readdirSync, existsSync, appendFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import type { Platform, AccelerationMode } from "../../src/services/ports";
 import { CHANNELS, checkContractVersion, ipcError } from "../shared/ipc-contract";
@@ -28,6 +28,7 @@ import {
 import { createConnectionStore } from "./services/connections";
 import { createContentStore } from "./services/content";
 import { exportNotes, type NotesExportFs } from "./services/notes-export";
+import { createLogger } from "./services/logger";
 import { createModelIndexStore } from "./models/store";
 import { createDownloader } from "./models/downloader";
 import { createModelService, boundModelIdsFrom } from "./models/service";
@@ -59,6 +60,21 @@ let floatingBarWindow: BrowserWindow | null = null;
 let inferenceRuntime: InferenceRuntime | null = null;
 let stopParakeetServer: (() => void) | null = null;
 let hotkeyManager: HotkeyManager | null = null;
+// Resolved once the dispatch is built; lets the module-level logger read the live logging level.
+let activeSettings: ReturnType<typeof createSettingsStore> | null = null;
+
+// Level-gated file logger -> app logs dir (Settings -> System -> "Open logs"). The verbosity follows
+// the loggingLevel setting, read fresh per line so a change in Settings applies immediately.
+const logger = createLogger({
+  dir: () => app.getPath("logs"),
+  level: () => activeSettings?.get().values["loggingLevel"] ?? "info",
+  fs: { mkdirSync, appendFileSync },
+  mirror: (level, line) => {
+    if (level === "error") console.error(line);
+    else if (level === "warn") console.warn(line);
+    else console.log(line);
+  },
+});
 
 /** True when an IPC message originates from one of our own app frames (file:// or the dev server). */
 function isTrustedSender(event: { senderFrame?: { url?: string } | null }): boolean {
@@ -283,10 +299,12 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
         createCaptureSession({
           sessionId: id,
           config,
-          transcribeSegment: (wav) =>
-            transcriptionService
+          transcribeSegment: (wav) => {
+            logger.trace(`transcribe segment (${wav.length} bytes)`);
+            return transcriptionService
               .transcribe({ audioBase64: wav.toString("base64") })
-              .then((r) => r.text),
+              .then((r) => r.text);
+          },
           emit: (event) => {
             for (const win of BrowserWindow.getAllWindows()) {
               if (!win.isDestroyed()) win.webContents.send("khonjel:transcript", event);
@@ -623,7 +641,7 @@ function createTray(onDictation: () => void): void {
   try {
     const source = nativeImage.createFromPath(path.join(__dirname, "..", "build", "icon.png"));
     if (source.isEmpty()) {
-      console.warn("[khonjel] tray icon could not be loaded; skipping tray.");
+      logger.warn("tray icon could not be loaded; skipping tray.");
       return;
     }
     tray = new Tray(source.resize({ width: 16, height: 16 }));
@@ -638,7 +656,7 @@ function createTray(onDictation: () => void): void {
     );
     tray.on("click", () => showMainWindow());
   } catch (err) {
-    console.warn(`[khonjel] tray init failed: ${String(err)}`);
+    logger.warn(`tray init failed: ${String(err)}`);
   }
 }
 
@@ -654,6 +672,8 @@ void app.whenReady().then(() => {
   hotkeyManager = createHotkeyManager();
   const built = buildDispatch(inferenceRuntime, () => registerHotkeys());
   selectedLlmModelId = () => built.settingsStore.get().values["llm.chat.model"];
+  activeSettings = built.settingsStore;
+  logger.info(`Khonjel ${app.getVersion()} starting (${process.platform} ${process.arch})`);
   // The single allow-listed request/response bridge. The preload sends the contract version on
   // every call (rejected on mismatch); `dispatch` then validates channel + payload (unknown
   // channel -> not_found; bad payload -> validation). Together these are the allow-list.
@@ -800,10 +820,12 @@ void app.whenReady().then(() => {
   function triggerDictation(): void {
     if (!dictationActive) {
       dictationActive = true;
+      logger.debug("dictation start");
       showFloatingBar();
       floatingBarWindow?.webContents.send("khonjel:hotkey", "dictation:start");
     } else {
       dictationActive = false;
+      logger.debug("dictation stop");
       floatingBarWindow?.webContents.send("khonjel:hotkey", "dictation:stop");
     }
   }
@@ -893,14 +915,14 @@ void app.whenReady().then(() => {
       triggerDictation();
     });
     liveDictationAccelerator = live;
-    console.log(`[khonjel] dictation hotkey: ${live ?? "none (registration failed)"}`);
+    logger.info(`dictation hotkey: ${live ?? "none (registration failed)"}`);
     if (snapshot.toggles["transforms.optIn"]) {
       for (const transform of built.contentStore.transforms()) {
         if (!transform.enabled || transform.hotkey.length === 0) continue;
         const accel = hotkeyManager.registerExtra(transform.hotkey, () => {
           mainWindow?.webContents.send("khonjel:hotkey", `transform:${transform.id}`);
         });
-        if (accel) console.log(`[khonjel] transform ${transform.id} hotkey: ${accel}`);
+        if (accel) logger.info(`transform ${transform.id} hotkey: ${accel}`);
       }
     }
   }
@@ -912,7 +934,7 @@ void app.whenReady().then(() => {
 
   // Upgrade from the deterministic stub to the local LLM in the background (never blocks startup).
   void inferenceRuntime.start().then((mode) => {
-    console.log(`[khonjel] inference engine: ${mode}`);
+    logger.info(`inference engine: ${mode}`);
   });
 });
 
@@ -951,7 +973,9 @@ ipcOn("system:open-devtools", () => {
   mainWindow?.webContents.openDevTools({ mode: "detach" });
 });
 ipcOn("system:open-logs", () => {
-  void shell.openPath(app.getPath("logs"));
+  const dir = app.getPath("logs");
+  mkdirSync(dir, { recursive: true });
+  void shell.openPath(dir);
 });
 ipcOn("system:open-models", () => {
   const dir = path.join(app.getPath("userData"), "models");
@@ -982,7 +1006,7 @@ ipcOn("system:reset-data", () => {
       defaultId: 0,
       cancelId: 0,
       message: "Reset all Khonjel data?",
-      detail: "Permanently deletes your settings, notes, history, connections, and saved keys, then restarts.",
+      detail: "Permanently deletes your settings, notes, history, connections, saved keys, and downloaded models, then restarts.",
     })
     .then(({ response }) => {
       if (response !== 1) return;
@@ -990,6 +1014,7 @@ ipcOn("system:reset-data", () => {
       for (const file of ["settings.json", "content.json", "connections.json", "secrets.json"]) {
         rmSync(path.join(ud, file), { force: true });
       }
+      rmSync(path.join(ud, "models"), { recursive: true, force: true });
       app.relaunch();
       app.exit(0);
     });

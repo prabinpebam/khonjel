@@ -95,7 +95,7 @@ export function SystemSettings() {
         />
         <SettingRow
           title="Reset all data"
-          subtitle="Permanently delete settings, transcripts, audio, and downloaded models."
+          subtitle="Permanently delete settings, transcripts, connections, saved keys, and downloaded models."
           control={
             <Button
               variant="destructive"
