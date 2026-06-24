@@ -77,4 +77,28 @@ describe("createInjector", () => {
     await createInjector(d).inject("line one\n");
     expect(d.typeText).toHaveBeenCalledWith("line one\n");
   });
+
+  it("auto-paste off: leaves the text on the clipboard without pasting or typing", async () => {
+    const d = deps("notepad.exe");
+    const out = await createInjector(d).inject("hello", { autoPaste: false });
+    expect(d.writeClipboard).toHaveBeenCalledWith("hello");
+    expect(d.paste).not.toHaveBeenCalled();
+    expect(d.typeText).not.toHaveBeenCalled();
+    expect(out.strategy).toBe("clipboard");
+  });
+
+  it("keep-in-clipboard: pastes but does NOT restore the prior clipboard", async () => {
+    const d = { ...deps("notepad.exe"), readClipboard: vi.fn(() => "prior"), sleep: vi.fn(async () => {}) };
+    await createInjector(d).inject("hello", { keepInClipboard: true });
+    expect(d.writeClipboard).toHaveBeenCalledTimes(1);
+    expect(d.writeClipboard).toHaveBeenCalledWith("hello");
+    expect(d.paste).toHaveBeenCalledOnce();
+  });
+
+  it("keep-in-clipboard with a type strategy also copies the text to the clipboard", async () => {
+    const d = deps("cmd.exe");
+    await createInjector(d).inject("dir", { keepInClipboard: true });
+    expect(d.typeText).toHaveBeenCalledWith("dir");
+    expect(d.writeClipboard).toHaveBeenCalledWith("dir");
+  });
 });

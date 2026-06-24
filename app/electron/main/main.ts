@@ -288,7 +288,15 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
         const plat = process.platform;
         return (plat === "win32" || plat === "darwin" || plat === "linux" ? plat : "web") as Platform;
       },
-      injectText: (text) => injector.inject(text),
+      injectText: (text) => {
+        // Honor the Clipboard settings: auto-paste at the cursor, and whether to keep the
+        // transcription on the clipboard afterwards (default: paste + restore the prior clipboard).
+        const toggles = settingsStore.get().toggles;
+        return injector.inject(text, {
+          autoPaste: toggles.autoPaste ?? true,
+          keepInClipboard: toggles.keepInClipboard ?? false,
+        });
+      },
       captureSelection: () => win32.captureSelection(),
     },
     settings: {
