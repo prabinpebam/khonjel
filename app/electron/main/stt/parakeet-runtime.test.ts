@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 import { join } from "node:path";
-import { resolveParakeetTranscriber, type ParakeetRuntimeDeps } from "./parakeet-runtime";
+import {
+  resolveParakeetTranscriber,
+  resolveParakeetProvider,
+  type ParakeetRuntimeDeps,
+} from "./parakeet-runtime";
 import type { ParakeetModelDir } from "./parakeet";
 import type { Transcriber } from "./whisper";
 
@@ -105,5 +109,38 @@ describe("resolveParakeetTranscriber", () => {
     const t = resolveParakeetTranscriber({ ...CFG, isWindows: true }, deps);
     expect(await t?.transcribe("/x.wav")).toBe("cli");
     expect(cli[0]?.binPath).toBe(CLI_BIN_EXE);
+  });
+});
+
+describe("resolveParakeetProvider", () => {
+  const providerDeps = (dirFiles: Record<string, string[]>, hasGpu: boolean) => ({
+    listDir: (d: string) => dirFiles[d] ?? [],
+    hasNvidiaGpu: () => hasGpu,
+  });
+
+  it("honors the KHONJEL_PARAKEET_PROVIDER override (cuda) regardless of hardware", () => {
+    const env = { KHONJEL_PARAKEET_PROVIDER: "cuda" };
+    expect(resolveParakeetProvider({ ...CFG, env }, providerDeps({}, false))).toBe("cuda");
+  });
+
+  it("honors the override (cpu) even when CUDA libs + an NVIDIA GPU are present", () => {
+    const env = { KHONJEL_PARAKEET_PROVIDER: "cpu" };
+    const deps = providerDeps({ [VENDOR]: ["onnxruntime_providers_cuda.dll"] }, true);
+    expect(resolveParakeetProvider({ ...CFG, env }, deps)).toBe("cpu");
+  });
+
+  it("selects cuda when an NVIDIA GPU + a CUDA provider library sit beside the binary", () => {
+    const deps = providerDeps({ [VENDOR]: ["sherpa-onnx-offline", "onnxruntime_providers_cuda.dll"] }, true);
+    expect(resolveParakeetProvider(CFG, deps)).toBe("cuda");
+  });
+
+  it("falls back to cpu (the floor) when no CUDA library is present", () => {
+    const deps = providerDeps({ [VENDOR]: ["sherpa-onnx-offline"] }, true);
+    expect(resolveParakeetProvider(CFG, deps)).toBe("cpu");
+  });
+
+  it("falls back to cpu when there is no NVIDIA GPU, even with CUDA libs present", () => {
+    const deps = providerDeps({ [VENDOR]: ["onnxruntime_providers_cuda.dll"] }, false);
+    expect(resolveParakeetProvider(CFG, deps)).toBe("cpu");
   });
 });

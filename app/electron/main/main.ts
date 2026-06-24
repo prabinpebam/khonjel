@@ -12,7 +12,7 @@ import { createInferenceService } from "./services/inference";
 import { createInferenceRuntime, type InferenceRuntime } from "./inference/runtime";
 import { createTranscriptionService } from "./services/transcription";
 import { resolveTranscriber } from "./stt/runtime";
-import { resolveNodeParakeetTranscriber } from "./stt/parakeet-runtime";
+import { resolveNodeParakeetTranscriber, resolveNodeParakeetProvider } from "./stt/parakeet-runtime";
 import type { Transcriber } from "./stt/whisper";
 import { createCaptureSession, type CaptureSession } from "./stt/capture";
 import { DEFAULT_SEGMENTER } from "./stt/segmenter";
@@ -190,7 +190,9 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     if (engine === "parakeet") {
       if (!parakeetTranscriber) {
         // Retries until a real transcriber resolves (e.g. after the model finishes downloading).
-        parakeetTranscriber = resolveNodeParakeetTranscriber(sttRuntimeCfg);
+        const hasNvidia = detectHardwareProfile(modelsDir).gpus.some((g) => g.vendor === "nvidia");
+        const provider = resolveNodeParakeetProvider(sttRuntimeCfg, hasNvidia);
+        parakeetTranscriber = resolveNodeParakeetTranscriber({ ...sttRuntimeCfg, provider });
         const stoppable = parakeetTranscriber as (Transcriber & { stop?: () => void }) | undefined;
         if (stoppable?.stop) stopParakeetServer = stoppable.stop.bind(stoppable);
       }

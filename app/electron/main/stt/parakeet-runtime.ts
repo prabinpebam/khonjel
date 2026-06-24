@@ -101,6 +101,31 @@ export function resolveParakeetTranscriber(
   return undefined;
 }
 
+export interface ParakeetProviderDeps {
+  listDir: (dir: string) => string[];
+  hasNvidiaGpu: () => boolean;
+}
+
+/**
+ * Pick the sherpa `--provider`. CUDA only when an NVIDIA GPU is present AND a CUDA provider / cuDNN
+ * library sits beside the binary (the CUDA sherpa build); CPU is always the floor (real-time int8).
+ * The KHONJEL_PARAKEET_PROVIDER env var overrides. PURE (injected `listDir` + GPU presence) so the
+ * gate is BE1-tested; the GPU acceleration manager can drive this later via the same env override.
+ */
+export function resolveParakeetProvider(
+  cfg: ParakeetRuntimeConfig,
+  deps: ParakeetProviderDeps,
+): "cpu" | "cuda" {
+  const override = cfg.env.KHONJEL_PARAKEET_PROVIDER;
+  if (override === "cuda" || override === "cpu") return override;
+  if (!deps.hasNvidiaGpu()) return "cpu";
+  const cudaLib = /onnxruntime.*cuda|cudnn|cublas/i;
+  for (const dir of binDirs(cfg)) {
+    if (deps.listDir(dir).some((f) => cudaLib.test(f))) return "cuda";
+  }
+  return "cpu";
+}
+
 // ---- Node composition glue (not BE1-tested; the wrapper LOGIC it composes is) ----
 
 function execFileRun(bin: string, args: string[]): Promise<string> {
@@ -268,4 +293,18 @@ export function nodeParakeetRuntimeDeps(cfg: ParakeetRuntimeConfig): ParakeetRun
 /** Convenience: resolve a real Parakeet transcriber from config (the composition root uses this). */
 export function resolveNodeParakeetTranscriber(cfg: ParakeetRuntimeConfig): Transcriber | undefined {
   return resolveParakeetTranscriber(cfg, nodeParakeetRuntimeDeps(cfg));
+}
+
+/** Convenience: pick the sherpa provider from real fs + a detected NVIDIA-GPU flag. */
+export function resolveNodeParakeetProvider(cfg: ParakeetRuntimeConfig, hasNvidiaGpu: boolean): "cpu" | "cuda" {
+  return resolveParakeetProvider(cfg, {
+    listDir: (d) => {
+      try {
+        return readdirSync(d);
+      } catch {
+        return [];
+      }
+    },
+    hasNvidiaGpu: () => hasNvidiaGpu,
+  });
 }
