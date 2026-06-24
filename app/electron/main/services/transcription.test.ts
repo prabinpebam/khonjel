@@ -13,7 +13,7 @@ describe("createTranscriptionService", () => {
     const cleanup = vi.fn();
     let written: Buffer | null = null;
     const service = createTranscriptionService({
-      transcriber: fakeTranscriber,
+      resolveTranscriber: () => fakeTranscriber,
       writeTempWav: (bytes) => {
         written = bytes;
         return "/tmp/clip.wav";
@@ -30,11 +30,11 @@ describe("createTranscriptionService", () => {
   it("cleans up the temp file even when transcription throws", async () => {
     const cleanup = vi.fn();
     const service = createTranscriptionService({
-      transcriber: {
+      resolveTranscriber: () => ({
         transcribe: async () => {
           throw new Error("whisper crashed");
         },
-      },
+      }),
       writeTempWav: () => "/tmp/clip.wav",
       cleanup,
     });
@@ -54,9 +54,34 @@ describe("createTranscriptionService", () => {
     ).rejects.toSatisfy((e: unknown) => isIpcError(e) && e.code === "model_unavailable");
   });
 
+  it("reports model_unavailable when the resolver yields no transcriber", async () => {
+    const service = createTranscriptionService({
+      resolveTranscriber: () => undefined,
+      writeTempWav: () => "/tmp/x.wav",
+      cleanup: () => {},
+    });
+    await expect(
+      service.transcribe({ audioBase64: Buffer.from("x").toString("base64") }),
+    ).rejects.toSatisfy((e: unknown) => isIpcError(e) && e.code === "model_unavailable");
+  });
+
+  it("resolves the transcriber per request, so switching the STT engine takes effect immediately", async () => {
+    let engine: Transcriber = { transcribe: async () => "whisper text" };
+    const service = createTranscriptionService({
+      resolveTranscriber: () => engine,
+      writeTempWav: () => "/tmp/x.wav",
+      cleanup: () => {},
+    });
+    const first = await service.transcribe({ audioBase64: Buffer.from("x").toString("base64") });
+    expect(first.text).toBe("whisper text");
+    engine = { transcribe: async () => "parakeet text" }; // user picked Parakeet in Settings
+    const second = await service.transcribe({ audioBase64: Buffer.from("x").toString("base64") });
+    expect(second.text).toBe("parakeet text");
+  });
+
   it("rejects an empty audio payload", async () => {
     const service = createTranscriptionService({
-      transcriber: fakeTranscriber,
+      resolveTranscriber: () => fakeTranscriber,
       writeTempWav: () => "/tmp/x.wav",
       cleanup: () => {},
     });

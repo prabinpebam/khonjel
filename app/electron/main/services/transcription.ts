@@ -12,9 +12,13 @@ import type { Transcriber } from "../stt/whisper";
 import type { ProviderRouter } from "../providers/router";
 
 export interface TranscriptionDeps {
-  /** Undefined when no STT model/binary is available. */
-  transcriber?: Transcriber;
-  /** Cloud STT router (Azure/OpenAI); when a slot is bound it takes precedence over local whisper. */
+  /**
+   * Resolve the active local transcriber for THIS request (whisper or Parakeet, per the selected
+   * STT model). A thunk rather than a fixed transcriber so switching the model in Settings takes
+   * effect immediately, with no restart. Undefined / returning undefined => no local STT installed.
+   */
+  resolveTranscriber?: () => Transcriber | undefined;
+  /** Cloud STT router (Azure/OpenAI); when a slot is bound it takes precedence over local engines. */
   router?: ProviderRouter;
   /** Persist decoded WAV bytes to a temp path and return it. */
   writeTempWav: (bytes: Buffer) => string;
@@ -34,14 +38,15 @@ export function createTranscriptionService(deps: TranscriptionDeps): Transcripti
         throw ipcError("validation", "Empty audio payload.");
       }
       // A cloud-bound `stt.dictation` slot transcribes remotely (Azure/OpenAI); errors surface as
-      // IpcError(provider_error). Otherwise fall back to the local whisper engine.
+      // IpcError(provider_error). Otherwise fall back to the active local engine (whisper/Parakeet).
       const cloud = await deps.router?.transcribeForSlot("stt.dictation", bytes, {
         language: req.language,
       });
       if (cloud != null) {
         return { text: cloud };
       }
-      if (!deps.transcriber) {
+      const transcriber = deps.resolveTranscriber?.();
+      if (!transcriber) {
         throw ipcError(
           "model_unavailable",
           "No speech-to-text model is installed. Run `npm run fetch:whisper` or pick a model in Settings.",
@@ -49,7 +54,7 @@ export function createTranscriptionService(deps: TranscriptionDeps): Transcripti
       }
       const wavPath = deps.writeTempWav(bytes);
       try {
-        const text = await deps.transcriber.transcribe(wavPath, {
+        const text = await transcriber.transcribe(wavPath, {
           language: req.language,
           translate: req.translate,
         });

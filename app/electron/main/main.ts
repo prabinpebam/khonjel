@@ -1,6 +1,6 @@
 // Electron main process (TypeScript, bundled to ../main.cjs by scripts/build-electron.mjs).
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen, session, shell, type IpcMainEvent } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, session, shell, Tray, type IpcMainEvent } from "electron";
 import * as path from "node:path";
 import { writeFileSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -12,6 +12,7 @@ import { createInferenceService } from "./services/inference";
 import { createInferenceRuntime, type InferenceRuntime } from "./inference/runtime";
 import { createTranscriptionService } from "./services/transcription";
 import { resolveTranscriber } from "./stt/runtime";
+import { resolveNodeParakeetTranscriber } from "./stt/parakeet-runtime";
 import type { Transcriber } from "./stt/whisper";
 import { createCaptureSession, type CaptureSession } from "./stt/capture";
 import { DEFAULT_SEGMENTER } from "./stt/segmenter";
@@ -29,6 +30,7 @@ import { createContentStore } from "./services/content";
 import { createModelIndexStore } from "./models/store";
 import { createDownloader } from "./models/downloader";
 import { createModelService, boundModelIdsFrom } from "./models/service";
+import { modelManifest } from "./models/catalog";
 import { buildActiveModelReport, buildModelCompatibilityReport, buildModelReadiness } from "./models/compatibility";
 import {
   nodeModelFs,
@@ -49,8 +51,10 @@ import { listModels } from "./models/catalog";
 import { computeInsights } from "./insights/compute";
 
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
 let floatingBarWindow: BrowserWindow | null = null;
 let inferenceRuntime: InferenceRuntime | null = null;
+let stopParakeetServer: (() => void) | null = null;
 let hotkeyManager: HotkeyManager | null = null;
 
 /** True when an IPC message originates from one of our own app frames (file:// or the dev server). */
@@ -166,19 +170,35 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     sourceFor: (id) => parseModelSources(process.env.KHONJEL_MODEL_SOURCES)[id],
   });
 
-  // STT transcriber: the real whisper engine; an eval stub so the streaming capture path is
-  // deterministic/offline (KHONJEL_EVAL); or undefined to simulate no model (KHONJEL_EVAL_NO_STT).
-  const transcriber: Transcriber | undefined =
-    process.env.KHONJEL_EVAL_NO_STT === "1"
-      ? undefined
-      : process.env.KHONJEL_EVAL === "1"
-        ? { transcribe: async () => "khonjel eval transcript" }
-        : resolveTranscriber({
-            userDataDir: userData,
-            appDir: path.join(__dirname, ".."),
-            isWindows: process.platform === "win32",
-            env: process.env,
-          });
+  // STT transcriber selection (engine-agnostic): resolved per request from the selected STT model,
+  // so switching Whisper <-> Parakeet in Settings takes effect immediately. Each local engine is
+  // memoized (the warm Parakeet server spawns lazily on first use + is reused). Eval overrides: an
+  // offline stub (KHONJEL_EVAL) or no model at all (KHONJEL_EVAL_NO_STT).
+  const sttRuntimeCfg = {
+    userDataDir: userData,
+    appDir: path.join(__dirname, ".."),
+    isWindows: process.platform === "win32",
+    env: process.env,
+  };
+  let whisperTranscriber: Transcriber | undefined;
+  let parakeetTranscriber: Transcriber | undefined;
+  const resolveActiveTranscriber = (): Transcriber | undefined => {
+    if (process.env.KHONJEL_EVAL_NO_STT === "1") return undefined;
+    if (process.env.KHONJEL_EVAL === "1") return { transcribe: async () => "khonjel eval transcript" };
+    const sttModelId = settingsStore.get().values["stt.dictation.model"];
+    const engine = sttModelId ? modelManifest(sttModelId)?.engine : undefined;
+    if (engine === "parakeet") {
+      if (!parakeetTranscriber) {
+        // Retries until a real transcriber resolves (e.g. after the model finishes downloading).
+        parakeetTranscriber = resolveNodeParakeetTranscriber(sttRuntimeCfg);
+        const stoppable = parakeetTranscriber as (Transcriber & { stop?: () => void }) | undefined;
+        if (stoppable?.stop) stopParakeetServer = stoppable.stop.bind(stoppable);
+      }
+      return parakeetTranscriber;
+    }
+    whisperTranscriber ??= resolveTranscriber(sttRuntimeCfg);
+    return whisperTranscriber;
+  };
   const writeTempWav = (bytes: Buffer): string => {
     const file = path.join(
       app.getPath("temp"),
@@ -195,7 +215,7 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     }
   };
   const transcriptionService = createTranscriptionService({
-    transcriber,
+    resolveTranscriber: resolveActiveTranscriber,
     router,
     writeTempWav,
     cleanup: removeTempWav,
@@ -493,6 +513,46 @@ function createWindow(startMinimized = false): void {
   });
 }
 
+/** Bring the main window to the front, recreating it if it was closed (the app lives on in the tray). */
+function showMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+/**
+ * The system tray icon. Khonjel keeps running for the global dictation hotkey + floating bar even
+ * when the main window is closed, so the tray is the always-available way back in: left-click (or
+ * "Open Khonjel") reopens the window, the menu offers dictation, and "Quit" actually exits.
+ */
+function createTray(onDictation: () => void): void {
+  if (tray) return;
+  try {
+    const source = nativeImage.createFromPath(path.join(__dirname, "..", "build", "icon.png"));
+    if (source.isEmpty()) {
+      console.warn("[khonjel] tray icon could not be loaded; skipping tray.");
+      return;
+    }
+    tray = new Tray(source.resize({ width: 16, height: 16 }));
+    tray.setToolTip("Khonjel");
+    tray.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: "Open Khonjel", click: () => showMainWindow() },
+        { label: "Start dictation", click: () => onDictation() },
+        { type: "separator" },
+        { label: "Quit Khonjel", click: () => app.quit() },
+      ]),
+    );
+    tray.on("click", () => showMainWindow());
+  } catch (err) {
+    console.warn(`[khonjel] tray init failed: ${String(err)}`);
+  }
+}
+
 void app.whenReady().then(() => {
   let selectedLlmModelId = (): string | undefined => undefined;
   inferenceRuntime = createInferenceRuntime({
@@ -746,6 +806,10 @@ void app.whenReady().then(() => {
   }
   registerHotkeys();
 
+  // The tray keeps Khonjel reachable while the main window is closed (the dictation hotkey + floating
+  // bar keep the process alive). Pass the live dictation toggle so the menu can start a capture.
+  createTray(triggerDictation);
+
   // Upgrade from the deterministic stub to the local LLM in the background (never blocks startup).
   void inferenceRuntime.start().then((mode) => {
     console.log(`[khonjel] inference engine: ${mode}`);
@@ -755,8 +819,12 @@ void app.whenReady().then(() => {
 app.on("before-quit", () => {
   if (dictationMuted) win32.setSystemMuteSync(false);
   inferenceRuntime?.stop();
+  stopParakeetServer?.();
+  stopParakeetServer = null;
   hotkeyManager?.unregisterAll();
   floatingBarWindow?.destroy();
+  tray?.destroy();
+  tray = null;
 });
 
 app.on("window-all-closed", () => {
