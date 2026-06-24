@@ -85,6 +85,37 @@ describe("acceleration manager", () => {
     expect(store.llama?.active).toBeUndefined(); // never activated a GPU backend
   });
 
+  it("enable() CASCADES to the next candidate when the first backend has no artifact", async () => {
+    const plan: AccelerationPlan = {
+      llm: [
+        { backend: "cuda-13.3", reason: "best", confidence: "high" },
+        { backend: "cuda-12.4", reason: "fallback", confidence: "high" },
+        { backend: "cpu", reason: "cpu", confidence: "low" },
+      ],
+      stt: [{ backend: "cpu", reason: "cpu", confidence: "low" }],
+      recommendedLevel: "gpu-great",
+      summary: "fast",
+      requiresDownload: true,
+    };
+    const provision = vi.fn(async (_engine: string, backend: string) => {
+      if (backend === "cuda-13.3") throw new ProvisionError("not_pinned", "GPU support isn't available for this system yet.");
+      return { dir: `/r/llama/${backend}-b9744`, version: "b9744" };
+    });
+    const { deps, store } = makeDeps({ plan: async () => plan, provision: provision as unknown as ManagerDeps["provision"] });
+    const mgr = createAccelerationManager(deps);
+    const states: string[] = [];
+    const failures: string[] = [];
+    mgr.onProgress((e) => {
+      states.push(e.state);
+      if (e.state === "failed") failures.push(e.message);
+    });
+    await mgr.enable("llama");
+    expect(provision).toHaveBeenCalledTimes(2); // tried cuda-13.3, then fell back to cuda-12.4
+    expect(store.llama?.active).toBe(backendKey("cuda-12.4", "b9744")); // landed on the working backend
+    expect(states).toContain("active");
+    expect(failures).toHaveLength(0); // a successful fallback is not a failure
+  });
+
   it("disable() removes GPU backends and reverts to CPU", async () => {
     const { deps, store } = makeDeps();
     let idx = recordInstalled(emptyIndex("llama"), { backend: "cpu", version: "b9744", dir: "/r/llama/cpu-b9744" });

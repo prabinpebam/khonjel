@@ -86,7 +86,7 @@ describe("createAccelerationService", () => {
 describe("defaultAvailableBackends", () => {
   it("ships CUDA + Vulkan + CPU on Windows x64", () => {
     const list = defaultAvailableBackends("win32", "x64");
-    expect(list).toEqual(expect.arrayContaining(["cuda-13.3", "cuda-12.4", "vulkan", "cpu"]));
+    expect(list).toEqual(expect.arrayContaining(["cuda-12.4", "vulkan", "cpu"]));
   });
   it("ships Metal + CPU on Apple Silicon", () => {
     expect(defaultAvailableBackends("darwin", "arm64")).toEqual(["metal", "cpu"]);

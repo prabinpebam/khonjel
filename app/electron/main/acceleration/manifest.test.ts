@@ -25,10 +25,10 @@ describe("BACKEND_MANIFEST structure", () => {
     }
   });
 
-  it("every CUDA backend ships a cudart redistributable part (avoids the silent DLL-load failure)", () => {
-    const cudaArtifacts = BACKEND_MANIFEST.filter((a) => a.backend.startsWith("cuda"));
-    expect(cudaArtifacts.length).toBeGreaterThan(0);
-    for (const a of cudaArtifacts) {
+  it("every llama CUDA backend ships a cudart redistributable part (whisper cuBLAS bundles its own)", () => {
+    const cudaLlama = BACKEND_MANIFEST.filter((a) => a.engine === "llama" && a.backend.startsWith("cuda"));
+    expect(cudaLlama.length).toBeGreaterThan(0);
+    for (const a of cudaLlama) {
       expect(a.parts.some((p) => p.role === "redist")).toBe(true);
     }
   });

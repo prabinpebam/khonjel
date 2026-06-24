@@ -82,41 +82,63 @@ export function createAccelerationManager(deps: ManagerDeps): AccelerationManage
     notice = undefined; // one-shot
   }
 
-  async function recommendedBackend(engine: AccelerationEngine): Promise<Backend> {
+  async function orderedCandidates(engine: AccelerationEngine): Promise<Backend[]> {
     const plan = await deps.plan();
     const list = engine === "llama" ? plan.llm : plan.stt;
-    return list[0]?.backend ?? "cpu";
+    const backends = list.map((c) => c.backend);
+    return backends.length > 0 ? backends : ["cpu"];
   }
 
-  async function runEnable(engine: AccelerationEngine, backend: Backend): Promise<void> {
-    if (backend === "cpu") {
+  /**
+   * Bring an engine onto the GPU. With no explicit backend we CASCADE through the planned candidates
+   * best-first (e.g. cuda-13.3 -> cuda-12.4 -> vulkan), skipping any the manifest doesn't ship for
+   * this engine and falling back when a download or on-device probe fails, until one works or we
+   * reach the CPU floor. A single missing/failing build never dead-ends the user on the CPU.
+   */
+  async function runEnable(engine: AccelerationEngine, explicit?: Backend): Promise<void> {
+    const candidates = explicit ? [explicit] : await orderedCandidates(engine);
+    const headline = candidates.find((b) => b !== "cpu");
+    if (!headline) {
+      // No GPU candidate for this engine (e.g. dictation on a non-NVIDIA card): stay on the CPU floor.
       await disable(engine);
       return;
     }
-    emitProgress({ engine, backend, state: "planning", message: "Checking your graphics card" });
+    emitProgress({ engine, backend: headline, state: "planning", message: "Checking your graphics card" });
     let index = deps.loadBackends(engine);
-    try {
-      emitProgress({ engine, backend, state: "downloading", message: "Downloading GPU support" });
-      const installed = await deps.provision(engine, backend, (bytesDone, bytesTotal) =>
-        emitProgress({ engine, backend, state: "downloading", bytesDone, bytesTotal, message: "Downloading GPU support" }),
-      );
-      index = recordInstalled(index, { backend, version: installed.version, dir: installed.dir });
-      emitProgress({ engine, backend, state: "probing", message: "Testing it on your machine" });
-      const probe = await deps.probe(engine, backend, installed.dir);
-      const outcome = applyProbeOutcome(index, backendKey(backend, installed.version), probe.ok, probe.failCode ? { code: probe.failCode, message: probe.message } : undefined);
-      deps.saveBackends(engine, outcome.index);
-      if (probe.ok) {
-        notice = { kind: "enabled", message: "Your graphics card is now making Khonjel faster." };
-        emitProgress({ engine, backend, state: "active", message: "Acceleration is on." });
-      } else {
-        notice = { kind: "rolled-back", message: probe.message };
-        emitProgress({ engine, backend, state: "quarantined", message: probe.message, rolledBackTo: "cpu" });
+    let lastMessage = "";
+    for (const backend of candidates) {
+      if (backend === "cpu") break; // reached the floor; the CPU is the implicit fallback
+      try {
+        emitProgress({ engine, backend, state: "downloading", message: "Downloading GPU support" });
+        const installed = await deps.provision(engine, backend, (bytesDone, bytesTotal) =>
+          emitProgress({ engine, backend, state: "downloading", bytesDone, bytesTotal, message: "Downloading GPU support" }),
+        );
+        index = recordInstalled(index, { backend, version: installed.version, dir: installed.dir });
+        emitProgress({ engine, backend, state: "probing", message: "Testing it on your machine" });
+        const probe = await deps.probe(engine, backend, installed.dir);
+        const outcome = applyProbeOutcome(
+          index,
+          backendKey(backend, installed.version),
+          probe.ok,
+          probe.failCode ? { code: probe.failCode, message: probe.message } : undefined,
+        );
+        index = outcome.index;
+        deps.saveBackends(engine, index);
+        if (probe.ok) {
+          notice = { kind: "enabled", message: "Your graphics card is now making Khonjel faster." };
+          emitProgress({ engine, backend, state: "active", message: "Acceleration is on." });
+          notifyState();
+          return;
+        }
+        lastMessage = probe.message; // probe failed: fall through to the next candidate
+      } catch (err) {
+        // Missing artifact (not_pinned) or a download error: try the next candidate.
+        lastMessage = err instanceof ProvisionError ? err.message : "Couldn't finish setting up GPU support.";
       }
-    } catch (err) {
-      const message = err instanceof ProvisionError ? err.message : "Couldn't finish setting up GPU support.";
-      notice = { kind: "rolled-back", message };
-      emitProgress({ engine, backend, state: "failed", message, rolledBackTo: "cpu" });
     }
+    // Every GPU candidate failed: stay on the CPU floor with a calm, honest message.
+    notice = { kind: "rolled-back", message: lastMessage || "Kept things on the CPU so nothing broke." };
+    emitProgress({ engine, backend: headline, state: "failed", message: lastMessage || "Couldn't set up GPU support.", rolledBackTo: "cpu" });
     notifyState();
   }
 
@@ -141,8 +163,7 @@ export function createAccelerationManager(deps: ManagerDeps): AccelerationManage
       notifyState();
     },
     enable: async (engine, backend) => {
-      const target = backend ?? (await recommendedBackend(engine));
-      await runEnable(engine, target);
+      await runEnable(engine, backend);
     },
     disable,
     retry: async (engine, backend) => runEnable(engine, backend),

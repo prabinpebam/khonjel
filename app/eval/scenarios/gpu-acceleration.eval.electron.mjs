@@ -54,19 +54,22 @@ test("acceleration: real detection never crashes; state is honest; enable fails 
   expect(after.mode).toBe("off");
   await page.evaluate(() => window.khonjel.invoke("acceleration:setMode", "auto"));
 
-  // ---- Enabling a GPU backend fails GRACEFULLY (pin-gated): no throw, app stays on CPU ----
+  // ---- Enabling an UNPROVISIONABLE backend fails GRACEFULLY: no throw, app stays on the CPU. ----
+  // We force "hip" (a backend the manifest ships for no platform) so the real installer is never
+  // invoked here -- the recommended-backend path does a real multi-hundred-MB GPU download, which a
+  // fast eval must not trigger. This still proves the seam degrades quietly and never crashes.
   const enableResult = await page.evaluate(async () => {
     try {
-      await window.khonjel.invoke("acceleration:enable", "llama");
+      await window.khonjel.invoke("acceleration:enable", "llama", "hip");
       return "resolved";
     } catch (err) {
       return `threw:${String(err)}`;
     }
   });
-  expect(enableResult, "enable resolves quietly even when provisioning is unavailable").toBe("resolved");
+  expect(enableResult, "enable resolves quietly when a backend can't be provisioned").toBe("resolved");
 
   const finalState = await page.evaluate(() => window.khonjel.invoke("acceleration:state"));
-  expect(finalState.llm.device, "still on the CPU after a pin-gated enable").toBe("cpu");
+  expect(finalState.llm.device, "still on the CPU after an unprovisionable enable").toBe("cpu");
 
   // The app is still alive + ready after all of this.
   await expect(page.locator('[data-eval="app-shell"][data-eval-ready="true"]')).toBeVisible();

@@ -73,7 +73,7 @@ export function createAccelerationService(deps: AccelerationDeps): AccelerationA
 export function defaultAvailableBackends(os: GpuProfile["os"], arch: string): Backend[] {
   if (os === "darwin") return arch === "arm64" ? ["metal", "cpu"] : ["cpu"];
   if (arch !== "x64") return ["cpu"];
-  if (os === "win32") return ["cuda-13.3", "cuda-12.4", "vulkan", "cpu"];
+  if (os === "win32") return ["cuda-12.4", "vulkan", "cpu"];
   // linux
-  return ["cuda-13.3", "cuda-12.4", "vulkan", "cpu"];
+  return ["cuda-12.4", "vulkan", "cpu"];
 }

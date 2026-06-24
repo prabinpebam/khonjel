@@ -70,16 +70,6 @@ export const BACKEND_MANIFEST: BackendArtifact[] = [
     expectFiles: ["llama-server.exe", "ggml-cuda.dll"],
     minDriver: { nvidia: "551.78" },
   },
-  {
-    engine: "llama",
-    backend: "cuda-13.3",
-    version: LLAMA_TAG,
-    os: "win32",
-    arch: "x64",
-    parts: [part(llama("llama-b9744-bin-win-cuda-13.0-x64.zip"), 300 * MIB), part(llama("cudart-llama-bin-win-cuda-13.0-x64.zip"), 360 * MIB, "redist")],
-    expectFiles: ["llama-server.exe", "ggml-cuda.dll"],
-    minDriver: { nvidia: "580.0" },
-  },
   // ---- llama.cpp : macOS arm64 (Metal is in the base build) ----
   { engine: "llama", backend: "metal", version: LLAMA_TAG, os: "darwin", arch: "arm64", parts: [part(llama("llama-b9744-bin-macos-arm64.zip"), 120 * MIB)], expectFiles: ["llama-server"] },
   { engine: "llama", backend: "cpu", version: LLAMA_TAG, os: "darwin", arch: "arm64", parts: [part(llama("llama-b9744-bin-macos-arm64.zip"), 120 * MIB)], expectFiles: ["llama-server"] },
@@ -105,7 +95,9 @@ export const BACKEND_MANIFEST: BackendArtifact[] = [
     version: WHISPER_TAG,
     os: "win32",
     arch: "x64",
-    parts: [part(whisper("whisper-cublas-12.4.0-bin-x64.zip"), 150 * MIB), part(whisper("cudart-whisper-bin-win-cuda-12.4-x64.zip"), 320 * MIB, "redist")],
+    // whisper.cpp's Windows cuBLAS zip is self-contained: it bundles the CUDA runtime DLLs
+    // (cudart64 / cublas64) next to whisper-cli.exe, so there is no separate cudart redist part.
+    parts: [part(whisper("whisper-cublas-12.4.0-bin-x64.zip"), 150 * MIB)],
     expectFiles: ["whisper-cli.exe", "ggml-cuda.dll"],
     minDriver: { nvidia: "551.78" },
   },
@@ -153,7 +145,9 @@ export function manifestStructuralIssues(registry: BackendArtifact[]): string[] 
       }
       if (p.bytes <= 0) issues.push(`${id}: non-positive size`);
     }
-    if (a.backend.startsWith("cuda") && !a.parts.some((p) => p.role === "redist")) {
+    // llama.cpp ships the CUDA runtime as a SEPARATE cudart zip, so its CUDA backends must carry a
+    // redist part. whisper.cpp's cuBLAS zip bundles cudart, so it legitimately ships none.
+    if (a.engine === "llama" && a.backend.startsWith("cuda") && !a.parts.some((p) => p.role === "redist")) {
       issues.push(`${id}: CUDA backend is missing the cudart redistributable part`);
     }
   }

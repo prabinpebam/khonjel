@@ -126,9 +126,14 @@ export function AccelerationCard() {
               </Button>
             </>
           )}
-          {(view === "no-gpu" || view === "rolled-back") && (
+          {view === "rolled-back" && (
+            <Button data-eval="accel-retry" size="sm" onClick={() => void enableAll()}>
+              <RotateCw className="size-3.5" /> Try again
+            </Button>
+          )}
+          {view === "no-gpu" && (
             <Button data-eval="accel-rescan" size="sm" variant="outline" onClick={() => void rescan()}>
-              <RotateCw className="size-3.5" /> {view === "rolled-back" ? "Try again" : "Re-scan hardware"}
+              <RotateCw className="size-3.5" /> Re-scan hardware
             </Button>
           )}
         </div>
