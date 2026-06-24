@@ -66,7 +66,7 @@ const mockHardware: HardwareProfile = {
 const mockRuntimes: RuntimeStatus[] = [
   { engine: "whisper", state: "ready", message: "Speech runtime ready." },
   { engine: "llama", state: "ready", message: "Language runtime ready." },
-  { engine: "parakeet", state: "unsupported", message: "Parakeet local runtime is not bundled yet." },
+  { engine: "parakeet", state: "ready", message: "Parakeet runtime ready." },
 ];
 
 function emit(s: ModelStatus): void {
@@ -85,18 +85,6 @@ function emitRuntime(event: ModelRuntimeEvent): void {
 }
 
 function readinessFor(s: ModelStatus): ModelReadiness {
-  const runtimeUnsupported = s.id.includes("parakeet");
-  if (runtimeUnsupported) {
-    return {
-      modelId: s.id,
-      kind: s.kind,
-      state: "unsupported",
-      selected: false,
-      active: false,
-      reason: "Parakeet local runtime is not bundled yet.",
-      nextAction: "choose-another",
-    };
-  }
   if (s.state === "installed" && s.engineReady) {
     return { modelId: s.id, kind: s.kind, state: "ready", selected: s.inUse ?? false, active: s.inUse ?? false, reason: "Ready." };
   }
@@ -117,20 +105,17 @@ function readinessFor(s: ModelStatus): ModelReadiness {
 
 function compatibility(): ModelCompatibilityReport {
   const models = [...status.values()].map((s) => {
-    const unsupported = s.id.includes("parakeet");
     return {
       modelId: s.id,
       kind: s.kind,
-      level: unsupported ? "unsupported" as const : s.recommended ? "recommended" as const : "works" as const,
-      summary: unsupported ? "Not supported yet. Parakeet runtime is not bundled in this version." : s.recommended ? "Recommended for this PC." : `${s.name} works on this PC.`,
-      reasons: unsupported
-        ? [{ code: "runtime-unsupported" as const, message: "Parakeet local runtime is not bundled yet." }]
-        : [
-            { code: "runtime-ready" as const, message: "Runtime ready." },
-            { code: "enough-disk" as const, message: "Enough free disk space." },
-            { code: "enough-memory" as const, message: "Enough memory." },
-          ],
-      estimated: { speed: s.recommended ? "fast" as const : "good" as const, firstLoad: s.kind === "llm" ? "medium" as const : "short" as const },
+      level: s.recommended ? ("recommended" as const) : ("works" as const),
+      summary: s.recommended ? "Recommended for this PC." : `${s.name} works on this PC.`,
+      reasons: [
+        { code: "runtime-ready" as const, message: "Runtime ready." },
+        { code: "enough-disk" as const, message: "Enough free disk space." },
+        { code: "enough-memory" as const, message: "Enough memory." },
+      ],
+      estimated: { speed: s.recommended ? ("fast" as const) : ("good" as const), firstLoad: s.kind === "llm" ? ("medium" as const) : ("short" as const) },
     };
   });
   return {

@@ -28,9 +28,8 @@ test("local model setup: hardware status, recommendations, privacy labels, and u
   await expect(modal.getByText("Private").first()).toBeVisible();
   await expect(modal.getByText(/Recommended|Works/).first()).toBeVisible();
 
-  // Unsupported/advanced local models are not mixed into the default choice set; users opt in to see them.
-  await expect(modal.getByText(/Parakeet TDT/)).toHaveCount(0);
-  await modal.getByRole("button", { name: /Show .* unavailable or advanced models/ }).click();
-  await expect(modal.getByText(/Parakeet TDT/)).toBeVisible();
-  await expect(modal.getByText(/Not supported|not bundled/i).first()).toBeVisible();
+  // Parakeet is now a first-class local engine: it appears as a supported, downloadable model
+  // (no longer hidden behind an "unavailable" disclosure or marked as a permanent dead-end).
+  await expect(modal.getByText(/Parakeet TDT/).first()).toBeVisible();
+  await expect(modal.getByText(/not bundled/i)).toHaveCount(0);
 });

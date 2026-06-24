@@ -25,6 +25,8 @@ export const DETECTOR_CATALOG = [
   { code: "ACCEL_STATUS_DISHONEST", severity: "critical", category: "rendering", rule: "Status must never claim GPU/auto-detected without proof.", source: "gpu/honest-status" },
   { code: "ACCEL_FALLBACK_AS_ERROR", severity: "warning", category: "error-handling", rule: "A CPU fallback must be calm, not styled as an error.", source: "gpu/fallback" },
   { code: "ACCEL_CTA_DEADEND", severity: "critical", category: "workflow", rule: "The Turn-on CTA must reach a terminal state (no stuck spinner).", source: "gpu/flow" },
+  // Local STT engines (parakeet-integration-plan §9):
+  { code: "STT_ENGINE_DEAD_END", severity: "critical", category: "workflow", rule: "A selectable local STT provider must not be a permanent dead-end (every offered model 'Unavailable'/'not bundled'); it must offer a real Download or be Ready.", source: "parakeet/flow" },
 ];
 
 const SEVERITY_KEYS = ["critical", "warning", "info"];
