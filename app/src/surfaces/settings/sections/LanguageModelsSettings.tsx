@@ -54,10 +54,12 @@ export function LanguageModelsSettings() {
       </section>
 
       <section className="rounded-md border border-border bg-surface p-5">
-        <LocalModelSetup />
-        <div className="mt-4">
+        {chatMode === "local" ? (
+          <div className="mb-4">
+            <LocalModelSetup />
+          </div>
+        ) : null}
         <InferenceConfigBlock prefix="llm.chat" kind="llm" />
-        </div>
       </section>
 
       <div>

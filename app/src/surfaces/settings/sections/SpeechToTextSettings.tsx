@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSettingsStore } from "@stores/settings";
 import { SettingGroup } from "@components/common/SettingRow";
 import { Tabs } from "@components/ui/tabs";
 import { ToggleRow } from "../controls";
@@ -10,6 +11,7 @@ type SttTab = "dictation" | "note";
 export function SpeechToTextSettings() {
   const [tab, setTab] = useState<SttTab>("dictation");
   const prefix = `stt.${tab}`;
+  const mode = useSettingsStore((s) => s.values[`${prefix}.mode`] ?? "local");
 
   return (
     <div>
@@ -33,10 +35,12 @@ export function SpeechToTextSettings() {
         </section>
 
         <section className="rounded-md border border-border bg-surface p-5">
-          <LocalModelSetup compact={tab !== "dictation"} />
-          <div className="mt-4">
+          {mode === "local" ? (
+            <div className="mb-4">
+              <LocalModelSetup compact={tab !== "dictation"} />
+            </div>
+          ) : null}
           <InferenceConfigBlock prefix={prefix} kind="stt" />
-          </div>
         </section>
 
         {tab === "dictation" ? (
