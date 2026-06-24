@@ -25,7 +25,7 @@ function hardware(overrides: Partial<HardwareProfile> = {}): HardwareProfile {
 const runtimes: RuntimeStatus[] = [
   { engine: "whisper", state: "ready", message: "Speech runtime ready." },
   { engine: "llama", state: "ready", message: "Language runtime ready." },
-  { engine: "parakeet", state: "unsupported", message: "Parakeet local runtime is not bundled yet." },
+  { engine: "parakeet", state: "ready", message: "Parakeet runtime ready." },
 ];
 
 const baseStatuses: ModelStatus[] = [
@@ -56,7 +56,7 @@ const baseStatuses: ModelStatus[] = [
     recommended: false,
     kind: "stt",
     state: "not-installed",
-    engineReady: false,
+    engineReady: true,
     bytesTotal: 600 * 1024 * 1024,
   },
   {
@@ -111,12 +111,12 @@ describe("model compatibility", () => {
     expect(report.models.find((m) => m.modelId === "qwen2.5-7b-instruct-q4_k_m.gguf")?.level).toBe("unsupported");
   });
 
-  it("marks not-yet-supported runtimes as unsupported with plain copy", () => {
+  it("treats Parakeet as a supported local engine once its runtime is ready", () => {
     const report = buildModelCompatibilityReport({ hardware: hardware(), runtimes, statuses: baseStatuses });
     const parakeet = report.models.find((m) => m.modelId === "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3");
-    expect(parakeet?.level).toBe("unsupported");
-    expect(parakeet?.summary).toMatch(/runtime is not bundled/i);
-    expect(parakeet?.reasons.some((r) => r.code === "runtime-unsupported")).toBe(true);
+    expect(parakeet?.level).not.toBe("unsupported");
+    expect(parakeet?.reasons.some((r) => r.code === "runtime-unsupported")).toBe(false);
+    expect(parakeet?.reasons.some((r) => r.code === "runtime-ready")).toBe(true);
   });
 
   it("detects not-enough-disk before a download starts", () => {

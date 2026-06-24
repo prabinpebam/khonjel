@@ -451,8 +451,10 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
       },
       {
         engine: "parakeet" as const,
-        state: "unsupported" as const,
-        message: "Parakeet local runtime is not bundled yet.",
+        state: engineReady("parakeet") ? "ready" as const : "missing" as const,
+        message: engineReady("parakeet")
+          ? "Parakeet runtime ready."
+          : "Parakeet runtime missing. Run npm run fetch:parakeet or download it.",
       },
     ];
   }

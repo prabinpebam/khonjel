@@ -131,7 +131,19 @@ export function makeEngineReady(cfg: ModelRuntimeConfig): (engine: ModelManifest
       ];
       return anyExists(dirs.flatMap((d) => names.map((n) => join(d, n))));
     }
-    // Parakeet (sherpa-onnx) is not bundled/auto-fetched yet.
+    // Parakeet (sherpa-onnx): the one-shot CLI or the warm websocket server under vendor/parakeet[/bin].
+    if (engine === "parakeet") {
+      if (cfg.env.KHONJEL_SHERPA_BIN) return true;
+      const bases = ["sherpa-onnx-offline", "sherpa-onnx-offline-websocket-server"];
+      const names = cfg.isWindows ? bases.map((b) => `${b}.exe`) : bases;
+      const dirs = [
+        join(cfg.userDataDir, "runtime", "parakeet"),
+        join(cfg.userDataDir, "runtime", "parakeet", "bin"),
+        join(cfg.appDir, "vendor", "parakeet"),
+        join(cfg.appDir, "vendor", "parakeet", "bin"),
+      ];
+      return anyExists(dirs.flatMap((d) => names.map((n) => join(d, n))));
+    }
     return false;
   };
 }
