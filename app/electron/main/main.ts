@@ -2,7 +2,7 @@
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, session, shell, Tray, type IpcMainEvent } from "electron";
 import * as path from "node:path";
-import { writeFileSync, unlinkSync, mkdirSync, rmSync } from "node:fs";
+import { writeFileSync, unlinkSync, mkdirSync, rmSync, readdirSync, existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import type { Platform, AccelerationMode } from "../../src/services/ports";
 import { CHANNELS, checkContractVersion, ipcError } from "../shared/ipc-contract";
@@ -10,7 +10,7 @@ import { createDispatch } from "../shared/dispatch";
 import { createSettingsStore, fileSettingsIO, encryptedSettingsIO } from "./services/settings";
 import { createInferenceService } from "./services/inference";
 import { createInferenceRuntime, type InferenceRuntime } from "./inference/runtime";
-import { createTranscriptionService } from "./services/transcription";
+import { createTranscriptionService, sttLanguage } from "./services/transcription";
 import { resolveTranscriber } from "./stt/runtime";
 import { resolveNodeParakeetTranscriber, resolveNodeParakeetProvider } from "./stt/parakeet-runtime";
 import type { Transcriber } from "./stt/whisper";
@@ -27,6 +27,7 @@ import {
 } from "./hotkeys";
 import { createConnectionStore } from "./services/connections";
 import { createContentStore } from "./services/content";
+import { exportNotes, type NotesExportFs } from "./services/notes-export";
 import { createModelIndexStore } from "./models/store";
 import { createDownloader } from "./models/downloader";
 import { createModelService, boundModelIdsFrom } from "./models/service";
@@ -143,6 +144,26 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     },
   );
 
+  // "Save notes as files": mirror notes to readable .md files under Documents/Khonjel Notes when the
+  // setting is on. Best-effort + side-channel to the durable content.json (which stays the source of
+  // truth); export runs on every note-save and when the toggle first turns on.
+  const notesDir = path.join(app.getPath("documents"), "Khonjel Notes");
+  const notesExportFs: NotesExportFs = {
+    ensureDir: (dir) => mkdirSync(dir, { recursive: true }),
+    writeFile: (filePath, content) => writeFileSync(filePath, content, "utf8"),
+    readDir: (dir) => (existsSync(dir) ? readdirSync(dir) : []),
+    removeFile: (filePath) => rmSync(filePath, { force: true }),
+    join: path.join,
+  };
+  const exportCurrentNotes = (): void => {
+    if (!settingsStore.get().toggles["saveNotesAsFiles"]) return;
+    try {
+      exportNotes(contentStore.notes(), notesDir, notesExportFs);
+    } catch {
+      // best-effort: a failed export must never break note saving
+    }
+  };
+
   // Local model management (download/verify/remove/storage) over the durable models index. Progress
   // ticks are relayed to the renderer over "khonjel:model-progress" (preload bridges onModelProgress).
   const modelsDir = modelsDirOf(userData);
@@ -229,6 +250,9 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
   const transcriptionService = createTranscriptionService({
     resolveTranscriber: resolveActiveTranscriber,
     router,
+    // Honor the user's Transcription-language setting (e.g. "en-US" -> whisper "en"); Parakeet v3 is
+    // multilingual and ignores it. Read fresh per call so a change in Settings applies immediately.
+    defaultLanguage: () => sttLanguage(settingsStore.get().values["transcriptionLanguage"]),
     writeTempWav,
     cleanup: removeTempWav,
   });
@@ -305,9 +329,11 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
       // effect live (without this, registerHotkeys only re-ran on transform edits and the new key
       // stayed dead until restart).
       patch: (patch) => {
-        const before = settingsStore.get().values["hotkey.dictation"];
+        const before = settingsStore.get();
         const next = settingsStore.patch(patch);
-        if (next.values["hotkey.dictation"] !== before) onHotkeysChanged();
+        if (next.values["hotkey.dictation"] !== before.values["hotkey.dictation"]) onHotkeysChanged();
+        // "Save notes as files" just turned on -> mirror the current notes to disk straight away.
+        if (!before.toggles["saveNotesAsFiles"] && next.toggles["saveNotesAsFiles"]) exportCurrentNotes();
         return next;
       },
     },
@@ -349,6 +375,7 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
       replace: (collection: string, items: unknown[]) => {
         contentStore.replace(collection, items);
         if (collection === "transforms") onHotkeysChanged();
+        if (collection === "notes") exportCurrentNotes();
       },
     },
     models: {

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from "vitest";
-import { createTranscriptionService } from "./transcription";
+import { createTranscriptionService, sttLanguage } from "./transcription";
 import { isIpcError } from "../../shared/ipc-contract";
 import type { Transcriber } from "../stt/whisper";
 
@@ -88,5 +88,58 @@ describe("createTranscriptionService", () => {
     await expect(service.transcribe({ audioBase64: "" })).rejects.toSatisfy(
       (e: unknown) => isIpcError(e) && e.code === "validation",
     );
+  });
+
+  it("falls back to defaultLanguage when the request omits a language", async () => {
+    let seen: string | undefined = "untouched";
+    const service = createTranscriptionService({
+      resolveTranscriber: () => ({
+        transcribe: async (_path, opts) => {
+          seen = opts?.language;
+          return "ok";
+        },
+      }),
+      defaultLanguage: () => "en",
+      writeTempWav: () => "/tmp/x.wav",
+      cleanup: () => {},
+    });
+    await service.transcribe({ audioBase64: Buffer.from("x").toString("base64") });
+    expect(seen).toBe("en");
+  });
+
+  it("lets an explicit request language win over defaultLanguage", async () => {
+    let seen: string | undefined;
+    const service = createTranscriptionService({
+      resolveTranscriber: () => ({
+        transcribe: async (_path, opts) => {
+          seen = opts?.language;
+          return "ok";
+        },
+      }),
+      defaultLanguage: () => "en",
+      writeTempWav: () => "/tmp/x.wav",
+      cleanup: () => {},
+    });
+    await service.transcribe({ audioBase64: Buffer.from("x").toString("base64"), language: "fr" });
+    expect(seen).toBe("fr");
+  });
+});
+
+describe("sttLanguage", () => {
+  it("strips the region from a BCP-47 tag", () => {
+    expect(sttLanguage("en-US")).toBe("en");
+    expect(sttLanguage("en-GB")).toBe("en");
+    expect(sttLanguage("es-ES")).toBe("es");
+    expect(sttLanguage("ja-JP")).toBe("ja");
+  });
+
+  it("lowercases and accepts a bare language code", () => {
+    expect(sttLanguage("FR")).toBe("fr");
+    expect(sttLanguage("de")).toBe("de");
+  });
+
+  it("returns undefined (auto-detect) for empty or missing input", () => {
+    expect(sttLanguage(undefined)).toBeUndefined();
+    expect(sttLanguage("")).toBeUndefined();
   });
 });

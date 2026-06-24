@@ -5,6 +5,7 @@ import type { HistoryEntry, InsightsAggregate } from "@services/ports";
 import { useSettingsStore } from "@stores/settings";
 import { useUiStore } from "@stores/ui";
 import { EMPTY_INSIGHTS } from "@lib/defaults";
+import { learnCorrections } from "@lib/dictionary/auto-learn";
 import { PageHeader } from "@components/common/PageHeader";
 import { StatCard } from "@components/common/StatCard";
 import { Badge } from "@components/ui/badge";
@@ -22,6 +23,7 @@ export function Home() {
   const setActiveView = useUiStore((s) => s.setActiveView);
   const openSettings = useUiStore((s) => s.openSettings);
   const hotkey = useSettingsStore((s) => s.values["hotkey.dictation"] ?? "Ctrl+Shift+Space");
+  const autoLearn = useSettingsStore((s) => s.toggles["autoLearnDictionary"] ?? true);
   const [firstName, setFirstName] = useState("You");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [insights, setInsights] = useState<InsightsAggregate>(EMPTY_INSIGHTS);
@@ -112,7 +114,19 @@ export function Home() {
   }
 
   function saveEntry(id: string, finalText: string) {
+    // Auto-learn from corrections: when an edit changes the dictated text, derive personal-dictionary
+    // substitution rules from the words the user swapped (gated on the setting).
+    const before = history.find((e) => e.id === id)?.finalText;
+    if (autoLearn && before !== undefined && before.trim() !== finalText.trim()) {
+      void learnFromEdit(before, finalText);
+    }
     setHistory((prev) => prev.map((e) => (e.id === id ? { ...e, finalText } : e)));
+  }
+
+  async function learnFromEdit(before: string, after: string) {
+    const existing = await content.dictionary();
+    const learned = learnCorrections(before, after, existing);
+    if (learned.length > 0) await content.saveDictionary([...learned, ...existing]);
   }
 
   return (

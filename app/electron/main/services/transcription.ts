@@ -20,10 +20,20 @@ export interface TranscriptionDeps {
   resolveTranscriber?: () => Transcriber | undefined;
   /** Cloud STT router (Azure/OpenAI); when a slot is bound it takes precedence over local engines. */
   router?: ProviderRouter;
+  /** Default STT language (whisper code, e.g. "en") when the request doesn't specify one - wired to
+   * the user's Transcription-language setting. */
+  defaultLanguage?: () => string | undefined;
   /** Persist decoded WAV bytes to a temp path and return it. */
   writeTempWav: (bytes: Buffer) => string;
   /** Remove a temp file (best-effort). */
   cleanup: (filePath: string) => void;
+}
+
+/** PURE: map a BCP-47-ish UI language (e.g. "en-US") to a whisper language code ("en"); undefined = auto-detect. */
+export function sttLanguage(bcp47: string | undefined): string | undefined {
+  if (!bcp47) return undefined;
+  const base = bcp47.split("-")[0]?.trim().toLowerCase();
+  return base && base.length > 0 ? base : undefined;
 }
 
 export interface TranscriptionServiceImpl {
@@ -39,8 +49,9 @@ export function createTranscriptionService(deps: TranscriptionDeps): Transcripti
       }
       // A cloud-bound `stt.dictation` slot transcribes remotely (Azure/OpenAI); errors surface as
       // IpcError(provider_error). Otherwise fall back to the active local engine (whisper/Parakeet).
+      const language = req.language ?? deps.defaultLanguage?.();
       const cloud = await deps.router?.transcribeForSlot("stt.dictation", bytes, {
-        language: req.language,
+        language,
       });
       if (cloud != null) {
         return { text: cloud };
@@ -55,7 +66,7 @@ export function createTranscriptionService(deps: TranscriptionDeps): Transcripti
       const wavPath = deps.writeTempWav(bytes);
       try {
         const text = await transcriber.transcribe(wavPath, {
-          language: req.language,
+          language,
           translate: req.translate,
         });
         return { text };
