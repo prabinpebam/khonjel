@@ -53,16 +53,28 @@ function makeDeps(
 }
 
 describe("resolveParakeetTranscriber", () => {
-  it("prefers the warm server when both binaries + a model are present", async () => {
+  it("uses the warm server when opted in (KHONJEL_PARAKEET_SERVER=1) and present", async () => {
+    const env = { KHONJEL_PARAKEET_SERVER: "1" };
+    const { deps, server, cli } = makeDeps(new Set([CLI_BIN, SERVER_BIN]), {
+      [MODELS]: ["mdl"],
+      [MDL]: PARTS,
+    });
+    const t = resolveParakeetTranscriber({ ...CFG, env }, deps);
+    expect(await t?.transcribe("/x.wav")).toBe("server");
+    expect(server).toHaveLength(1);
+    expect(cli).toHaveLength(0);
+    expect(server[0]?.model.encoder).toBe(join(MDL, "encoder.int8.onnx"));
+  });
+
+  it("defaults to the one-shot CLI even when the server binary is present (warm server is opt-in)", async () => {
     const { deps, server, cli } = makeDeps(new Set([CLI_BIN, SERVER_BIN]), {
       [MODELS]: ["mdl"],
       [MDL]: PARTS,
     });
     const t = resolveParakeetTranscriber(CFG, deps);
-    expect(await t?.transcribe("/x.wav")).toBe("server");
-    expect(server).toHaveLength(1);
-    expect(cli).toHaveLength(0);
-    expect(server[0]?.model.encoder).toBe(join(MDL, "encoder.int8.onnx"));
+    expect(await t?.transcribe("/x.wav")).toBe("cli");
+    expect(cli).toHaveLength(1);
+    expect(server).toHaveLength(0);
   });
 
   it("falls back to the one-shot CLI when only the offline binary is present", async () => {

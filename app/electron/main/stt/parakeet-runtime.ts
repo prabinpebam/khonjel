@@ -94,8 +94,14 @@ export function resolveParakeetTranscriber(
 ): Transcriber | undefined {
   const model = findModel(cfg, deps);
   if (!model) return undefined;
-  const serverBin = findBin(cfg, deps, "sherpa-onnx-offline-websocket-server");
-  if (serverBin) return deps.makeServer({ serverBinPath: serverBin, model });
+  // The one-shot CLI is the validated default (same per-utterance model load as whisper-cli today,
+  // RTF well under 1.0). The warm websocket server avoids the reload but its wire protocol is
+  // sherpa-build specific, so it is opt-in via KHONJEL_PARAKEET_SERVER=1 (with the CLI as the
+  // automatic fallback) until validated against the pinned build.
+  if (cfg.env.KHONJEL_PARAKEET_SERVER === "1") {
+    const serverBin = findBin(cfg, deps, "sherpa-onnx-offline-websocket-server");
+    if (serverBin) return deps.makeServer({ serverBinPath: serverBin, model });
+  }
   const cliBin = findBin(cfg, deps, "sherpa-onnx-offline");
   if (cliBin) return deps.makeCli({ binPath: cliBin, model });
   return undefined;
