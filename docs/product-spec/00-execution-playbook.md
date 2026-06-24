@@ -38,7 +38,7 @@ telemetry).
 
 1. **The FINAL frontend is complete and must not regress.** It depends only on service ports
    and runs on **mock adapters** by default. The **backend phase is now active** — built behind
-   the seam per the [Backend Implementation Plan](04-architecture-and-delivery/backend/14-implementation-plan.md)
+   the seam per the [Backend Implementation Plan](../archive/delivery-plans/backend/14-implementation-plan.md)
    with a **strict TDD + EDD** gate. Real `ipc` adapters are **additive** and chosen at runtime
    (mock in the browser, real under Electron); the renderer never changes. *(Never break the
    frontend: `npm run verify` + `npm run eval` stay green.)*
@@ -125,7 +125,7 @@ Agent Overlay, meeting/preview/update overlays. Full inventory: [Sitemap & IA §
 6. **Onboarding, Integrations, ⌘K, notifications.**
 7. **Polish** — empty/loading/error, a11y, dark parity, motion.
 8. *(next)* **Backend build** — Electron shell + real adapters, executed per the
-   [Backend Implementation Plan](04-architecture-and-delivery/backend/14-implementation-plan.md)
+   [Backend Implementation Plan](../archive/delivery-plans/backend/14-implementation-plan.md)
    with a **strict TDD + EDD** gate per task. The frontend phases above are complete; both test
    lanes are operational (`npm run test`, `npm run eval`).
 
@@ -197,10 +197,10 @@ screen's **spec acceptance items asserted**.
 | Tech stack | [04/04-technology-stack](04-architecture-and-delivery/04-technology-stack.md) |
 | **Build plan** | [04/05-mock-frontend-plan](04-architecture-and-delivery/05-mock-frontend-plan.md) |
 | **Eval loop** | [04/06-test-and-validation-strategy](04-architecture-and-delivery/06-test-and-validation-strategy.md) |
-| **Backend architecture spec** | [04/backend/README](04-architecture-and-delivery/backend/README.md) |
-| **Backend build order** | [04/backend/14-implementation-plan](04-architecture-and-delivery/backend/14-implementation-plan.md) |
+| **Backend architecture spec (archived)** | [archive/delivery-plans/backend/README](../archive/delivery-plans/backend/README.md) |
+| **Backend build order (archived)** | [archive/delivery-plans/backend/14-implementation-plan](../archive/delivery-plans/backend/14-implementation-plan.md) |
 | **EDD framework + harness** | [frameworks/eval-driven-development](../frameworks/eval-driven-development/README.md) |
-| OpenWhispr repo capture | [99/03-openwhispr-repo-analysis](99-reference-analysis/03-openwhispr-repo-analysis.md) |
+| OpenWhispr repo capture (archived) | [archive/reference-analysis/03-openwhispr-repo-analysis](../archive/reference-analysis/03-openwhispr-repo-analysis.md) |
 
 ---
 

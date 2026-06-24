@@ -78,27 +78,17 @@ docs/product-spec/
 │   └── design-system/
 │       ├── README.md
 │       └── 01-intent.md
-├── 04-architecture-and-delivery/
-│   ├── 01-system-architecture.md
-│   ├── 02-privacy-data-security.md
-│   ├── 03-roadmap-mvp-open-questions.md
-│   ├── 04-technology-stack.md
-│   ├── 05-mock-frontend-plan.md
-│   ├── 06-test-and-validation-strategy.md
-│   ├── parakeet-integration-plan.md
-│   └── gpu-acceleration/
-│       ├── README.md
-│       ├── 01-gpu-detection-and-capability.md
-│       ├── 02-backend-provisioning-and-rollback.md
-│       ├── 03-runtime-acceleration-and-fallback.md
-│       ├── 04-contracts-data-and-ipc.md
-│       ├── 05-ux-setup-test-validate.md
-│       └── 06-edd-tdd-and-implementation-plan.md
-└── 99-reference-analysis/
-    ├── 01-open-wisper-screen-by-screen.md
-    ├── 02-wisper-flow-screen-by-screen.md
-    └── 03-openwhispr-repo-analysis.md
+└── 04-architecture-and-delivery/
+    ├── 01-system-architecture.md
+    ├── 02-privacy-data-security.md
+    ├── 03-roadmap-mvp-open-questions.md
+    ├── 04-technology-stack.md
+    ├── 05-mock-frontend-plan.md
+    └── 06-test-and-validation-strategy.md
 ```
+
+> Completed **delivery plans** (backend build, GPU acceleration, Parakeet integration) and the
+> **reference analysis** of the source apps are archived in [`../archive/`](../archive/).
 
 ### Index with one-line purpose
 
@@ -130,11 +120,10 @@ docs/product-spec/
 | [04 · Technology Stack](04-architecture-and-delivery/04-technology-stack.md) | The exact OpenWhispr stack Khonjel adopts |
 | [04 · **Mock Frontend Plan**](04-architecture-and-delivery/05-mock-frontend-plan.md) | **Build the inspectable, backend-free frontend** — stack, architecture, phases |
 | [04 · **Test & Validation Strategy**](04-architecture-and-delivery/06-test-and-validation-strategy.md) | **The eval loop** — how we detect "what right looks like" against the spec |
-| [04 · **GPU Acceleration (no-compromise + graceful fallback)**](04-architecture-and-delivery/gpu-acceleration/README.md) | **Full local-model GPU support** — smart detect, auto-provision, probe, rollback, test-and-validate UX, EDD + phased plan |
-| [04 · **Parakeet Integration (no-compromise)**](04-architecture-and-delivery/parakeet-integration-plan.md) | **Make NVIDIA Parakeet a first-class local STT engine** via sherpa-onnx — runtime, multi-asset model, GPU provider, EDD + phased plan |
-| [99 · OpenWhispr **repo** analysis](99-reference-analysis/03-openwhispr-repo-analysis.md) | **Authoritative** capture of the real app (stack, nav, features) |
-| [99 · OpenWhispr screen-by-screen](99-reference-analysis/01-open-wisper-screen-by-screen.md) | Hi-fidelity capture of all 15 OW screenshots |
-| [99 · Productivity reference — screen-by-screen](99-reference-analysis/02-wisper-flow-screen-by-screen.md) | Hi-fidelity capture of all 18 reference screenshots |
+
+> **Archived (delivered):** the backend build plan, the **GPU Acceleration** and **Parakeet
+> Integration** delivery specs, and the **reference analysis** of the source apps now live in
+> [`../archive/`](../archive/) — see [`../archive/README.md`](../archive/README.md).
 
 ---
 
@@ -171,10 +160,9 @@ docs/product-spec/
 ---
 
 ## Reference designs
-Original screenshots live in [`../reference-designs/`](../reference-designs/):
-`open-wisper/` (15) and `wisper-flow/` (18). Their exhaustive analysis is in
-[`99-reference-analysis/`](99-reference-analysis/). Use those to validate any screen
-built from this spec.
+The exhaustive screen-by-screen **analysis** of the source apps is archived in
+[`../archive/reference-analysis/`](../archive/reference-analysis/). (The original screenshots have
+been removed to keep the repository lean.)
 
 ---
 

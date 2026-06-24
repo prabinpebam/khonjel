@@ -7,7 +7,7 @@
  * llama-server. The argv construction and JSON parsing are PURE (BE1-tested); the process spawn is
  * injected as `run`, so the one-shot transcriber is unit-tested without the binary. The runtime
  * resolver (stt/parakeet-runtime.ts) wires the real spawn + a resolved model directory.
- * See docs/product-spec/04-architecture-and-delivery/parakeet-integration-plan.md.
+ * See docs/archive/delivery-plans/parakeet-integration-plan.md.
  */
 import type { RunCommand, Transcriber } from "./whisper";
 

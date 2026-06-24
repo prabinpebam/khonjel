@@ -4,8 +4,8 @@
 > **Audience:** Product, UX, frontend, Electron/backend, EDD authors.
 > **Related:** [07 - Local model management](07-local-model-management.md),
 > [B4/B5 Settings](04-floating-bar-overlays-and-settings.md),
-> [10 - Providers & models](../04-architecture-and-delivery/backend/10-providers-and-models.md),
-> [12 - Audio capture & OS integration](../04-architecture-and-delivery/backend/12-audio-capture-and-os-integration.md).
+> [10 - Providers & models](../../archive/delivery-plans/backend/10-providers-and-models.md),
+> [12 - Audio capture & OS integration](../../archive/delivery-plans/backend/12-audio-capture-and-os-integration.md).
 
 ---
 
@@ -181,7 +181,7 @@ Do not require GPU for local models. CPU mode is valid; the UI should only warn 
 
 > Optional GPU acceleration (smart detect, auto-provision, probe, rollback, and a one-click
 > test-and-validate UX) is specified separately in
-> [GPU Acceleration](../04-architecture-and-delivery/gpu-acceleration/README.md). CPU remains the
+> [GPU Acceleration](../../archive/delivery-plans/gpu-acceleration/README.md). CPU remains the
 > always-available floor; GPU is a proven, reversible enhancement layered on top.
 
 ### Step 3 - Recommended Local Setup

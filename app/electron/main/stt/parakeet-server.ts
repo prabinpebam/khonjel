@@ -9,7 +9,7 @@
  * composition glue in stt/parakeet-runtime.ts. Falling back to the one-shot transcriber on a start
  * or request failure guarantees a transcript even if the server protocol needs tuning against a
  * specific sherpa-onnx build.
- * See docs/product-spec/04-architecture-and-delivery/parakeet-integration-plan.md §2.1, §5.2.
+ * See docs/archive/delivery-plans/parakeet-integration-plan.md §2.1, §5.2.
  */
 import { buildSherpaServerArgs, parseSherpaText, type ParakeetModelDir } from "./parakeet";
 import type { Transcriber } from "./whisper";

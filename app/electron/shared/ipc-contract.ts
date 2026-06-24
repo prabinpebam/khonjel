@@ -7,7 +7,7 @@
  * renderer and to import from tests. Runtime validation schemas live next to it in
  * `ipc-schemas.ts` (main + tests only, keeping zod out of the renderer bundle).
  *
- * See docs/product-spec/04-architecture-and-delivery/backend/08-ipc-and-ports-contracts.md.
+ * See docs/archive/delivery-plans/backend/08-ipc-and-ports-contracts.md.
  */
 import type {
   ChatMessage,

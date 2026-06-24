@@ -4,7 +4,7 @@
 > built on (same tech stack). Optimised for **local-first** operation, a **sacred hot
 > path**, and a **single inference abstraction** across many providers.
 > Concrete stack: [`04-technology-stack.md`](04-technology-stack.md). Source mapping:
-> [`../99-reference-analysis/03-openwhispr-repo-analysis.md`](../99-reference-analysis/03-openwhispr-repo-analysis.md).
+> [`../../archive/reference-analysis/03-openwhispr-repo-analysis.md`](../../archive/reference-analysis/03-openwhispr-repo-analysis.md).
 
 ---
 
