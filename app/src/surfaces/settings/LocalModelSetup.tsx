@@ -16,6 +16,7 @@ import { useModelsStore } from "@stores/models";
 import type { ModelReadiness, ModelStatus } from "@services/ports";
 import { Button } from "@components/ui/button";
 import { cn } from "@lib/utils";
+import { isTargetSettled } from "./local-setup-logic";
 
 const BUSY_STATES = new Set<ModelStatus["state"]>(["downloading", "queued", "paused", "verifying"]);
 const errMsg = (e: unknown): string => (e instanceof Error ? e.message : "Something went wrong.");
@@ -86,7 +87,13 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
       }
     }
 
-    if (ids.every((id) => readiness[id]?.state === "ready")) {
+    // Stop when every target is settled: either fully ready, OR installed but its on-device engine
+    // runtime cannot be made ready (missing/failed) and we already attempted prepare. Otherwise the
+    // card would spin at "Setting up… 100%" forever when a model downloads but its engine binary is
+    // absent (prepare reports `failed`, so readiness never reaches "ready").
+    if (
+      ids.every((id) => isTargetSettled(statuses[id], readiness[id]?.state, prepared.current.has(id)))
+    ) {
       setPhase("idle");
       void refresh();
     }
@@ -104,6 +111,15 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
 
   const anyBusy = targets.some((m) => BUSY_STATES.has(m.state));
   const running = phase === "running" || anyBusy;
+
+  // Downloaded, but the on-device engine runtime isn't ready yet (e.g. not installed on this PC).
+  const targetIds = [sttId, llmId].filter((x): x is string => Boolean(x));
+  const enginesMissing =
+    !running &&
+    phase !== "error" &&
+    targetIds.length > 0 &&
+    targetIds.every((id) => statuses[id]?.state === "installed") &&
+    !allReady;
 
   const totalBytes = targets.reduce((sum, m) => sum + (m.bytesTotal ?? 0), 0);
   const doneBytes = targets.reduce(
@@ -133,7 +149,9 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
 
   const onPrimary = () => {
     if (running) return;
-    if (allReady) {
+    // "Ready" and "engine missing" both just re-check current state (in case the runtime was
+    // installed since); only a not-yet-downloaded setup kicks off downloads.
+    if (allReady || enginesMissing) {
       void refresh();
       return;
     }
@@ -230,6 +248,8 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
               <Loader2 className="animate-spin" />
             ) : phase === "error" ? (
               <RotateCcw />
+            ) : allReady || enginesMissing ? (
+              <RotateCcw />
             ) : (
               <Download />
             )}
@@ -237,14 +257,17 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
               ? `Setting up… ${pct}%`
               : phase === "error"
                 ? "Retry setup"
-                : allReady
+                : allReady || enginesMissing
                   ? "Recheck local models"
                   : "Download recommended setup"}
           </Button>
           <span
             role="status"
             aria-live="polite"
-            className={cn("text-xs", phase === "error" ? "text-danger" : "text-tertiary-foreground")}
+            className={cn(
+              "text-xs",
+              phase === "error" ? "text-danger" : enginesMissing ? "text-warning" : "text-tertiary-foreground",
+            )}
           >
             {phase === "error"
               ? (error ?? "Setup failed. Try again.")
@@ -252,7 +275,9 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
                 ? `Downloading your private models… ${fmt(doneBytes)} / ${fmt(totalBytes)}`
                 : allReady
                   ? "Ready for private dictation."
-                  : "Downloads continue in the background if you close Settings."}
+                  : enginesMissing
+                    ? "Models downloaded. The on-device engine isn’t set up on this computer yet."
+                    : "Downloads continue in the background if you close Settings."}
           </span>
         </div>
       </div>
@@ -296,6 +321,7 @@ function RecommendedCard({
   // Only show the "Setting up" spinner while we are actively preparing the runtime, not when an
   // installed model is simply idle-and-not-yet-prepared (that reads as "Needs setup").
   const settingUp = pending && state === "installed" && !ready && !failed;
+  const runtimeMissing = state === "installed" && rstate === "runtime-missing" && !settingUp;
   const busy = downloading || verifying || settingUp;
   const pct = pctOf(model);
 
@@ -309,7 +335,9 @@ function RecommendedCard({
           ? "Verifying"
           : settingUp
             ? "Setting up"
-            : "Needs setup";
+            : runtimeMissing
+              ? "Engine needed"
+              : "Needs setup";
 
   return (
     <div className={cn("rounded-md border bg-surface-2 p-3", failed ? "border-danger/50" : "border-border")}>
