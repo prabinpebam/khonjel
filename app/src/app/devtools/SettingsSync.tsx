@@ -37,13 +37,31 @@ export function SettingsSync() {
       }
     });
 
+    // Write-through every store change to main, but DEBOUNCED: each settings.patch is a synchronous
+    // full read + (encrypt) + write of settings.json in main, so persisting on every keystroke/toggle
+    // floods IPC and the disk. Batch rapid changes into one write; flush the last change on unmount.
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let pending: { toggles: Record<string, boolean>; values: Record<string, string> } | null = null;
+    const flush = () => {
+      if (pending) {
+        void services.settings.patch(pending);
+        pending = null;
+      }
+    };
     const unsubscribe = useSettingsStore.subscribe((state) => {
-      void services.settings.patch({ toggles: state.toggles, values: state.values });
+      pending = { toggles: state.toggles, values: state.values };
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        flush();
+      }, 300);
     });
 
     return () => {
       cancelled = true;
       unsubscribe();
+      if (timer) clearTimeout(timer);
+      flush();
     };
   }, [services]);
 

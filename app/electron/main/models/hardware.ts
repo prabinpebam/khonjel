@@ -60,7 +60,14 @@ export function parseWindowsGpuCsv(csv: string): HardwareGpu[] {
   });
 }
 
+// GPU enumeration shells out to PowerShell (Get-CimInstance), which costs hundreds of ms to seconds
+// of synchronous main-process time. GPUs do not change during a session, so cache the first
+// successful result. Without this, every `models:compatibility` call (opening Settings, each
+// finished download) re-spawned PowerShell and froze the whole app. A thrown query (timeout) is not
+// cached, so detection retries next time.
+let gpuCache: HardwareGpu[] | null = null;
 function detectWindowsGpus(): HardwareGpu[] {
+  if (gpuCache) return gpuCache;
   try {
     const out = execFileSync(
       "powershell",
@@ -72,7 +79,8 @@ function detectWindowsGpus(): HardwareGpu[] {
       ],
       { encoding: "utf8", windowsHide: true, timeout: 3000 },
     );
-    return parseWindowsGpuCsv(out);
+    gpuCache = parseWindowsGpuCsv(out);
+    return gpuCache;
   } catch {
     return [];
   }

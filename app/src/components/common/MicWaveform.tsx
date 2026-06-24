@@ -26,6 +26,9 @@ export function MicWaveform({
     if (!canvas || !ctx) return;
     const history = new Array<number>(barCount).fill(0);
     let raf = 0;
+    // Read the accent color once per recording session instead of every frame: getComputedStyle
+    // forces a synchronous style recalc, and this rAF loop runs at ~60fps on up to three surfaces.
+    const color = getComputedStyle(canvas).color;
 
     const draw = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -43,7 +46,7 @@ export function MicWaveform({
       history.push(active ? Math.min(1, Math.max(0, levelRef.current)) : 0);
       history.shift();
 
-      ctx.fillStyle = getComputedStyle(canvas).color;
+      ctx.fillStyle = color;
       const gap = 2;
       const barW = (w - gap * (barCount - 1)) / barCount;
       for (let i = 0; i < barCount; i++) {
