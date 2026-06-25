@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="app/build/icon.png" alt="Khonjel" width="128" height="128" />
+
 # Khonjel
 
 **A local-first, privacy-first desktop voice productivity app.**
@@ -86,6 +88,15 @@ npm run dev            # http://localhost:5173 — fully interactive, fake data
 
 If the local engines aren't downloaded, the app still runs: dictation cleanup falls back to a
 deterministic stub, and transcription reports `model_unavailable` until a model is present.
+
+## Using Khonjel
+
+Once Khonjel is running:
+
+1. **Dictate anywhere.** Press the global hotkey (default `Ctrl+Shift+Space`), speak, and the cleaned-up text is pasted at your cursor in whatever app you're using — the floating bar shows a live waveform while you talk.
+2. **Choose your engines.** In **Settings → Speech-to-Text** and **Language Models**, pick an on-device model (or connect a cloud provider), and optionally turn on **GPU acceleration**.
+3. **Work in the surfaces.** **Home** (history + stats), **Chat** and **Notes** for AI-assisted writing, **Upload** to transcribe audio files, **Dictionary** for custom terms, and **Transforms** for hotkey-bound text actions.
+4. **Stay current.** The installer keeps Khonjel up to date automatically; you can also check from **Settings → System**.
 
 ## Using a cloud provider (optional)
 
