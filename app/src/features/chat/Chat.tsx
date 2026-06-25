@@ -175,16 +175,30 @@ export function Chat() {
           <Plus />
           New chat
         </Button>
-        <div className="flex flex-col gap-0.5 overflow-y-auto">
+        <div className="flex flex-col gap-0.5 overflow-y-auto" role="listbox" aria-label="Conversations">
           {sortedThreads.length === 0 ? (
             <p className="px-2 py-1 text-xs text-tertiary-foreground">No conversations yet.</p>
           ) : (
             sortedThreads.map((t) => (
               <div
                 key={t.id}
+                role="option"
+                aria-selected={t.id === activeId}
                 data-eval="chat-thread"
+                tabIndex={0}
+                onClick={() => setActiveId(t.id)}
+                onDoubleClick={() => setRenamingId(t.id)}
+                onKeyDown={(e) => {
+                  if (renamingId === t.id) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setActiveId(t.id);
+                  } else if (e.key === "F2") {
+                    setRenamingId(t.id);
+                  }
+                }}
                 className={cn(
-                  "group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm transition-colors",
+                  "group flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   t.id === activeId ? "bg-sidebar-selected text-foreground" : "text-muted-foreground hover:bg-foreground/5",
                 )}
               >
@@ -194,27 +208,25 @@ export function Chat() {
                     defaultValue={t.title}
                     aria-label="Conversation title"
                     className="min-w-0 flex-1 rounded-sm bg-surface px-1 text-sm text-foreground outline-none"
+                    onClick={(e) => e.stopPropagation()}
                     onBlur={(e) => commitRename(t.id, e.target.value)}
                     onKeyDown={(e) => {
+                      e.stopPropagation();
                       if (e.key === "Enter") commitRename(t.id, e.currentTarget.value);
                       if (e.key === "Escape") setRenamingId(null);
                     }}
                   />
                 ) : (
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 truncate text-left"
-                    onClick={() => setActiveId(t.id)}
-                    onDoubleClick={() => setRenamingId(t.id)}
-                  >
-                    {t.title || "New chat"}
-                  </button>
+                  <span className="min-w-0 flex-1 truncate text-left">{t.title || "New chat"}</span>
                 )}
                 <button
                   type="button"
                   aria-label="Rename conversation"
                   className="opacity-0 transition-opacity group-hover:opacity-100"
-                  onClick={() => setRenamingId(t.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRenamingId(t.id);
+                  }}
                 >
                   <Pencil className="size-3.5 text-tertiary-foreground hover:text-foreground" />
                 </button>
@@ -223,7 +235,10 @@ export function Chat() {
                   aria-label="Delete conversation"
                   data-eval="chat-thread-delete"
                   className="opacity-0 transition-opacity group-hover:opacity-100"
-                  onClick={() => removeThread(t.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeThread(t.id);
+                  }}
                 >
                   <Trash2 className="size-3.5 text-tertiary-foreground hover:text-danger" />
                 </button>
@@ -257,7 +272,7 @@ export function Chat() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4" role="log" aria-live="polite" aria-busy={streamingId !== null}>
               {messages.map((message) => (
                 <MessageBubble
                   key={message.id}
@@ -331,6 +346,10 @@ function MessageBubble({
 }) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === "user";
+  const isError = message.status === "error";
+  const isStopped = message.status === "stopped";
+  // A just-started assistant turn (placeholder, no tokens yet) shows a typing indicator.
+  const isTyping = streaming && message.content === "...";
 
   function copy() {
     window.electronAPI?.copyText?.(message.content);
@@ -342,17 +361,29 @@ function MessageBubble({
     <div
       data-eval="chat-message"
       data-eval-role={message.role}
+      data-eval-status={message.status ?? ""}
       className={cn("group flex flex-col gap-1", isUser ? "items-end" : "items-start")}
     >
       <div
         className={cn(
           "max-w-[72%] whitespace-pre-wrap rounded-lg px-4 py-2.5 text-sm",
           isUser ? "bg-primary text-primary-foreground" : "border border-border bg-surface-2 text-foreground",
-          message.status === "error" && "border-danger text-danger",
+          isError && "border-danger text-danger",
         )}
       >
-        {message.content}
+        {isTyping ? (
+          <span className="flex items-center gap-1 text-muted-foreground" aria-label="Khonjel is typing">
+            <Loader2 className="size-3.5 animate-spin" />
+            Thinking...
+          </span>
+        ) : (
+          <>
+            {message.content}
+            {streaming ? <span className="ml-0.5 inline-block animate-pulse">|</span> : null}
+          </>
+        )}
       </div>
+      {isStopped ? <span className="px-1 text-xs text-tertiary-foreground">Stopped</span> : null}
       {!isUser && !streaming ? (
         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <Button
@@ -364,7 +395,7 @@ function MessageBubble({
           >
             {copied ? <Check /> : <Copy />}
           </Button>
-          <Button variant="ghost" size="icon" aria-label="Regenerate" data-eval="chat-regenerate" onClick={onRegenerate}>
+          <Button variant="ghost" size="icon" aria-label={isError ? "Retry" : "Regenerate"} data-eval="chat-regenerate" onClick={onRegenerate}>
             <RefreshCw />
           </Button>
         </div>
