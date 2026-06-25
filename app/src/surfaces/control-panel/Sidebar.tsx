@@ -17,7 +17,7 @@ export function Sidebar() {
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const services = useServices();
-  const { profile } = services;
+  const { system } = services;
   const stt = useActiveModel("stt.dictation", "stt");
   // The LLM line mirrors the chat badge (the user-facing language model).
   const llm = useActiveModel("llm.chat", "llm");
@@ -26,7 +26,7 @@ export function Sidebar() {
   const hasLocalModel = stt.isLocal || llm.isLocal;
   const accelInit = useAccelerationStore((s) => s.init);
   const accelState = useAccelerationStore((s) => s.state);
-  const [name, setName] = useState("You");
+  const [name, setName] = useState("");
 
   useEffect(() => {
     accelInit(services);
@@ -34,13 +34,14 @@ export function Sidebar() {
 
   useEffect(() => {
     let live = true;
-    void profile.get().then((p) => {
-      if (live) setName(p.name);
+    // The signed-in Windows account name (identity is the OS login; nothing is stored by the app).
+    void system.getAccountName().then((n) => {
+      if (live) setName(n);
     });
     return () => {
       live = false;
     };
-  }, [profile]);
+  }, [system]);
 
   return (
     <aside

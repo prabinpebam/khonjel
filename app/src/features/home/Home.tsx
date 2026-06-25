@@ -19,12 +19,12 @@ import { dayKey, formatDateLabel, formatDuration, formatNumber, formatTime } fro
 const PAGE_SIZE = 20;
 
 export function Home() {
-  const { profile, content } = useServices();
+  const { system, content } = useServices();
   const setActiveView = useUiStore((s) => s.setActiveView);
   const openSettings = useUiStore((s) => s.openSettings);
   const hotkey = useSettingsStore((s) => s.values["hotkey.dictation"] ?? "Ctrl+Shift+Space");
   const autoLearn = useSettingsStore((s) => s.toggles["autoLearnDictionary"] ?? true);
-  const [firstName, setFirstName] = useState("You");
+  const [firstName, setFirstName] = useState("");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [insights, setInsights] = useState<InsightsAggregate>(EMPTY_INSIGHTS);
   const loadedRef = useRef(false);
@@ -35,13 +35,16 @@ export function Home() {
 
   useEffect(() => {
     let live = true;
-    void profile.get().then((p) => {
-      if (live) setFirstName(p.name.split(" ")[0] ?? p.name);
+    // Identity is the Windows login (no app account); greet by the OS account's first name.
+    void system.getAccountName().then((name) => {
+      if (!live) return;
+      const first = name.split(/[ .]/)[0] || name;
+      setFirstName(first ? first.charAt(0).toUpperCase() + first.slice(1) : "");
     });
     return () => {
       live = false;
     };
-  }, [profile]);
+  }, [system]);
 
   // Load history + stats, and keep them live: refetch whenever main reports a content change
   // (a new dictation lands in history, including captures made from the floating-bar window), so the
@@ -131,7 +134,7 @@ export function Home() {
 
   return (
     <div>
-      <PageHeader title={`Welcome back, ${firstName}`} description="Your dictation history and stats." />
+      <PageHeader title={firstName ? `Welcome back, ${firstName}` : "Welcome back"} description="Your dictation history and stats." />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_var(--rail-width)]">
         <section>

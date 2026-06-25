@@ -31,7 +31,6 @@ import type {
   ModelStorageReport,
   Note,
   Platform,
-  Profile,
   SettingsPatch,
   SettingsSnapshot,
   Snippet,
@@ -49,13 +48,13 @@ import type {
 } from "../../src/services/ports";
 
 /** Bumped only on breaking channel changes; preload sends it, main rejects mismatches. */
-export const CONTRACT_VERSION = 1;
+export const CONTRACT_VERSION = 2;
 
 /** Request/response channels (invoke). One namespace per port. Phase 0 = the seam proof. */
 export const CHANNELS = {
-  profileGet: "profile:get",
   systemGetAppVersion: "system:getAppVersion",
   systemGetPlatform: "system:getPlatform",
+  systemGetAccountName: "system:getAccountName",
   systemInjectText: "system:injectText",
   systemCaptureSelection: "system:captureSelection",
   settingsGet: "settings:get",
@@ -113,9 +112,9 @@ export type Channel = (typeof CHANNELS)[keyof typeof CHANNELS];
 
 /** Per-channel request argument tuples and response types. */
 export interface ChannelContract {
-  "profile:get": { request: []; response: Profile };
   "system:getAppVersion": { request: []; response: string };
   "system:getPlatform": { request: []; response: Platform };
+  "system:getAccountName": { request: []; response: string };
   "system:injectText": { request: [string]; response: InjectionOutcome };
   "system:captureSelection": { request: []; response: string };
   "settings:get": { request: []; response: SettingsSnapshot };

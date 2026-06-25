@@ -1,8 +1,8 @@
 # Khonjel — Data Inventory & Privacy Map
 
-What the app stores, where, how it is protected, how long it is kept, and whether it can leave the device. Reviewed each release. Reflects the implemented hardening (encrypted content at rest, fail-closed secrets, 0600 file perms, retention).
+What the app stores, where, how it is protected, how long it is kept, and whether it can leave the device. Reviewed each release. Reflects the implemented hardening (all durable data encrypted at rest, fail-closed secrets, 0600 file perms, retention).
 
-All persistent files live under Electron's `userData` directory (per-OS app data folder).
+Khonjel has **no user account**: the signed-in operating-system user is the identity. All persistent files live under Electron's `userData` directory (a per-OS-user folder), and every durable store is encrypted at rest to that account (Windows DPAPI via `safeStorage`), so another OS user on the same device cannot read it.
 
 | Datum | Location | At rest | Retention | Can leave the device? |
 |---|---|---|---|---|
@@ -10,8 +10,8 @@ All persistent files live under Electron's `userData` directory (per-OS app data
 | Transcript history (`finalText`) | `content.json` | Encrypted with `safeStorage` when available (tagged `enc:`); legacy plaintext migrated on next write | User-configurable retention (`privacy.historyRetentionDays`, 0 = keep); auto-purged on add | Only if a **cloud STT/LLM slot is bound** by the user |
 | Notes / chat | `content.json` | Encrypted at rest (as above) | Until deleted | Only via a user-bound cloud LLM |
 | Dictionary / snippets / transforms | `content.json` | Encrypted at rest (as above) | Until deleted | No (used locally to shape prompts) |
-| Connections (endpoints, model ids) | `connections.json` | Plaintext (no secrets here; 0600 perms) | Until deleted | No (used to build requests) |
-| Settings | `settings.json` | Plaintext (non-sensitive; 0600 perms) | Until deleted | No |
+| Connections (endpoints, model ids) | `connections.json` | Encrypted with `safeStorage` (tagged `enc:`); legacy plaintext migrated on next write; 0600 perms | Until deleted | No (used to build requests) |
+| Settings | `settings.json` | Encrypted with `safeStorage` (tagged `enc:`); legacy plaintext migrated on next write; 0600 perms | Until deleted | No |
 | Downloaded models | `models/` + `models/index.json` | Plaintext model files; integrity-verified on download | Until deleted | No (downloaded only) |
 | **Audio** | _not persisted_ | n/a — per-window temp WAVs are deleted after transcription | None | Per-window to a **bound cloud STT** slot only |
 

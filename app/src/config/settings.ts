@@ -29,7 +29,7 @@ export interface SettingsGroup {
   items: SettingsSection[];
 }
 
-/** Settings modal nav rail (grouped). Account/Workspace are optional surfaces. */
+/** Settings modal nav rail (grouped). */
 export const SETTINGS_GROUPS: SettingsGroup[] = [
   {
     label: "General",

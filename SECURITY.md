@@ -28,8 +28,8 @@ We track the latest stable Electron major and ship Chromium/Electron **security*
 - Process isolation: `contextIsolation`, `nodeIntegration: false`, `sandbox: true` on every window.
 - Strict Content-Security-Policy and navigation lock in the packaged renderer.
 - IPC is a single version-checked, zod-validated, sender-guarded channel.
-- API keys are stored in the OS keychain (`safeStorage`) and never exposed to the renderer; when OS encryption is unavailable we refuse to persist plaintext.
-- User content (transcripts/notes/chat) is encrypted at rest when the OS supports it.
+- **No app account; identity is the OS login.** Khonjel has no user/account concept: the signed-in operating-system user *is* the identity. All durable data is encrypted at rest to that account (Windows DPAPI via `safeStorage`), so another OS user on the same device cannot read it.
+- Encrypted at rest to the logged-in user: settings, provider connections, secrets (API keys), and all user content (transcripts/notes/chat/dictionary). API keys are never exposed to the renderer; when OS encryption is unavailable we refuse to persist plaintext secrets.
 - Provider traffic requires TLS (https) for non-loopback endpoints.
 - No telemetry, analytics, crash reporting, or auto-update beacon.
 

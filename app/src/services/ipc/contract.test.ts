@@ -19,9 +19,9 @@ describe("ipc contract", () => {
     }
   });
 
-  it("response schema validates a good profile and rejects a bad one", () => {
-    expect(ResponseSchemas["profile:get"].safeParse({ id: "local", name: "You" }).success).toBe(true);
-    expect(ResponseSchemas["profile:get"].safeParse({ id: 1 }).success).toBe(false);
+  it("account-name response schema accepts a string and rejects a non-string", () => {
+    expect(ResponseSchemas["system:getAccountName"].safeParse("prabin").success).toBe(true);
+    expect(ResponseSchemas["system:getAccountName"].safeParse({ id: 1 }).success).toBe(false);
   });
 
   it("platform response schema accepts only known platforms", () => {

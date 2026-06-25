@@ -12,6 +12,11 @@ export const mockSystemService: SystemService = {
     await delay(10);
     return (electronAPI.getPlatform?.() ?? "web") as Platform;
   },
+  async getAccountName() {
+    // Browser/dev preview has no OS login; the real adapter returns the Windows account name.
+    await delay(10);
+    return "You";
+  },
   async injectText() {
     // Browser/dev has no OS injection; report a clipboard outcome for the same shape.
     await delay(10);

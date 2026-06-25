@@ -19,7 +19,6 @@ import type {
   ModelStorageReport,
   Note,
   Platform,
-  Profile,
   Services,
   SettingsSnapshot,
   Snippet,
@@ -76,12 +75,10 @@ export function createIpcServices(
   subscribeAccelerationState?: SubscribeAccelerationState,
 ): Services {
   return {
-    profile: {
-      get: () => invoke(CHANNELS.profileGet) as Promise<Profile>,
-    },
     system: {
       getAppVersion: () => invoke(CHANNELS.systemGetAppVersion) as Promise<string>,
       getPlatform: () => invoke(CHANNELS.systemGetPlatform) as Promise<Platform>,
+      getAccountName: () => invoke(CHANNELS.systemGetAccountName) as Promise<string>,
       injectText: (text) => invoke(CHANNELS.systemInjectText, text) as Promise<InjectionOutcome>,
       captureSelection: () => invoke(CHANNELS.systemCaptureSelection) as Promise<string>,
     },

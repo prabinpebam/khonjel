@@ -42,8 +42,7 @@ const GPU_TEST_REPORT: AccelerationTestReport = {
 const settingsState = { toggles: {} as Record<string, boolean>, values: {} as Record<string, string> };
 let connectionState: ConnectionProfile[] = [];
 const dispatch = createDispatch({
-  profile: { get: () => ({ id: "local", name: "You" }) },
-  system: { getAppVersion: () => "9.9.9", getPlatform: () => "linux" as const, injectText: () => ({ strategy: "paste" as const, app: "notepad.exe" }), captureSelection: () => "selected" },
+  system: { getAppVersion: () => "9.9.9", getPlatform: () => "linux" as const, getAccountName: () => "prabin", injectText: () => ({ strategy: "paste" as const, app: "notepad.exe" }), captureSelection: () => "selected" },
   settings: {
     get: () => ({ toggles: { ...settingsState.toggles }, values: { ...settingsState.values } }),
     patch: (patch) => {
@@ -158,10 +157,10 @@ describe.each<[string, Services]>([
   ["mock", mockServices],
   ["ipc", ipcServices],
 ])("Services parity — %s adapter", (_name, services) => {
-  it("profile.get resolves a profile with id + name", async () => {
-    const profile = await services.profile.get();
-    expect(profile.id).toBeTruthy();
-    expect(profile.name).toBeTruthy();
+  it("system.getAccountName resolves a non-empty string", async () => {
+    const accountName = await services.system.getAccountName();
+    expect(typeof accountName).toBe("string");
+    expect(accountName.length).toBeGreaterThan(0);
   });
 
   it("system.getAppVersion resolves a non-empty string", async () => {

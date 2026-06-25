@@ -4,6 +4,7 @@ import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage,
 import * as path from "node:path";
 import { writeFileSync, unlinkSync, mkdirSync, rmSync, readdirSync, existsSync, appendFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
+import * as os from "node:os";
 import type { Platform, AccelerationMode } from "../../src/services/ports";
 import { CHANNELS, checkContractVersion, ipcError } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
@@ -140,9 +141,11 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     getForegroundApp: win32.getForegroundApp,
   });
 
-  // Durable stores (native-free JSON files) + the secret keychain (Electron safeStorage).
-  const settingsStore = createSettingsStore(fileSettingsIO(path.join(userData, "settings.json")));
-  const connectionStore = createConnectionStore(fileSettingsIO(path.join(userData, "connections.json")));
+  // Durable stores. Everything is encrypted at rest to the logged-in Windows account (Electron
+  // safeStorage / DPAPI): there is no app-level user, so identity IS the OS login. Existing
+  // plaintext files migrate to ciphertext transparently on the next write.
+  const settingsStore = createSettingsStore(encryptedSettingsIO(path.join(userData, "settings.json"), safeStorageCipher));
+  const connectionStore = createConnectionStore(encryptedSettingsIO(path.join(userData, "connections.json"), safeStorageCipher));
   const secretStore = createSecretStore(fileSettingsIO(path.join(userData, "secrets.json")), safeStorageCipher);
 
   // The provider router resolves a slot's binding (settings) -> connection + secret -> proxyFetch.
@@ -326,14 +329,19 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
   };
 
   const dispatch = createDispatch({
-    profile: {
-      get: () => ({ id: "local", name: "You" }),
-    },
     system: {
       getAppVersion: () => app.getVersion(),
       getPlatform: () => {
         const plat = process.platform;
         return (plat === "win32" || plat === "darwin" || plat === "linux" ? plat : "web") as Platform;
+      },
+      // Identity is the OS login itself (no app account); surfaced display-only for the greeting.
+      getAccountName: () => {
+        try {
+          return os.userInfo().username || "there";
+        } catch {
+          return "there";
+        }
       },
       injectText: (text) => {
         // Honor the Clipboard settings: auto-paste at the cursor, and whether to keep the

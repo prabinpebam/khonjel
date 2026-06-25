@@ -6,7 +6,7 @@
  * today; real Electron/IPC adapters will back them later with zero UI change.
  *
  * The `Services` container grows one port at a time, per delivery phase. Phase 0
- * wires `profile` + `system` to prove the seam end-to-end.
+ * wired `system` (OS info + text injection) to prove the seam end-to-end.
  */
 
 export type Platform = "win32" | "darwin" | "linux" | "web";
@@ -20,21 +20,14 @@ export interface InjectionOutcome {
   app?: string;
 }
 
-export interface Profile {
-  id: string;
-  name: string;
-  email?: string;
-  avatarUrl?: string;
-}
-
-export interface ProfileService {
-  /** The local user profile (local-first: no account required). */
-  get(): Promise<Profile>;
-}
-
 export interface SystemService {
   getAppVersion(): Promise<string>;
   getPlatform(): Promise<Platform>;
+  /**
+   * The current Windows account name (the OS login). There is no app-level user account: identity is
+   * the logged-in OS user, and all durable data is encrypted to that account. Display-only.
+   */
+  getAccountName(): Promise<string>;
   /** Inject text into the currently focused app (clipboard/paste/type per the app table). */
   injectText(text: string): Promise<InjectionOutcome>;
   /** Copy the current selection from the focused app and return it (for hotkey-bound transforms). */
@@ -377,7 +370,6 @@ export interface AccelerationService {
 
 /** The full set of ports available to the app at runtime. */
 export interface Services {
-  profile: ProfileService;
   system: SystemService;
   content: ContentService;
   settings: SettingsService;

@@ -32,7 +32,6 @@ import type {
   ModelStorageReport,
   Note,
   Platform,
-  Profile,
   SettingsPatch,
   SettingsSnapshot,
   Snippet,
@@ -50,10 +49,10 @@ import type {
 } from "../../src/services/ports";
 
 export interface DispatchDeps {
-  profile: { get: () => Profile | Promise<Profile> };
   system: {
     getAppVersion: () => string | Promise<string>;
     getPlatform: () => Platform | Promise<Platform>;
+    getAccountName: () => string | Promise<string>;
     injectText: (text: string) => InjectionOutcome | Promise<InjectionOutcome>;
     captureSelection: () => string | Promise<string>;
   };
@@ -135,9 +134,9 @@ export type Dispatch = (channel: string, ...args: unknown[]) => Promise<unknown>
 
 export function createDispatch(deps: DispatchDeps): Dispatch {
   const handlers: Record<Channel, (args: unknown[]) => unknown> = {
-    [CHANNELS.profileGet]: () => deps.profile.get(),
     [CHANNELS.systemGetAppVersion]: () => deps.system.getAppVersion(),
     [CHANNELS.systemGetPlatform]: () => deps.system.getPlatform(),
+    [CHANNELS.systemGetAccountName]: () => deps.system.getAccountName(),
     [CHANNELS.systemInjectText]: (args) => deps.system.injectText(args[0] as string),
     [CHANNELS.systemCaptureSelection]: () => deps.system.captureSelection(),
     [CHANNELS.settingsGet]: () => deps.settings.get(),

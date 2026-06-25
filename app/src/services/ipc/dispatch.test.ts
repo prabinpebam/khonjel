@@ -37,8 +37,7 @@ const GPU_TEST_REPORT: AccelerationTestReport = {
  * and node-free (the real db/keychain are constructed in the electron composition root later).
  */
 const deps: DispatchDeps = {
-  profile: { get: () => ({ id: "local", name: "You" }) },
-  system: { getAppVersion: () => "1.2.3", getPlatform: () => "win32", injectText: () => ({ strategy: "paste" }), captureSelection: () => "" },
+  system: { getAppVersion: () => "1.2.3", getPlatform: () => "win32", getAccountName: () => "prabin", injectText: () => ({ strategy: "paste" }), captureSelection: () => "" },
   settings: {
     get: () => ({ toggles: {}, values: {} }),
     patch: (patch) => ({ toggles: { ...(patch.toggles ?? {}) }, values: { ...(patch.values ?? {}) } }),
@@ -135,7 +134,7 @@ describe("createDispatch", () => {
   it("routes a known channel to its handler", async () => {
     expect(await dispatch("system:getAppVersion")).toBe("1.2.3");
     expect(await dispatch("system:getPlatform")).toBe("win32");
-    expect(await dispatch("profile:get")).toEqual({ id: "local", name: "You" });
+    expect(await dispatch("system:getAccountName")).toBe("prabin");
   });
 
   it("rejects an unknown channel with a not_found IpcError", async () => {

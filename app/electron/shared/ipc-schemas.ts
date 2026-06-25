@@ -15,13 +15,6 @@ const InjectionOutcomeSchema = z.object({
   app: z.string().optional(),
 });
 
-const ProfileSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  email: z.string().optional(),
-  avatarUrl: z.string().optional(),
-});
-
 const SettingsSnapshotSchema = z.object({
   toggles: z.record(z.string(), z.boolean()),
   values: z.record(z.string(), z.string()),
@@ -456,9 +449,9 @@ const RunTestOptsSchema = z.object({ tokens: z.number().optional(), warmup: z.bo
 
 /** Request argument tuples (Phase 0 channels take no arguments; settings:patch takes a patch). */
 export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
-  [CHANNELS.profileGet]: z.tuple([]),
   [CHANNELS.systemGetAppVersion]: z.tuple([]),
   [CHANNELS.systemGetPlatform]: z.tuple([]),
+  [CHANNELS.systemGetAccountName]: z.tuple([]),
   [CHANNELS.systemInjectText]: z.tuple([z.string()]),
   [CHANNELS.systemCaptureSelection]: z.tuple([]),
   [CHANNELS.settingsGet]: z.tuple([]),
@@ -514,9 +507,9 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
 
 /** Response payload schemas. */
 export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
-  [CHANNELS.profileGet]: ProfileSchema,
   [CHANNELS.systemGetAppVersion]: z.string(),
   [CHANNELS.systemGetPlatform]: PlatformSchema,
+  [CHANNELS.systemGetAccountName]: z.string(),
   [CHANNELS.systemInjectText]: InjectionOutcomeSchema,
   [CHANNELS.systemCaptureSelection]: z.string(),
   [CHANNELS.settingsGet]: SettingsSnapshotSchema,
