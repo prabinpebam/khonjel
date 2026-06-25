@@ -27,7 +27,9 @@ Speak anywhere, and Khonjel transcribes, cleans up, and places the text right wh
 - **`Khonjel-<version>-setup.exe`** (recommended) — installs Khonjel and **keeps it up to date automatically**: new versions download in the background and apply on restart (you can also check from **Settings -> System**).
 - **`Khonjel-<version>-portable.exe`** — a single no-install `.exe`; update it by downloading a newer one.
 
-If **Windows SmartScreen** appears on first run, choose **More info -> Run anyway** (builds are currently unsigned). Khonjel works immediately with a built-in fallback; open **Settings** to download the local whisper.cpp / llama.cpp engines for full on-device transcription and cleanup.
+Windows builds are code-signed with a free Open Source certificate from **[SignPath Foundation](https://signpath.org/)** (code signing by [SignPath.io](https://signpath.io/)). A brand-new release may still show a **Windows SmartScreen** prompt until its signature gains reputation — choose **More info -> Run anyway**. Khonjel works immediately with a built-in fallback; open **Settings** to download the local whisper.cpp / llama.cpp engines for full on-device transcription and cleanup.
+
+Khonjel is **offline by default and collects no data** — see the [Privacy Policy](PRIVACY.md).
 
 Browse [all releases](https://github.com/prabinpebam/khonjel/releases) for release notes and previous versions.
 
@@ -177,6 +179,8 @@ drive it end to end (the floating bar, model selection, and system settings each
 - **Encrypted at rest.** Transcripts and notes are encrypted on disk, and the local model server is bound to loopback with a per-session token.
 - **Hardened renderer.** Strict CSP, navigation lock, and a single allow-listed, schema-validated IPC bridge. Full threat model in [SECURITY.md](SECURITY.md).
 
+See the [Privacy Policy](PRIVACY.md) for exactly what is processed and when anything leaves your device.
+
 ## Tech stack
 
 Electron 42 · React 19 · TypeScript (strict) · Vite 8 · Tailwind CSS v4 · Zustand · zod ·
@@ -188,6 +192,8 @@ Khonjel is a local-first, de-monetized app modeled on the open-source
 [OpenWhispr](https://github.com/OpenWhispr/openwhispr) (MIT) — same core stack and on-device
 philosophy — with additional productivity polish. Local inference is powered by the excellent
 [whisper.cpp](https://github.com/ggml-org/whisper.cpp), [llama.cpp](https://github.com/ggml-org/llama.cpp), and [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) projects.
+
+Free Windows code signing is provided by [SignPath.io](https://signpath.io/), with a certificate from the [SignPath Foundation](https://signpath.org/).
 
 ## License
 
