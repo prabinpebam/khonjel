@@ -5,6 +5,7 @@
   "type": "module",
   "main": "electron/main.cjs",
   "author": "Khonjel",
+  "license": "MIT",
   "description": "Khonjel — local-first, privacy-first desktop voice productivity app (Electron + React) with local whisper.cpp + llama.cpp engines behind a typed IPC seam.",
   "scripts": {
     "dev": "vite",

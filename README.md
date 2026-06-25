@@ -186,3 +186,7 @@ Khonjel is a local-first, de-monetized app modeled on the open-source
 [OpenWhispr](https://github.com/OpenWhispr/openwhispr) (MIT) — same core stack and on-device
 philosophy — with additional productivity polish. Local inference is powered by the excellent
 [whisper.cpp](https://github.com/ggml-org/whisper.cpp), [llama.cpp](https://github.com/ggml-org/llama.cpp), and [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) projects.
+
+## License
+
+Khonjel is released under the [MIT License](LICENSE).
