@@ -7,6 +7,17 @@
  * It grows one method at a time, as features need it.
  */
 
+/** Coarse auto-update lifecycle surfaced in Settings -> System (mirrors the main-process updater). */
+export type UpdateStatus =
+  | { state: "idle" }
+  | { state: "unsupported" }
+  | { state: "checking" }
+  | { state: "available"; version: string }
+  | { state: "none" }
+  | { state: "downloading"; percent: number }
+  | { state: "ready"; version: string }
+  | { state: "error"; message: string };
+
 export interface ElectronAPIShim {
   getPlatform: () => "win32" | "darwin" | "linux";
   /** Hide the floating window (no-op in the mock). */
@@ -24,6 +35,12 @@ export interface ElectronAPIShim {
   resetAllData?: () => void;
   /** The floating bar reports recording start/stop so other system audio can be muted. */
   setRecordingActive?: (active: boolean) => void;
+  /** Manually trigger an update check (no-op in the browser preview). */
+  checkForUpdates?: () => void;
+  /** Quit and install a downloaded update. */
+  installUpdate?: () => void;
+  /** Subscribe to update lifecycle changes; returns an unsubscribe fn. */
+  onUpdateStatus?: (callback: (status: UpdateStatus) => void) => () => void;
 }
 
 export const electronAPI: ElectronAPIShim = {
@@ -40,6 +57,13 @@ export const electronAPI: ElectronAPIShim = {
   clearModelCache: () => {},
   resetAllData: () => {},
   setRecordingActive: () => {},
+  checkForUpdates: () => {},
+  installUpdate: () => {},
+  // The browser preview has no updater; report "unsupported" so the UI says so instead of spinning.
+  onUpdateStatus: (callback) => {
+    queueMicrotask(() => callback({ state: "unsupported" }));
+    return () => {};
+  },
 };
 
 declare global {

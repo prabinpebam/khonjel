@@ -32,14 +32,16 @@
     "fetch:parakeet": "node scripts/fetch-parakeet.mjs",
     "electron": "npm run build && npm run build:electron && electron .",
     "electron:dev": "npm run build:electron && electron . --dev-server",
-    "package": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --win portable",
-    "package:dir": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --dir"
+    "package": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --win nsis portable",
+    "package:dir": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --dir",
+    "release": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --win nsis portable --publish always"
   },
   "dependencies": {
     "@lobehub/icons-static-svg": "^1.91.0",
     "better-sqlite3": "^11.10.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "electron-updater": "^6.8.9",
     "lucide-react": "^1.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -92,11 +94,30 @@
       "!node_modules/**/*"
     ],
     "win": {
-      "target": "portable",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "build/icon.png"
     },
     "portable": {
       "artifactName": "Khonjel-${version}-portable.exe"
-    }
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Khonjel-${version}-setup.exe",
+      "shortcutName": "Khonjel",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "prabinpebam",
+        "repo": "khonjel",
+        "releaseType": "release"
+      }
+    ]
   }
 }

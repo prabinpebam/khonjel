@@ -1,12 +1,14 @@
 name: Release
 
-# Builds the portable Windows app and publishes it as a GitHub Release whenever a version tag is
-# pushed. To cut a release:
-#   1. Bump "version" in app/package.json (and run `npm install --package-lock-only` to sync the lock).
-#   2. Commit that on main.
-#   3. git tag vX.Y.Z && git push origin vX.Y.Z
-# The tag push triggers this workflow, which rebuilds on a clean Windows runner and attaches
-# Khonjel-<version>-portable.exe to a release for the tag.
+# Builds the Windows app and publishes it to a GitHub Release when a version tag is pushed.
+# Release flow:
+#   1. Bump "version" in app/package.json (run `npm install --package-lock-only` to sync the lock).
+#   2. Commit on main.
+#   3. git tag vX.Y.Z && git push origin vX.Y.Z   (the tag MUST match the package.json version)
+# electron-builder publishes the NSIS installer (which auto-updates), the portable .exe, and the
+# electron-updater metadata (latest.yml + .blockmap) to a release for the tag. Signing can be added
+# later as a step before "Build + publish" (e.g. SignPath or Azure Trusted Signing) -- nothing else
+# in this workflow needs to change.
 
 on:
   push:
@@ -17,7 +19,7 @@ permissions:
   contents: write
 
 jobs:
-  windows-portable:
+  windows:
     runs-on: windows-latest
     defaults:
       run:
@@ -36,12 +38,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Build portable (.exe)
-        run: npm run package
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: app/release/Khonjel-*-portable.exe
-          fail_on_unmatched_files: true
-          generate_release_notes: true
+      - name: Build + publish (NSIS installer, portable, update metadata)
+        run: npm run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -30,6 +30,7 @@ import { createConnectionStore } from "./services/connections";
 import { createContentStore } from "./services/content";
 import { exportNotes, type NotesExportFs } from "./services/notes-export";
 import { createLogger } from "./services/logger";
+import { setupAutoUpdater, type AutoUpdaterControls, type UpdateStatus } from "./services/updater";
 import { createModelIndexStore } from "./models/store";
 import { createDownloader } from "./models/downloader";
 import { createModelService, boundModelIdsFrom } from "./models/service";
@@ -63,6 +64,7 @@ let stopParakeetServer: (() => void) | null = null;
 let hotkeyManager: HotkeyManager | null = null;
 // Resolved once the dispatch is built; lets the module-level logger read the live logging level.
 let activeSettings: ReturnType<typeof createSettingsStore> | null = null;
+let updaterControls: AutoUpdaterControls | null = null;
 
 // Level-gated file logger -> app logs dir (Settings -> System -> "Open logs"). The verbosity follows
 // the loggingLevel setting, read fresh per line so a change in Settings applies immediately.
@@ -748,6 +750,19 @@ void app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
+  // Auto-updates: check the GitHub Releases feed, download in the background, and let the user
+  // restart to apply from Settings -> System. Only active in a packaged build (a dev run has no
+  // feed). The first check waits for the window to settle; then it re-checks periodically.
+  updaterControls = setupAutoUpdater({
+    isPackaged: app.isPackaged,
+    logger,
+    send: (status: UpdateStatus) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("update:status", status);
+    },
+  });
+  setTimeout(() => updaterControls?.check(), 10_000);
+  setInterval(() => updaterControls?.check(), 6 * 60 * 60 * 1000);
+
   // ---- Floating dictation bar (the core capture surface) ----
   // A frameless, transparent, always-on-top, non-focusable window so it never steals focus from the
   // app you are typing into. Created hidden; the dictation hotkey shows it (when the HUD preview is
@@ -1027,3 +1042,7 @@ ipcOn("system:reset-data", () => {
       app.exit(0);
     });
 });
+
+// Auto-update controls from Settings -> System (the updater is wired in app.whenReady).
+ipcOn("update:check", () => updaterControls?.check());
+ipcOn("update:install", () => updaterControls?.install());

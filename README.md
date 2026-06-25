@@ -22,10 +22,12 @@ Speak anywhere, and Khonjel transcribes, cleans up, and places the text right wh
 
 ## Download
 
-**[Download the latest release](https://github.com/prabinpebam/khonjel/releases/latest)** — a single portable `.exe` for **Windows 10/11 (x64)**. No installer: download `Khonjel-<version>-portable.exe` from the release assets and run it.
+**[Download the latest release](https://github.com/prabinpebam/khonjel/releases/latest)** for **Windows 10/11 (x64)**:
 
-- If **Windows SmartScreen** appears on first run, choose **More info -> Run anyway** (the portable build is unsigned).
-- Khonjel works immediately with a built-in fallback; open **Settings** to download the local whisper.cpp / llama.cpp engines for full on-device transcription and cleanup.
+- **`Khonjel-<version>-setup.exe`** (recommended) — installs Khonjel and **keeps it up to date automatically**: new versions download in the background and apply on restart (you can also check from **Settings -> System**).
+- **`Khonjel-<version>-portable.exe`** — a single no-install `.exe`; update it by downloading a newer one.
+
+If **Windows SmartScreen** appears on first run, choose **More info -> Run anyway** (builds are currently unsigned). Khonjel works immediately with a built-in fallback; open **Settings** to download the local whisper.cpp / llama.cpp engines for full on-device transcription and cleanup.
 
 Browse [all releases](https://github.com/prabinpebam/khonjel/releases) for release notes and previous versions.
 

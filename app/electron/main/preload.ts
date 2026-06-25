@@ -17,6 +17,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   clearModelCache: () => ipcRenderer.send("system:clear-cache"),
   resetAllData: () => ipcRenderer.send("system:reset-data"),
   setRecordingActive: (active: boolean) => ipcRenderer.send("recording:active", active),
+  checkForUpdates: () => ipcRenderer.send("update:check"),
+  installUpdate: () => ipcRenderer.send("update:install"),
+  onUpdateStatus: (callback: (status: unknown) => void) => {
+    const listener = (_event: unknown, status: unknown) => callback(status);
+    ipcRenderer.on("update:status", listener);
+    return () => ipcRenderer.removeListener("update:status", listener);
+  },
 });
 
 // The typed seam the renderer's `ipc` adapter calls. Only a single generic `invoke` crosses the

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useServices } from "@services";
 import type { ModelStorageReport } from "@services/ports";
+import type { UpdateStatus } from "@mock/electron-api-shim";
 import { useModelsStore } from "@stores/models";
 import { SettingGroup, SettingRow } from "@components/common/SettingRow";
 import { Button } from "@components/ui/button";
@@ -37,6 +38,7 @@ export function SystemSettings() {
     <div>
       <SettingGroup label="About">
         <SettingRow title="Version" subtitle={`Khonjel ${version}`} />
+        <UpdatesRow />
       </SettingGroup>
 
       <SettingGroup label="Developer tools">
@@ -109,4 +111,63 @@ export function SystemSettings() {
       </SettingGroup>
     </div>
   );
+}
+
+/** Live auto-update status + action (driven by the main-process updater via window.electronAPI). */
+function UpdatesRow() {
+  const [status, setStatus] = useState<UpdateStatus>({ state: "idle" });
+
+  useEffect(() => {
+    const api = window.electronAPI;
+    const unsub = api?.onUpdateStatus?.((s) => setStatus(s));
+    api?.checkForUpdates?.();
+    return () => unsub?.();
+  }, []);
+
+  let subtitle = "Khonjel checks for updates automatically.";
+  let control: ReactNode = (
+    <Button variant="secondary" size="sm" onClick={() => window.electronAPI?.checkForUpdates?.()}>
+      Check now
+    </Button>
+  );
+
+  switch (status.state) {
+    case "checking":
+      subtitle = "Checking for updates...";
+      control = null;
+      break;
+    case "available":
+      subtitle = `Downloading version ${status.version}...`;
+      control = null;
+      break;
+    case "downloading":
+      subtitle = `Downloading update... ${status.percent}%`;
+      control = null;
+      break;
+    case "ready":
+      subtitle = `Version ${status.version} is ready to install.`;
+      control = (
+        <Button size="sm" onClick={() => window.electronAPI?.installUpdate?.()}>
+          Restart to update
+        </Button>
+      );
+      break;
+    case "none":
+      subtitle = "You're on the latest version.";
+      break;
+    case "error":
+      subtitle = "Couldn't check for updates.";
+      control = (
+        <Button variant="secondary" size="sm" onClick={() => window.electronAPI?.checkForUpdates?.()}>
+          Retry
+        </Button>
+      );
+      break;
+    case "unsupported":
+      subtitle = "Auto-update runs in the installed app.";
+      control = null;
+      break;
+  }
+
+  return <SettingRow title="Updates" subtitle={subtitle} control={control} />;
 }
