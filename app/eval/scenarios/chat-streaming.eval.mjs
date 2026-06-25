@@ -91,6 +91,19 @@ test("chat — threaded streaming, new thread + auto-title, stop, regenerate", a
     await recorder.capture("regenerated");
   }
 
+  // ---- Edit & resend a user message: rewrites it, truncates after it, and re-answers. ----
+  const firstUser = page.locator('[data-eval="chat-message"][data-eval-role="user"]').first();
+  await firstUser.hover();
+  await page.locator('[data-eval="chat-edit"]').first().click();
+  await page.locator('[data-eval="chat-edit-input"]').fill("Edited question about pottery");
+  await page.locator('[data-eval="chat-edit-save"]').click();
+  await expect(page.locator('[data-eval="chat-send"]'), "the re-answer completes").toBeVisible({ timeout: 15000 });
+  await expect(
+    page.locator('[data-eval="chat-message"][data-eval-role="user"]').first(),
+    "the edited text replaced the original",
+  ).toContainText("Edited question about pottery");
+  await recorder.capture("edited");
+
   const { report, outputDir } = await recorder.finish();
   console.log(`[eval] chat ${report.verdict} -- artifacts: ${outputDir}`);
   expect(report.summary.critical, "no critical anomalies").toBe(0);

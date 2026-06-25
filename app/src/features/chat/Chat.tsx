@@ -37,6 +37,9 @@ export function Chat() {
   const stoppedRef = useRef<Set<string>>(new Set());
   // threadIds already sent for an LLM title, so we never re-title (or loop) on the same thread.
   const titledRef = useRef<Set<string>>(new Set());
+  // Autoscroll only when the user is pinned to the bottom (an IntersectionObserver tracks the sentinel).
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const pinnedRef = useRef(true);
 
   const sortedThreads = useMemo(() => sortThreads(threads), [threads]);
   const messages = useMemo(() => allMessages.filter((m) => m.threadId === activeId), [allMessages, activeId]);
@@ -134,6 +137,28 @@ export function Chat() {
     return () => clearTimeout(handle);
   }, [threads, allMessages, streamingId, content]);
 
+  // Track whether the user is pinned to the bottom (sentinel visible) so autoscroll never fights a
+  // user who has scrolled up to read earlier messages.
+  useEffect(() => {
+    const el = bottomRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const last = entries[entries.length - 1];
+        if (last) pinnedRef.current = last.isIntersecting;
+      },
+      { rootMargin: "0px 0px 160px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // Autoscroll to the latest content while pinned (on new turns + as the streaming reply grows).
+  const lastLen = messages.at(-1)?.content.length ?? 0;
+  useEffect(() => {
+    if (pinnedRef.current) bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [messages.length, lastLen, streamingId]);
+
   function startStream(threadId: string, history: ChatMessage[]) {
     const requestId = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -175,6 +200,24 @@ export function Chat() {
     const kept = truncateAfter(threadMsgs, user.id);
     const others = allMessages.filter((m) => m.threadId !== threadId);
     setAllMessages([...others, ...kept]);
+    startStream(threadId, kept);
+  }
+
+  // Edit a user turn: rewrite it, drop everything after it, and re-answer from there (spec 5.3).
+  function editAndResend(messageId: string, nextText: string) {
+    if (streamingId) return;
+    const value = nextText.trim();
+    if (!value) return;
+    const target = allMessages.find((m) => m.id === messageId);
+    if (!target || target.role !== "user") return;
+    const threadId = target.threadId;
+    const edited = allMessages
+      .filter((m) => m.threadId === threadId)
+      .map((m) => (m.id === messageId ? { ...m, content: value } : m));
+    const kept = truncateAfter(edited, messageId);
+    const others = allMessages.filter((m) => m.threadId !== threadId);
+    setAllMessages([...others, ...kept]);
+    setThreads((prev) => touchThread(prev, threadId, new Date().toISOString()));
     startStream(threadId, kept);
   }
 
@@ -314,11 +357,14 @@ export function Chat() {
                   key={message.id}
                   message={message}
                   streaming={message.id === streamingId}
+                  busy={streamingId !== null}
                   onRegenerate={() => regenerate(message.id)}
+                  onEdit={(text) => editAndResend(message.id, text)}
                 />
               ))}
             </div>
           )}
+          <div ref={bottomRef} className="h-px scroll-mb-24" aria-hidden="true" />
         </div>
 
         <div className="sticky bottom-0 -mx-8 mt-6 border-t border-border bg-surface px-8 py-4">
@@ -374,13 +420,19 @@ export function Chat() {
 function MessageBubble({
   message,
   streaming,
+  busy,
   onRegenerate,
+  onEdit,
 }: {
   message: ChatMessage;
   streaming: boolean;
+  busy: boolean;
   onRegenerate: () => void;
+  onEdit: (text: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
   const reasoningOn = useSettingsStore((s) => s.toggles["llm.chat.reasoning"] ?? false);
   const isUser = message.role === "user";
   const isError = message.status === "error";
@@ -397,6 +449,47 @@ function MessageBubble({
     window.electronAPI?.copyText?.(copyText);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
+  }
+
+  function saveEdit(text: string) {
+    setEditing(false);
+    if (text.trim() && text.trim() !== message.content.trim()) onEdit(text);
+  }
+
+  function beginEdit() {
+    setEditText(message.content);
+    setEditing(true);
+  }
+
+  if (editing) {
+    return (
+      <div data-eval="chat-message" data-eval-role={message.role} className="flex flex-col items-end gap-1">
+        <Textarea
+          ref={(el) => el?.focus()}
+          rows={2}
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          aria-label="Edit message"
+          data-eval="chat-edit-input"
+          className="max-h-40 w-[72%] resize-none"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              saveEdit(editText);
+            }
+            if (e.key === "Escape") setEditing(false);
+          }}
+        />
+        <div className="flex gap-1.5">
+          <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+            Cancel
+          </Button>
+          <Button size="sm" data-eval="chat-edit-save" onClick={() => saveEdit(editText)}>
+            Send
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -432,7 +525,7 @@ function MessageBubble({
         {streaming && !isTyping ? <span className="ml-0.5 inline-block animate-pulse">|</span> : null}
       </div>
       {isStopped ? <span className="px-1 text-xs text-tertiary-foreground">Stopped</span> : null}
-      {!isUser && !streaming ? (
+      {!streaming ? (
         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <Button
             variant="ghost"
@@ -443,9 +536,22 @@ function MessageBubble({
           >
             {copied ? <Check /> : <Copy />}
           </Button>
-          <Button variant="ghost" size="icon" aria-label={isError ? "Retry" : "Regenerate"} data-eval="chat-regenerate" onClick={onRegenerate}>
-            <RefreshCw />
-          </Button>
+          {isUser ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Edit"
+              data-eval="chat-edit"
+              disabled={busy}
+              onClick={beginEdit}
+            >
+              <Pencil />
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" aria-label={isError ? "Retry" : "Regenerate"} data-eval="chat-regenerate" onClick={onRegenerate}>
+              <RefreshCw />
+            </Button>
+          )}
         </div>
       ) : null}
     </div>
