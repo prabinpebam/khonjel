@@ -15,6 +15,7 @@ import { autoTitleThread, createThread, deleteThread, renameThread, sortThreads,
 import { chatTitlePrompt, cleanTitle, deriveThreadTitle } from "@lib/chat/title";
 import { splitReasoning } from "@lib/chat/stream";
 import { precedingUserMessage, toTurns, truncateAfter } from "@lib/chat/regenerate";
+import { Markdown } from "./Markdown";
 
 const SUGGESTIONS = ["Rewrite that note", "Plan my day", "Summarize my last meeting", "Draft a reply"];
 
@@ -64,10 +65,10 @@ export function Chat() {
           if (ev.kind === "error") {
             return { ...m, content: ev.error ?? "Sorry, I could not reach the model.", status: "error" };
           }
-          const { answer } = splitReasoning(ev.fullText);
+          // Keep the RAW reply (reasoning + answer); the bubble splits <think> at render time.
           const stopped = stoppedRef.current.has(ev.requestId);
           const status: ChatMessage["status"] = ev.kind === "done" ? (stopped ? "stopped" : "complete") : "streaming";
-          return { ...m, content: answer || (ev.kind === "done" ? m.content : "..."), status };
+          return { ...m, content: ev.fullText || (ev.kind === "done" ? m.content : "..."), status };
         }),
       );
       if (ev.kind === "done" || ev.kind === "error") {
@@ -107,7 +108,7 @@ export function Chat() {
       titledRef.current.add(t.id);
       const turns = msgs
         .filter((m) => m.status !== "error" && m.content.trim() && m.content !== "...")
-        .map((m) => ({ role: m.role, content: m.content }));
+        .map((m) => ({ role: m.role, content: splitReasoning(m.content).answer || m.content }));
       void inference
         .chat(chatTitlePrompt(turns))
         .then(({ text }) => {
@@ -380,14 +381,20 @@ function MessageBubble({
   onRegenerate: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const reasoningOn = useSettingsStore((s) => s.toggles["llm.chat.reasoning"] ?? false);
   const isUser = message.role === "user";
   const isError = message.status === "error";
   const isStopped = message.status === "stopped";
-  // A just-started assistant turn (placeholder, no tokens yet) shows a typing indicator.
-  const isTyping = streaming && message.content === "...";
+  const split = isUser || isError ? { reasoning: "", answer: message.content } : splitReasoning(message.content);
+  const reasoning = split.reasoning;
+  // The "..." placeholder counts as "no answer yet" so the typing indicator (not literal dots) shows.
+  const answer = split.answer === "..." ? "" : split.answer;
+  // A just-started assistant turn (placeholder / reasoning-only so far) shows a typing indicator.
+  const isTyping = streaming && !isError && answer.trim().length === 0;
+  const copyText = isUser || isError ? message.content : answer;
 
   function copy() {
-    window.electronAPI?.copyText?.(message.content);
+    window.electronAPI?.copyText?.(copyText);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
   }
@@ -401,22 +408,28 @@ function MessageBubble({
     >
       <div
         className={cn(
-          "max-w-[72%] whitespace-pre-wrap rounded-lg px-4 py-2.5 text-sm",
-          isUser ? "bg-primary text-primary-foreground" : "border border-border bg-surface-2 text-foreground",
-          isError && "border-danger text-danger",
+          "max-w-[72%] rounded-lg px-4 py-2.5 text-sm",
+          isUser ? "whitespace-pre-wrap bg-primary text-primary-foreground" : "border border-border bg-surface-2 text-foreground",
+          isError && "whitespace-pre-wrap border-danger text-danger",
         )}
       >
+        {reasoningOn && reasoning.trim().length > 0 ? (
+          <details className="mb-1.5 rounded border border-border/60 bg-foreground/5 px-2 py-1 text-xs">
+            <summary className="cursor-pointer select-none text-tertiary-foreground">Thinking</summary>
+            <div className="mt-1 whitespace-pre-wrap text-muted-foreground">{reasoning.trim()}</div>
+          </details>
+        ) : null}
         {isTyping ? (
           <span className="flex items-center gap-1 text-muted-foreground" aria-label="Khonjel is typing">
             <Loader2 className="size-3.5 animate-spin" />
             Thinking...
           </span>
+        ) : isUser || isError ? (
+          message.content
         ) : (
-          <>
-            {message.content}
-            {streaming ? <span className="ml-0.5 inline-block animate-pulse">|</span> : null}
-          </>
+          <Markdown source={answer} />
         )}
+        {streaming && !isTyping ? <span className="ml-0.5 inline-block animate-pulse">|</span> : null}
       </div>
       {isStopped ? <span className="px-1 text-xs text-tertiary-foreground">Stopped</span> : null}
       {!isUser && !streaming ? (

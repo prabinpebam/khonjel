@@ -6,8 +6,11 @@ import type { ChatService, ChatTokenEvent, ChatSendRequest } from "@services/por
  * `done` with whatever was accumulated, exactly as the real main-process streamer will.
  */
 const REPLY =
-  "Here is a simulated streaming reply. The real model fills this in token by token; the mock " +
-  "drives the same lifecycle so the UI can be built and tested without a backend.";
+  "Here is a **simulated** streaming reply.\n\n" +
+  "- Renders token by token\n" +
+  "- Needs no backend\n\n" +
+  "```ts\nconst x = 1;\n```\n\n" +
+  "Use `stop` to cancel; the mock drives the same lifecycle as the real model.";
 
 interface Active {
   timer: ReturnType<typeof setInterval>;

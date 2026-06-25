@@ -53,6 +53,14 @@ test("chat — threaded streaming, new thread + auto-title, stop, regenerate", a
   ).not.toHaveText("...");
   await recorder.capture("streamed-reply");
 
+  // ---- The assistant reply renders as sanitized markdown (bold, list, fenced code w/ copy). ----
+  const lastReply = page.locator('[data-eval="chat-message"][data-eval-role="assistant"]').last();
+  await expect(lastReply.locator("strong"), "bold renders").toContainText("simulated");
+  await expect(lastReply.locator("pre code"), "a fenced code block renders").toContainText("const x = 1;");
+  await expect(lastReply.locator("li"), "list items render").toHaveCount(2);
+  await expect(lastReply.getByRole("button", { name: "Copy code" }), "code blocks get a copy control").toBeVisible();
+  await recorder.capture("markdown");
+
   // ---- New thread: empty state, then a send creates + auto-titles a thread ----
   const threadsBefore = await page.locator('[data-eval="chat-thread"]').count();
   await page.locator('[data-eval="chat-new"]').click();
