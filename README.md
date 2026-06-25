@@ -20,11 +20,13 @@ Speak anywhere, and Khonjel transcribes, cleans up, and places the text right wh
 
 ## Highlights
 
-- **Floating dictation bar** — press a global hotkey anywhere, speak, and the cleaned-up text is pasted at your cursor. Capture → transcribe → clean up → inject, all on device.
-- **On-device engines** — speech-to-text via [whisper.cpp](https://github.com/ggml-org/whisper.cpp), language cleanup + chat via [llama.cpp](https://github.com/ggml-org/llama.cpp). No account, no telemetry.
+- **Floating dictation bar** — press a global hotkey anywhere, speak, and the cleaned-up text is pasted at your cursor. Live waveform and streaming partial text while you talk; capture → transcribe → clean up → inject, all on device.
+- **On-device engines, one-click setup** — speech-to-text via [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (or NVIDIA [Parakeet](https://github.com/k2-fsa/sherpa-onnx)), language cleanup + chat via [llama.cpp](https://github.com/ggml-org/llama.cpp). The app downloads the models **and** their engine binaries on demand — no account, no telemetry.
+- **Optional GPU acceleration** — turn it on from Settings and Khonjel fetches a CUDA/Vulkan build for your card, verifies it on-device, and falls back to the CPU if anything fails. The base install stays small until you opt in.
 - **Bring your own cloud (optional)** — Azure OpenAI and OpenAI-compatible providers, with API keys stored in your OS keychain (never in plaintext).
 - **Productivity surfaces** — Home (history + stats), Chat, Notes with AI actions, Upload (transcribe audio files), a personal Dictionary, hotkey-bound Transforms, and Insights.
 - **Typed IPC seam** — the same React UI runs on in-memory mock adapters in the browser and on the real Electron backend, with one allow-listed, schema-validated bridge between them.
+- **Private + hardened** — offline by default, no telemetry, secrets and transcripts encrypted at rest, strict CSP, and a loopback-only model server. See [SECURITY.md](SECURITY.md).
 
 ## How dictation works
 
@@ -45,12 +47,18 @@ app you're typing into — the cleaned text lands exactly where your cursor was.
 cd app
 npm install --legacy-peer-deps
 
-# 1) Download the local engines once (standalone binaries + small models)
-npm run fetch:whisper   # whisper.cpp + a ggml STT model
-npm run fetch:llama     # llama.cpp server + a small GGUF LLM (~1 GB)
-
-# 2) Build and launch the desktop app
+# Build and launch the desktop app
 npm run electron
+```
+
+On first launch, open **Settings → Speech-to-Text** and click **Download recommended setup** —
+Khonjel fetches the speech + language models **and** their engine binaries for you. Prefer the CLI, or
+setting up a dev machine? Fetch them ahead of time instead:
+
+```bash
+npm run fetch:whisper    # whisper.cpp + a ggml STT model
+npm run fetch:llama      # llama.cpp server + a small GGUF LLM (~1 GB)
+npm run fetch:parakeet   # (optional) NVIDIA Parakeet STT via sherpa-onnx
 ```
 
 Prefer to explore the UI without a backend? Run the renderer in the browser against mock adapters:
@@ -70,6 +78,20 @@ Khonjel is fully usable offline. To route a task to the cloud instead:
 2. **Settings → Speech-to-Text** / **Language Models** → choose **Enterprise** mode and bind the connection + deployment.
 
 Local and cloud share one model picker per task — change it once and it's reflected everywhere.
+
+## GPU acceleration (optional)
+
+Khonjel runs on the CPU out of the box. To go faster, open **Settings → Speech-to-Text → GPU
+acceleration** and click **Turn on**: it detects your card, downloads a matching build, and verifies
+it actually runs before switching over.
+
+- **Cascades to what works** — tries CUDA first, then Vulkan, then stays on the CPU floor, so a
+  missing or incompatible build never dead-ends you.
+- **Both engines** — accelerates dictation (whisper) and cleanup/chat (llama) from one switch.
+- **Honest + reversible** — an on-device speed check shows the real before/after, and one click turns
+  it back off.
+
+The base install stays small because GPU builds are only downloaded if you opt in.
 
 ## Architecture
 
@@ -132,20 +154,22 @@ Khonjel is built **test-first and eval-driven**: pure logic is unit-tested, and 
 behavior is gated by Playwright scenarios — including ones that launch the **real Electron app** and
 drive it end to end (the floating bar, model selection, and system settings each have one).
 
-## Privacy
+## Privacy & security
 
 - **Offline by default.** Audio is captured, transcribed, and cleaned up locally; nothing is uploaded.
 - **No telemetry.** There is no analytics or tracking.
 - **Keys stay in the keychain.** Cloud API keys are encrypted via the OS keychain, never written in plaintext, and never exposed to the renderer.
+- **Encrypted at rest.** Transcripts and notes are encrypted on disk, and the local model server is bound to loopback with a per-session token.
+- **Hardened renderer.** Strict CSP, navigation lock, and a single allow-listed, schema-validated IPC bridge. Full threat model in [SECURITY.md](SECURITY.md).
 
 ## Tech stack
 
 Electron 42 · React 19 · TypeScript (strict) · Vite 8 · Tailwind CSS v4 · Zustand · zod ·
-Vitest · Playwright · whisper.cpp · llama.cpp.
+better-sqlite3 · Vitest · Playwright · whisper.cpp · llama.cpp · sherpa-onnx.
 
 ## Credits
 
 Khonjel is a local-first, de-monetized app modeled on the open-source
 [OpenWhispr](https://github.com/OpenWhispr/openwhispr) (MIT) — same core stack and on-device
 philosophy — with additional productivity polish. Local inference is powered by the excellent
-[whisper.cpp](https://github.com/ggml-org/whisper.cpp) and [llama.cpp](https://github.com/ggml-org/llama.cpp) projects.
+[whisper.cpp](https://github.com/ggml-org/whisper.cpp), [llama.cpp](https://github.com/ggml-org/llama.cpp), and [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) projects.
