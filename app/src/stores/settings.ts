@@ -40,6 +40,7 @@ const DEFAULT_TOGGLES: Record<string, boolean> = {
   "llm.agent.reasoning": true,
   "llm.note.autoTitle": true,
   "llm.chat.reasoning": false,
+  "llm.chat.autoTitle": true,
 };
 
 const DEFAULT_VALUES: Record<string, string> = {

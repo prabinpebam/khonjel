@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveThreadTitle, chatTitlePrompt, cleanTitle } from "./title";
+import { deriveThreadTitle, chatTitlePrompt, cleanTitle, titleFromPrompt } from "./title";
 
 describe("deriveThreadTitle", () => {
   it("takes the first six words", () => {
@@ -37,5 +37,18 @@ describe("cleanTitle", () => {
   });
   it("returns empty for blank input", () => {
     expect(cleanTitle("  ")).toBe("");
+  });
+});
+
+describe("titleFromPrompt", () => {
+  it("derives a concise title from a titling request's conversation", () => {
+    const prompt = chatTitlePrompt([{ role: "user", content: "Plan a quiet weekend away" }])[0]!.content;
+    expect(titleFromPrompt(prompt)).toBe("Plan a quiet weekend away");
+  });
+  it("returns null for a non-titling prompt", () => {
+    expect(titleFromPrompt("What is the capital of France?")).toBeNull();
+  });
+  it("falls back to a default when the request has no user line", () => {
+    expect(titleFromPrompt("Write a short, specific title for this conversation.")).toBe("New chat");
   });
 });

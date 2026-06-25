@@ -10,6 +10,7 @@ import { runPipeline } from "../pipeline/index";
 import type { DictionaryRule, SnippetRule } from "../pipeline/types";
 import { resolvePrompt } from "../inference/prompts";
 import type { ProviderRouter } from "../providers/router";
+import { titleFromPrompt } from "../../../src/lib/chat/title";
 
 /** A single chat message at the engine layer (includes the system role). */
 export interface EngineMessage {
@@ -131,6 +132,10 @@ export const stubInferenceEngine: InferenceEngine = {
   runAgent: async (instruction) => `(stub agent) You said: ${instruction}`,
   chat: async (messages) => {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
-    return `(local stub reply) ${lastUser?.content ?? ""}`.trim();
+    const prompt = lastUser?.content ?? "";
+    // A titling request still gets a sensible derived title (not an echo) with no model installed.
+    const title = titleFromPrompt(prompt);
+    if (title != null) return title;
+    return `(local stub reply) ${prompt}`.trim();
   },
 };

@@ -121,6 +121,11 @@ export function LanguageModelsSettings() {
             <>
               <SettingGroup>
                 <ToggleRow title="Reasoning mode" settingKey="llm.chat.reasoning" />
+                <ToggleRow
+                  title="Auto-generate thread title"
+                  subtitle="Name a new conversation from its first exchange."
+                  settingKey="llm.chat.autoTitle"
+                />
               </SettingGroup>
               <section className="flex flex-col gap-1.5">
                 <Label>System prompt</Label>

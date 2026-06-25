@@ -4,6 +4,7 @@ import { useServices } from "@services";
 import type { ChatMessage, ChatThread, ChatTokenEvent } from "@services/ports";
 import { useDictationField } from "@hooks/useDictationField";
 import { useActiveModel } from "@hooks/useActiveModel";
+import { useSettingsStore } from "@stores/settings";
 import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
 import { Badge } from "@components/ui/badge";
@@ -11,15 +12,16 @@ import { Button } from "@components/ui/button";
 import { Textarea } from "@components/ui/textarea";
 import { cn } from "@lib/utils";
 import { autoTitleThread, createThread, deleteThread, renameThread, sortThreads, touchThread } from "@lib/chat/threads";
-import { deriveThreadTitle } from "@lib/chat/title";
+import { chatTitlePrompt, cleanTitle, deriveThreadTitle } from "@lib/chat/title";
 import { splitReasoning } from "@lib/chat/stream";
 import { precedingUserMessage, toTurns, truncateAfter } from "@lib/chat/regenerate";
 
 const SUGGESTIONS = ["Rewrite that note", "Plan my day", "Summarize my last meeting", "Draft a reply"];
 
 export function Chat() {
-  const { content, chat } = useServices();
+  const { content, chat, inference } = useServices();
   const llm = useActiveModel("llm.chat", "llm");
+  const autoTitle = useSettingsStore((s) => s.toggles["llm.chat.autoTitle"] ?? true);
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [allMessages, setAllMessages] = useState<ChatMessage[]>([]);
@@ -32,6 +34,8 @@ export function Chat() {
   const loadedRef = useRef(false);
   // requestIds the user explicitly stopped, so the trailing done keeps "stopped" (not "complete").
   const stoppedRef = useRef<Set<string>>(new Set());
+  // threadIds already sent for an LLM title, so we never re-title (or loop) on the same thread.
+  const titledRef = useRef<Set<string>>(new Set());
 
   const sortedThreads = useMemo(() => sortThreads(threads), [threads]);
   const messages = useMemo(() => allMessages.filter((m) => m.threadId === activeId), [allMessages, activeId]);
@@ -87,6 +91,37 @@ export function Chat() {
       return changed ? next : prev;
     });
   }, [allMessages]);
+
+  // LLM auto-title (llm.chat.autoTitle): once a thread's first exchange completes, ask the model for
+  // a concise title and upgrade the fallback in place. Skips manual titles; runs once per thread.
+  useEffect(() => {
+    if (!autoTitle) return;
+    for (const t of threads) {
+      if (t.titleStatus === "manual" || titledRef.current.has(t.id)) continue;
+      const msgs = allMessages.filter((m) => m.threadId === t.id);
+      const hasUser = msgs.some((m) => m.role === "user");
+      const replied = msgs.some(
+        (m) => m.role === "assistant" && (m.status === "complete" || m.status === "stopped" || m.status == null),
+      );
+      if (!hasUser || !replied) continue;
+      titledRef.current.add(t.id);
+      const turns = msgs
+        .filter((m) => m.status !== "error" && m.content.trim() && m.content !== "...")
+        .map((m) => ({ role: m.role, content: m.content }));
+      void inference
+        .chat(chatTitlePrompt(turns))
+        .then(({ text }) => {
+          const title = cleanTitle(text);
+          if (!title) return;
+          setThreads((prev) =>
+            prev.map((x) => (x.id === t.id && x.titleStatus !== "manual" ? { ...x, title, titleStatus: "auto" } : x)),
+          );
+        })
+        .catch(() => {
+          // Keep the deterministic fallback title on any titling failure.
+        });
+    }
+  }, [threads, allMessages, autoTitle, inference]);
 
   // Persist (debounced) when idle -- never mid-stream (the placeholder churns per token).
   useEffect(() => {

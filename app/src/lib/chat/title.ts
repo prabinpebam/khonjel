@@ -39,3 +39,15 @@ export function cleanTitle(raw: string): string {
     .trim();
   return text ? cap(text) : "";
 }
+
+/**
+ * If `prompt` is a titling request (built by `chatTitlePrompt`), derive a concise title from its
+ * embedded conversation; otherwise null. Lets a model-less engine (the mock / the local stub) still
+ * produce a sensible auto-title instead of echoing the prompt back.
+ */
+export function titleFromPrompt(prompt: string): string | null {
+  if (!/^Write a short, specific title/.test(prompt.trimStart())) return null;
+  const userLine = prompt.split("\n").find((line) => line.trimStart().startsWith("User:"));
+  const subject = userLine ? userLine.slice(userLine.indexOf("User:") + "User:".length).trim() : "";
+  return deriveThreadTitle(subject);
+}

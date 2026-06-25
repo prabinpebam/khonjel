@@ -1,4 +1,5 @@
 import type { CleanupResult, InferenceService } from "@services/ports";
+import { titleFromPrompt } from "@lib/chat/title";
 
 /**
  * Mock inference service — a lightweight deterministic cleanup standing in for the real pipeline +
@@ -21,8 +22,13 @@ export const mockInferenceService: InferenceService = {
   },
   async chat(messages) {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    const prompt = lastUser?.content ?? "";
+    // A titling request (see chatTitlePrompt): echo a concise title derived from the conversation so
+    // the browser preview shows a believable auto-title without a real model.
+    const title = titleFromPrompt(prompt);
+    if (title != null) return { text: title };
     return {
-      text: `This is a mock reply. Connect a real model in Settings -> Language Models -> Chat. You said: "${lastUser?.content ?? ""}"`,
+      text: `This is a mock reply. Connect a real model in Settings -> Language Models -> Chat. You said: "${prompt}"`,
     };
   },
 };
