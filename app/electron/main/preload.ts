@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("update:status", listener);
     return () => ipcRenderer.removeListener("update:status", listener);
   },
+  copyText: (text: string) => ipcRenderer.send("clipboard:write", text),
 });
 
 // The typed seam the renderer's `ipc` adapter calls. Only a single generic `invoke` crosses the

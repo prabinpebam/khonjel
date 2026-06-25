@@ -155,7 +155,7 @@ export function Home() {
                     <HistoryRow
                       key={entry.id}
                       entry={entry}
-                      onCopy={() => void navigator.clipboard.writeText(entry.finalText)}
+                      onCopy={() => window.electronAPI?.copyText?.(entry.finalText)}
                       onDelete={() => removeEntry(entry.id)}
                       onSave={(text) => saveEntry(entry.id, text)}
                     />
@@ -214,6 +214,13 @@ function HistoryRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(entry.finalText);
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    onCopy();
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  }
 
   function startEdit() {
     setDraft(entry.finalText);
@@ -265,8 +272,14 @@ function HistoryRow({
       </div>
       {!editing ? (
         <div className="flex shrink-0 items-start gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-          <Button variant="ghost" size="icon" aria-label="Copy" onClick={onCopy}>
-            <Copy />
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={copied ? "Copied" : "Copy"}
+            className={copied ? "text-success hover:text-success" : undefined}
+            onClick={handleCopy}
+          >
+            {copied ? <Check /> : <Copy />}
           </Button>
           <Button variant="ghost" size="icon" aria-label="Edit" onClick={startEdit}>
             <Pencil />

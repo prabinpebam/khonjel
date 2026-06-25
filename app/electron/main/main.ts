@@ -1,6 +1,6 @@
 // Electron main process (TypeScript, bundled to ../main.cjs by scripts/build-electron.mjs).
 // Frameless window hosting the Vite build + the composition root for the IPC seam.
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, session, shell, Tray, type IpcMainEvent } from "electron";
+import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, session, shell, Tray, type IpcMainEvent } from "electron";
 import * as path from "node:path";
 import { writeFileSync, unlinkSync, mkdirSync, rmSync, readdirSync, existsSync, appendFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -984,6 +984,12 @@ ipcOn("window:toggle-maximize", () => {
   else mainWindow.maximize();
 });
 ipcOn("window:close", () => mainWindow?.close());
+
+// Write text to the system clipboard. The renderer's async clipboard API is blocked by our strict
+// permission handler (and file:// is not a secure context for it), so copy actions route here.
+ipcOn("clipboard:write", (_event, text: unknown) => {
+  if (typeof text === "string") clipboard.writeText(text);
+});
 
 // System / diagnostics controls (Settings -> System).
 ipcOn("app:version", (event) => {

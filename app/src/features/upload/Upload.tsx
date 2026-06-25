@@ -191,7 +191,7 @@ export function Upload() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => void navigator.clipboard.writeText(job.result ?? "")}
+                    onClick={() => window.electronAPI?.copyText?.(job.result ?? "")}
                   >
                     <Copy />
                     Copy

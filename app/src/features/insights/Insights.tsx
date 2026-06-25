@@ -36,7 +36,7 @@ export function Insights() {
                 `Fixes made: ${data.wordsCorrected + data.dictionaryFixes}`,
                 `Day streak: ${data.streak.current} (longest ${data.streak.longest})`,
               ].join("\n");
-              void navigator.clipboard.writeText(summary);
+              window.electronAPI?.copyText?.(summary);
             }}
             className="grid size-12 place-items-center rounded-pill bg-dataviz text-primary-foreground transition-opacity hover:opacity-90"
           >

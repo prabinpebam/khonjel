@@ -41,6 +41,8 @@ export interface ElectronAPIShim {
   installUpdate?: () => void;
   /** Subscribe to update lifecycle changes; returns an unsubscribe fn. */
   onUpdateStatus?: (callback: (status: UpdateStatus) => void) => () => void;
+  /** Write text to the system clipboard. */
+  copyText?: (text: string) => void;
 }
 
 export const electronAPI: ElectronAPIShim = {
@@ -63,6 +65,9 @@ export const electronAPI: ElectronAPIShim = {
   onUpdateStatus: (callback) => {
     queueMicrotask(() => callback({ state: "unsupported" }));
     return () => {};
+  },
+  copyText: (text) => {
+    void navigator.clipboard?.writeText?.(text);
   },
 };
 
