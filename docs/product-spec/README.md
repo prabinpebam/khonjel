@@ -62,7 +62,8 @@ docs/product-spec/
 │   ├── 02-capture-modes-and-flows.md
 │   ├── 03-ai-engines-and-providers.md
 │   ├── 04-text-intelligence.md
-│   └── 05-notes-insights-collaboration.md
+│   ├── 05-notes-insights-collaboration.md
+│   └── 06-chat-threads-and-streaming.md
 ├── 02-information-architecture/
 │   ├── 01-sitemap-and-ia.md
 │   └── 02-navigation-and-content-model.md
