@@ -6,7 +6,9 @@
 > actions** (copy, regenerate, stop, edit-and-resend), built on the existing typed IPC
 > seam and the same streaming pattern already proven by long-form capture.
 >
-> **Status:** proposed. **Owner:** TBD. **Refs:** [`Chat.tsx`](../../../app/src/features/chat/Chat.tsx),
+> **Status:** proposed. **Owner:** TBD. **Implementation plan:**
+> [`chat-implementation-plan.md`](../../archive/delivery-plans/chat-implementation-plan.md). **Refs:**
+> [`Chat.tsx`](../../../app/src/features/chat/Chat.tsx),
 > [`ports/index.ts`](../../../app/src/services/ports/index.ts),
 > [`02-navigation-and-content-model.md`](../02-information-architecture/02-navigation-and-content-model.md).
 
@@ -136,6 +138,16 @@ A two-pane Chat view:
 - **Edit & resend** (user, P1) — edit a user message; truncate everything after it; regenerate.
 - **Delete message** (P2).
 
+### 5.4 Rendering — markdown & reasoning
+- **Markdown.** Assistant messages render markdown (headings, **bold**, lists, links, and fenced code
+  with a copy-on-block control); render incrementally as tokens arrive. Use a **sanitized** renderer
+  (no raw HTML) so the strict CSP and the hardened renderer guarantees hold. User messages stay plain
+  text. **(P1.)**
+- **Reasoning tokens.** Reasoning models (e.g. Qwen `<think>…</think>`) stream chain-of-thought
+  before the answer. When `llm.chat.reasoning` is **on**, reasoning streams into a collapsible
+  "Thinking" disclosure above the answer; when **off**, the streamer strips it and shows only the
+  final answer (the same intent as `llm.cleanup.disableThinking`).
+
 ---
 
 ## 6. Streaming protocol
@@ -183,6 +195,16 @@ export interface ChatTokenEvent {
 4. On completion emit `kind: "done"`; on failure `kind: "error"`. `stop(requestId)` aborts the
    underlying request and emits `done` with whatever was accumulated (`status: "stopped"`).
 5. Renderer updates the placeholder by `requestId`, then persists the thread + messages.
+
+**Context, system prompt & concurrency**
+- **System prompt.** Main prepends a concise default system prompt (assistant persona) to every
+  request; it is not stored in the thread. A user-editable per-thread persona is P2.
+- **Context budget.** The renderer sends the full thread; **main** trims to a token budget for the
+  active model (oldest turns dropped first) so the policy lives in one place. Summarizing dropped
+  context is P2.
+- **Local single-stream.** The persistent `llama-server` generates one completion at a time. The
+  session manager **serializes local generations** (FIFO): a second `send` while one is streaming
+  queues, and the waiting thread shows a subtle "waiting…" state. Cloud requests are not serialized.
 
 **IPC seam deltas**
 - [`ipc-contract.ts`](../../../app/electron/shared/ipc-contract.ts): channels `content:chat-threads`,
@@ -234,6 +256,12 @@ Add the `llm.chat.autoTitle` default to [`stores/settings.ts`](../../../app/src/
 - **Switch thread mid-stream** → the stream keeps running for its `threadId`; tokens are applied to
   that thread's messages even when it isn't focused (correlation by `requestId` + `threadId`).
 - **Empty/whitespace input** → ignored.
+- **Concurrent sends (local)** → serialized FIFO by the session manager; the waiting thread shows
+  "waiting…" until the prior local generation finishes (see §6).
+- **Long thread** → main trims to a token budget before sending; the user sees the full thread, the
+  model sees the recent window (see §6).
+- **Draft threads** → "New chat" opens a draft that is **persisted on first send**, so abandoned
+  empty threads never clutter the list.
 - **Persistence races** → debounce `saveChat` (the placeholder churns per token); persist on
   `done`/`stopped`/`error`, not on every token.
 
@@ -280,6 +308,7 @@ Add the `llm.chat.autoTitle` default to [`stores/settings.ts`](../../../app/src/
 
 **P1 — Polish**
 - [ ] LLM auto-title behind `llm.chat.autoTitle`.
+- [ ] Markdown rendering (sanitized) + reasoning "Thinking" disclosure.
 - [ ] Rename + delete thread (guarded).
 - [ ] Edit-and-resend user messages; autoscroll-when-pinned.
 - [ ] Cloud/provider streaming parity.
@@ -294,7 +323,6 @@ Add the `llm.chat.autoTitle` default to [`stores/settings.ts`](../../../app/src/
 ## 13. Open questions
 
 1. **Branching vs replace** on Regenerate — replace in place (P0) vs keep variants (P2)?
-2. **Per-thread model** — pin a model per thread, or always use the global `llm.chat` scope?
-3. **Markdown rendering** — render assistant markdown (code blocks, lists) now or after streaming lands?
-4. **History cap** — how many turns to send as context (token budget) before truncation/summarization?
-5. **Thread search** — reuse the local semantic index (Notes/Qdrant) for chat too?
+2. **Per-thread model / persona** — pin a model + system prompt per thread, or always use the global `llm.chat` scope?
+3. **Dropped-context summarization** — when a thread exceeds the token budget, summarize older turns (P2) or just drop them?
+4. **Thread search** — reuse the local semantic index (Notes / Qdrant) for chat too?
