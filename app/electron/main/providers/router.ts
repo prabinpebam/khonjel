@@ -7,8 +7,9 @@
  */
 import { ipcError } from "../../shared/ipc-contract";
 import type { ConnectionProfile, SettingsSnapshot } from "../../../src/services/ports";
-import type { EngineMessage } from "../services/inference";
+import type { EngineMessage, ChatStreamHandlers } from "../services/inference";
 import { buildChatRequest, buildTranscriptionRequest } from "./request";
+import { parseSseBuffer } from "../inference/chat-stream";
 import type { ProxyFetch } from "./proxyFetch";
 
 export type SlotMode = "local" | "self-hosted" | "providers" | "enterprise" | "cloud";
@@ -74,6 +75,17 @@ export interface ProviderRouter {
     messages: EngineMessage[],
     params?: ChatCallParams,
   ) => Promise<string | undefined>;
+  /**
+   * Stream a cloud chat reply token-by-token. Resolves `true` when the slot was routed and handled,
+   * `false` when the slot is local/unbound or no streaming transport is wired (caller falls back to
+   * the local engine). Throws an IpcError(provider_error) on an actual cloud failure.
+   */
+  streamForSlot: (
+    prefix: string,
+    messages: EngineMessage[],
+    handlers: ChatStreamHandlers,
+    params?: ChatCallParams,
+  ) => Promise<boolean>;
   /** Cloud transcript, or undefined when the slot is local/unbound. */
   transcribeForSlot: (
     prefix: string,
@@ -108,6 +120,35 @@ export function createProviderRouter(deps: ProviderRouterDeps): ProviderRouter {
         return parseChatReply(await deps.fetch.json(req));
       } catch (err) {
         throw ipcError("provider_error", `Chat request to ${binding.conn.id} failed`, String(err));
+      }
+    },
+    streamForSlot: async (prefix, messages, handlers, params) => {
+      const binding = resolveBinding(prefix);
+      if (!binding || !deps.fetch.stream) return false; // local/unbound or no transport: fall back to local
+      try {
+        const req = buildChatRequest(binding.conn, binding.target, binding.secret, {
+          messages,
+          maxTokens: params?.maxTokens,
+          temperature: params?.temperature,
+          topP: params?.topP,
+        });
+        (req.body as Record<string, unknown>).stream = true;
+        const res = await deps.fetch.stream(req, handlers.signal);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 400)}`);
+        const decoder = new TextDecoder();
+        let buffer = "";
+        for await (const chunk of res.body ?? []) {
+          buffer += decoder.decode(chunk, { stream: true });
+          const parsed = parseSseBuffer(buffer);
+          buffer = parsed.rest;
+          for (const delta of parsed.deltas) {
+            if (delta.done) return true;
+            if (delta.content) handlers.onToken(delta.content);
+          }
+        }
+        return true;
+      } catch (err) {
+        throw ipcError("provider_error", `Chat stream to ${binding.conn.id} failed`, String(err));
       }
     },
     transcribeForSlot: async (prefix, audio, opts) => {

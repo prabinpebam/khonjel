@@ -359,14 +359,18 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
           CHAT_CONTEXT_BUDGET_CHARS,
         );
         let fullText = "";
+        const handlers = {
+          signal: controller.signal,
+          onToken: (delta: string) => {
+            fullText += delta;
+            emit({ requestId: req.requestId, threadId: req.threadId, kind: "token", delta, fullText });
+          },
+        };
         try {
-          await inferenceRuntime.engine.chatStream?.(messages, {
-            signal: controller.signal,
-            onToken: (delta) => {
-              fullText += delta;
-              emit({ requestId: req.requestId, threadId: req.threadId, kind: "token", delta, fullText });
-            },
-          });
+          // A routed (cloud/self-hosted) chat slot streams via the provider router; an unrouted
+          // (local) slot returns false and falls back to the local llama-server / stub engine.
+          const handledByCloud = await router.streamForSlot("llm.chat", messages, handlers, { maxTokens: 16384 });
+          if (!handledByCloud) await inferenceRuntime.engine.chatStream?.(messages, handlers);
           emit({ requestId: req.requestId, threadId: req.threadId, kind: "done", delta: "", fullText });
         } catch (err) {
           // A deliberate Stop ends the turn cleanly (keep the partial text); anything else is an error.

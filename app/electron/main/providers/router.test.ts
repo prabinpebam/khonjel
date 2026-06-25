@@ -141,3 +141,79 @@ describe("createProviderRouter", () => {
     );
   });
 });
+
+describe("createProviderRouter — streamForSlot", () => {
+  const base = {
+    getConnection: (id: string) => (id === "azure-prod" ? azureConn : undefined),
+    getSecret: () => "SECRET",
+  };
+  const sse = (chunks: string[]) => ({
+    ok: true,
+    status: 200,
+    text: async () => "",
+    body: (async function* () {
+      const enc = new TextEncoder();
+      for (const c of chunks) yield enc.encode(c);
+    })(),
+  });
+  const boundChat = {
+    "llm.chat.mode": "providers",
+    "llm.chat.connectionId": "azure-prod",
+    "llm.chat.target": "x",
+  };
+
+  it("streams deltas for a bound chat slot, returns true, and sets stream:true", async () => {
+    let sentBody: Record<string, unknown> = {};
+    const router = createProviderRouter({
+      ...base,
+      getSettings: () => settings(boundChat),
+      fetch: {
+        json: async () => ({}),
+        transcription: async () => ({}),
+        stream: async (req) => {
+          sentBody = req.body as Record<string, unknown>;
+          return sse([
+            'data: {"choices":[{"delta":{"content":"He"}}]}\n\n',
+            'data: {"choices":[{"delta":{"content":"llo"}}]}\n\n',
+            "data: [DONE]\n\n",
+          ]);
+        },
+      },
+    });
+    const tokens: string[] = [];
+    const handled = await router.streamForSlot(
+      "llm.chat",
+      [{ role: "user", content: "hi" }],
+      { onToken: (d) => tokens.push(d) },
+    );
+    expect(handled).toBe(true);
+    expect(tokens.join("")).toBe("Hello");
+    expect(sentBody.stream).toBe(true);
+  });
+
+  it("returns false for a local/unbound slot (caller falls back to local)", async () => {
+    const router = createProviderRouter({
+      ...base,
+      getSettings: () => settings({}),
+      fetch: { json: async () => ({}), transcription: async () => ({}), stream: async () => sse([]) },
+    });
+    expect(await router.streamForSlot("llm.chat", [], { onToken: () => undefined })).toBe(false);
+  });
+
+  it("wraps a cloud stream failure as IpcError(provider_error)", async () => {
+    const router = createProviderRouter({
+      ...base,
+      getSettings: () => settings(boundChat),
+      fetch: {
+        json: async () => ({}),
+        transcription: async () => ({}),
+        stream: async () => {
+          throw new Error("net down");
+        },
+      },
+    });
+    await expect(router.streamForSlot("llm.chat", [], { onToken: () => undefined })).rejects.toSatisfy(
+      (e: unknown) => isIpcError(e) && e.code === "provider_error",
+    );
+  });
+});
