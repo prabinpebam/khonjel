@@ -5,10 +5,23 @@ name: Release
 #   1. Bump "version" in app/package.json (run `npm install --package-lock-only` to sync the lock).
 #   2. Commit on main.
 #   3. git tag vX.Y.Z && git push origin vX.Y.Z   (the tag MUST match the package.json version)
-# electron-builder publishes the NSIS installer (which auto-updates), the portable .exe, and the
-# electron-updater metadata (latest.yml + .blockmap) to a release for the tag. Signing can be added
-# later as a step before "Build + publish" (e.g. SignPath or Azure Trusted Signing) -- nothing else
-# in this workflow needs to change.
+# Publishes the NSIS installer (which auto-updates), the portable .exe, and the electron-updater
+# metadata (latest.yml) to a release for the tag.
+#
+# Code signing (optional, free for OSS via SignPath Foundation): the installer is signed only when
+# the items below are configured -- until then the signing steps are skipped and unsigned builds are
+# published (auto-update still works; users just see the SmartScreen "Run anyway" prompt). Because
+# signing changes the installer's bytes after the build, the updater metadata is regenerated from the
+# signed file (scripts/resign-update-metadata.mjs) so electron-updater's hash check still passes.
+#
+# To enable signing (Repo Settings -> Secrets and variables -> Actions), once the SignPath project is
+# approved and configured (Artifact Configuration = a zip whose root is the .exe; SignPath GitHub App
+# installed on this repo):
+#   secret  SIGNPATH_API_TOKEN              submitter token for the signing policy
+#   var     SIGNPATH_ORGANIZATION_ID        SignPath organization id
+#   var     SIGNPATH_PROJECT_SLUG           SignPath project slug
+#   var     SIGNPATH_SIGNING_POLICY_SLUG    signing policy slug (e.g. release-signing)
+# Validate end to end with a test release after the secret/vars are set.
 
 on:
   push:
@@ -17,6 +30,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   windows:
@@ -24,6 +38,9 @@ jobs:
     defaults:
       run:
         working-directory: app
+    env:
+      # True only when the SignPath submitter token is present; gates every signing step below.
+      SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,7 +55,45 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Build + publish (NSIS installer, portable, update metadata)
-        run: npm run release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build (NSIS installer + portable + update metadata, unsigned)
+        run: npm run package -- --publish never
+
+      # ---- Optional code signing via SignPath Foundation (skipped unless configured) ----
+      - name: Upload installer for signing
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: app/release/Khonjel-*-setup.exe
+          if-no-files-found: error
+
+      - name: Sign installer (SignPath)
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: app/release
+
+      - name: Regenerate update metadata for the signed installer
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          node scripts/resign-update-metadata.mjs release "Khonjel-$version-setup.exe"
+
+      # ---- Publish all artifacts (signed or not) + the update feed to the tag's release ----
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app/release/Khonjel-*-setup.exe
+            app/release/Khonjel-*-portable.exe
+            app/release/*.blockmap
+            app/release/latest.yml
+          fail_on_unmatched_files: false
+          generate_release_notes: true
