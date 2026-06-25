@@ -17,6 +17,12 @@ export interface EngineMessage {
   content: string;
 }
 
+/** Callbacks for a streamed chat completion: a per-token sink + an optional cancellation signal. */
+export interface ChatStreamHandlers {
+  onToken: (delta: string) => void;
+  signal?: AbortSignal;
+}
+
 export interface InferenceEngine {
   /** STAGE 3 LLM cleanup. */
   refine: (text: string) => Promise<string>;
@@ -24,6 +30,8 @@ export interface InferenceEngine {
   runAgent?: (instruction: string) => Promise<string>;
   /** Multi-turn chat completion (optional; absent on minimal engines). */
   chat?: (messages: EngineMessage[]) => Promise<string>;
+  /** Streaming multi-turn chat: fires `onToken` per delta and resolves with the full text. */
+  chatStream?: (messages: EngineMessage[], handlers: ChatStreamHandlers) => Promise<string>;
 }
 
 export interface InferenceServiceImpl {

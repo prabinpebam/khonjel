@@ -11,8 +11,9 @@
  * deterministic fallback so a missing/down model never blocks the user (the pipeline also guards).
  * See backend/03 SS4 + 10 (local inference) and inference/prompts.ts for the system prompts.
  */
-import type { EngineMessage, InferenceEngine } from "../services/inference";
+import type { EngineMessage, InferenceEngine, ChatStreamHandlers } from "../services/inference";
 import { resolvePrompt } from "./prompts";
+import { buildLlamaStreamBody, parseSseBuffer } from "./chat-stream";
 
 export interface LlamaChatOptions {
   systemPrompt: string;
@@ -69,6 +70,23 @@ export type HttpFetch = (
   init: { method: string; headers: Record<string, string>; body: string },
 ) => Promise<HttpResponse>;
 
+/** Streaming HTTP surface: exposes the response body as an async-iterable of bytes (SSE frames). */
+export interface StreamHttpResponse {
+  ok: boolean;
+  status: number;
+  text: () => Promise<string>;
+  body: AsyncIterable<Uint8Array> | null;
+}
+export type StreamHttpFetch = (
+  url: string,
+  init: {
+    method: string;
+    headers: Record<string, string>;
+    body: string;
+    signal?: AbortSignal;
+  },
+) => Promise<StreamHttpResponse>;
+
 export interface LlamaEngineOptions {
   /** Base URL of the running llama-server, e.g. http://127.0.0.1:8080 */
   endpoint: string;
@@ -79,6 +97,8 @@ export interface LlamaEngineOptions {
   maxTokens?: number;
   /** Injected for tests; defaults to the global fetch. */
   fetchFn?: HttpFetch;
+  /** Injected for tests; defaults to the global fetch (streaming/SSE transport). */
+  streamFetchFn?: StreamHttpFetch;
   /** Injected for tests; defaults to the shared prompt resolver. */
   resolvePromptFn?: typeof resolvePrompt;
 }
@@ -105,6 +125,47 @@ async function complete(opts: LlamaEngineOptions, messages: EngineMessage[]): Pr
   return parseLlamaChatResponse(await res.json());
 }
 
+/** Stream a chat completion: fire `handlers.onToken` per SSE delta, resolve with the full text. */
+async function completeStream(
+  opts: LlamaEngineOptions,
+  messages: EngineMessage[],
+  handlers: ChatStreamHandlers,
+): Promise<string> {
+  const fetchFn = opts.streamFetchFn ?? (globalThis as unknown as { fetch: StreamHttpFetch }).fetch;
+  const url = `${opts.endpoint.replace(/\/+$/, "")}/v1/chat/completions`;
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (opts.apiKey) headers["Authorization"] = `Bearer ${opts.apiKey}`;
+  const res = await fetchFn(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(
+      buildLlamaStreamBody(messages, {
+        model: opts.model,
+        temperature: opts.temperature,
+        maxTokens: opts.maxTokens,
+      }),
+    ),
+    signal: handlers.signal,
+  });
+  if (!res.ok) {
+    throw new Error(`llama-server error ${res.status}: ${await res.text()}`);
+  }
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let full = "";
+  for await (const chunk of res.body ?? []) {
+    buffer += decoder.decode(chunk, { stream: true });
+    const parsed = parseSseBuffer(buffer);
+    buffer = parsed.rest;
+    for (const delta of parsed.deltas) {
+      if (delta.done) return full;
+      full += delta.content;
+      handlers.onToken(delta.content);
+    }
+  }
+  return full;
+}
+
 /** A real LLM engine backed by a local llama-server. `refine`/`runAgent`/`chat` use Khonjel's prompts. */
 export function createLlamaEngine(opts: LlamaEngineOptions): InferenceEngine {
   const resolve = opts.resolvePromptFn ?? resolvePrompt;
@@ -118,6 +179,7 @@ export function createLlamaEngine(opts: LlamaEngineOptions): InferenceEngine {
       { role: "user", content: instruction },
     ]),
     chat: (messages) => complete(opts, messages),
+    chatStream: (messages, handlers) => completeStream(opts, messages, handlers),
   };
 }
 
@@ -151,6 +213,18 @@ export function withFallback(primary: InferenceEngine, fallback: InferenceEngine
         // fall through to the fallback engine
       }
       return fallback.chat ? fallback.chat(messages) : "";
+    },
+    chatStream: async (messages, handlers) => {
+      try {
+        if (primary.chatStream) return await primary.chatStream(messages, handlers);
+      } catch (err) {
+        // A deliberate cancellation must surface, not silently degrade to a stub reply.
+        if (handlers.signal?.aborted) throw err;
+        // otherwise fall through to a non-streaming fallback
+      }
+      const text = fallback.chat ? await fallback.chat(messages) : "";
+      if (text.length > 0) handlers.onToken(text);
+      return text;
     },
   };
 }

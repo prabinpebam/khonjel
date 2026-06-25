@@ -5,12 +5,14 @@ import * as path from "node:path";
 import { writeFileSync, unlinkSync, mkdirSync, rmSync, readdirSync, existsSync, appendFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import * as os from "node:os";
-import type { Platform, AccelerationMode } from "../../src/services/ports";
+import type { Platform, AccelerationMode, ChatSendRequest, ChatTokenEvent } from "../../src/services/ports";
 import { CHANNELS, checkContractVersion, ipcError } from "../shared/ipc-contract";
 import { createDispatch } from "../shared/dispatch";
 import { createSettingsStore, fileSettingsIO, encryptedSettingsIO } from "./services/settings";
 import { createInferenceService } from "./services/inference";
 import { createInferenceRuntime, type InferenceRuntime } from "./inference/runtime";
+import { resolvePrompt } from "./inference/prompts";
+import { trimToBudget, createSerialQueue } from "./inference/chat-stream";
 import { createTranscriptionService, sttLanguage } from "./services/transcription";
 import { resolveTranscriber } from "./stt/runtime";
 import { resolveNodeParakeetTranscriber, resolveNodeParakeetProvider } from "./stt/parakeet-runtime";
@@ -330,6 +332,67 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     },
   };
 
+  // Threaded chat streaming (06 chat spec): each send streams llama-server SSE tokens to every
+  // window via `khonjel:chat-token`. Local generations run one-at-a-time through a FIFO queue (a
+  // single-slot llama-server cannot answer two prompts at once); each in-flight request has an
+  // AbortController so Stop cancels it. Coarse char budget keeps the prompt inside the ctx window.
+  const CHAT_CONTEXT_BUDGET_CHARS = 8000;
+  const chatSessions = new Map<string, AbortController>();
+  const chatQueue = createSerialQueue();
+  const chatManager = {
+    send: (req: ChatSendRequest): void => {
+      const controller = new AbortController();
+      chatSessions.set(req.requestId, controller);
+      const emit = (event: ChatTokenEvent): void => {
+        for (const win of BrowserWindow.getAllWindows()) {
+          if (!win.isDestroyed()) win.webContents.send("khonjel:chat-token", event);
+        }
+      };
+      void chatQueue.enqueue(async () => {
+        // Stopped while still queued behind another generation: never start it.
+        if (controller.signal.aborted) {
+          chatSessions.delete(req.requestId);
+          return;
+        }
+        const messages = trimToBudget(
+          [{ role: "system", content: resolvePrompt("chat") }, ...req.messages],
+          CHAT_CONTEXT_BUDGET_CHARS,
+        );
+        let fullText = "";
+        try {
+          await inferenceRuntime.engine.chatStream?.(messages, {
+            signal: controller.signal,
+            onToken: (delta) => {
+              fullText += delta;
+              emit({ requestId: req.requestId, threadId: req.threadId, kind: "token", delta, fullText });
+            },
+          });
+          emit({ requestId: req.requestId, threadId: req.threadId, kind: "done", delta: "", fullText });
+        } catch (err) {
+          // A deliberate Stop ends the turn cleanly (keep the partial text); anything else is an error.
+          if (controller.signal.aborted) {
+            emit({ requestId: req.requestId, threadId: req.threadId, kind: "done", delta: "", fullText });
+          } else {
+            emit({
+              requestId: req.requestId,
+              threadId: req.threadId,
+              kind: "error",
+              delta: "",
+              fullText,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        } finally {
+          chatSessions.delete(req.requestId);
+        }
+      });
+    },
+    stop: (requestId: string): void => {
+      chatSessions.get(requestId)?.abort();
+      chatSessions.delete(requestId);
+    },
+  };
+
   const dispatch = createDispatch({
     system: {
       getAppVersion: () => app.getVersion(),
@@ -530,7 +593,7 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
     void inferenceRuntime.start();
   });
 
-  return { dispatch, contentStore, settingsStore, captureManager };
+  return { dispatch, contentStore, settingsStore, captureManager, chatManager };
 
   function selectedModelIds(): { stt?: string; llm?: string } {
     const values = settingsStore.get().values;
@@ -711,6 +774,32 @@ void app.whenReady().then(() => {
     if (typeof sessionId !== "string" || typeof base64Pcm16 !== "string") return;
     if (base64Pcm16.length > 4_000_000) return;
     built.captureManager.pushChunk(sessionId, base64Pcm16);
+  });
+
+  // Threaded chat streaming bypasses the typed request/response dispatch: a send streams many token
+  // events back over `khonjel:chat-token`. Validate basic shape here (no per-token zod); the manager
+  // owns the AbortController + FIFO queue. Mirrors the capture-chunk fire-and-forget pattern.
+  ipcMain.on("chat:send", (event, payload: unknown) => {
+    if (!isTrustedSender(event)) return;
+    const req = payload as Partial<ChatSendRequest> | undefined;
+    if (!req || typeof req.requestId !== "string" || typeof req.threadId !== "string") return;
+    if (!Array.isArray(req.messages)) return;
+    // Defensive: cap turns + per-message size so a hostile renderer cannot exhaust memory.
+    const messages = req.messages
+      .filter(
+        (m): m is { role: "user" | "assistant"; content: string } =>
+          !!m &&
+          (m.role === "user" || m.role === "assistant") &&
+          typeof m.content === "string" &&
+          m.content.length <= 100_000,
+      )
+      .slice(-200);
+    built.chatManager.send({ requestId: req.requestId, threadId: req.threadId, messages });
+  });
+  ipcMain.on("chat:stop", (event, requestId: unknown) => {
+    if (!isTrustedSender(event)) return;
+    if (typeof requestId !== "string") return;
+    built.chatManager.stop(requestId);
   });
 
   // Live mic capture (dictation + the floating bar) issues a getUserMedia permission request. This

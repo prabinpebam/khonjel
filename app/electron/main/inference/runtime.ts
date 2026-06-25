@@ -120,6 +120,18 @@ export function createInferenceRuntime(cfg: InferenceRuntimeConfig): InferenceRu
     runAgent: (instruction) =>
       backing.runAgent ? backing.runAgent(instruction) : Promise.resolve(instruction),
     chat: (messages) => (backing.chat ? backing.chat(messages) : Promise.resolve("")),
+    // Prefer the backing engine's native streaming; otherwise degrade to a single-shot reply emitted
+    // as one token, so chat still works on the deterministic stub (no model installed).
+    chatStream: (messages, handlers) => {
+      if (backing.chatStream) return backing.chatStream(messages, handlers);
+      if (backing.chat) {
+        return backing.chat(messages).then((text) => {
+          if (text.length > 0) handlers.onToken(text);
+          return text;
+        });
+      }
+      return Promise.resolve("");
+    },
   };
 
   const startFor = async (modelId?: string): Promise<InferenceMode> => {
