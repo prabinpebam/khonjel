@@ -11,6 +11,7 @@
  */
 import type {
   ChatMessage,
+  ChatThread,
   ChatTurn,
   CleanupOptions,
   CleanupResult,
@@ -72,6 +73,7 @@ export const CHANNELS = {
   contentHistory: "content:history",
   contentInsights: "content:insights",
   contentChat: "content:chat",
+  contentChatThreads: "content:chatThreads",
   contentFolders: "content:folders",
   contentNotes: "content:notes",
   contentUploads: "content:uploads",
@@ -132,6 +134,7 @@ export interface ChannelContract {
   "content:history": { request: []; response: HistoryEntry[] };
   "content:insights": { request: []; response: InsightsAggregate };
   "content:chat": { request: []; response: ChatMessage[] };
+  "content:chatThreads": { request: []; response: ChatThread[] };
   "content:folders": { request: []; response: Folder[] };
   "content:notes": { request: []; response: Note[] };
   "content:uploads": { request: []; response: UploadJob[] };

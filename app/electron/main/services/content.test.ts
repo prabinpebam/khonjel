@@ -50,6 +50,47 @@ describe("createContentStore", () => {
     expect(store.llmModels().map((m) => m.id)).toEqual(["llm"]);
   });
 
+  it("starts with no chat threads and round-trips them via replace", () => {
+    const store = createContentStore(memIO(), deps);
+    expect(store.chatThreads()).toEqual([]);
+    const thread = {
+      id: "t1",
+      title: "Hello",
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+      titleStatus: "manual" as const,
+    };
+    store.replace("chatThreads", [thread]);
+    expect(store.chatThreads()).toEqual([thread]);
+  });
+
+  it("migrates a legacy flat chat into one 'Imported chat' thread", () => {
+    const legacy = JSON.stringify({
+      chat: [
+        { id: "m1", role: "user", content: "hi", createdAt: "2026-01-01T00:00:00Z" },
+        { id: "m2", role: "assistant", content: "hello", createdAt: "2026-01-01T00:00:05Z" },
+      ],
+    });
+    const store = createContentStore(memIO(legacy), deps);
+    const threads = store.chatThreads();
+    expect(threads).toHaveLength(1);
+    expect(threads[0]?.title).toBe("Imported chat");
+    expect(threads[0]?.titleStatus).toBe("manual");
+    const threadId = threads[0]?.id;
+    expect(store.chat().every((m) => m.threadId === threadId)).toBe(true);
+  });
+
+  it("does not migrate when chat is empty or already threaded", () => {
+    expect(createContentStore(memIO(), deps).chatThreads()).toEqual([]);
+    const threaded = JSON.stringify({
+      chat: [{ id: "m1", threadId: "tX", role: "user", content: "hi", createdAt: "2026-01-01T00:00:00Z" }],
+      chatThreads: [{ id: "tX", title: "Kept", createdAt: "", updatedAt: "", titleStatus: "manual" }],
+    });
+    const store = createContentStore(memIO(threaded), deps);
+    expect(store.chatThreads().map((t) => t.id)).toEqual(["tX"]);
+    expect(store.chat()[0]?.threadId).toBe("tX");
+  });
+
   it("derives insights from stored history via the injected compute fn", () => {
     const doc = JSON.stringify({
       history: [

@@ -8,6 +8,7 @@ import * as seed from "@mock/seed";
 const state = {
   history: [...seed.HISTORY],
   chat: [...seed.CHAT],
+  chatThreads: [...seed.CHAT_THREADS],
   folders: [...seed.FOLDERS],
   notes: [...seed.NOTES],
   uploads: [...seed.UPLOADS],
@@ -27,6 +28,7 @@ export const mockContentService: ContentService = {
   history: async () => state.history,
   insights: async () => seed.INSIGHTS,
   chat: async () => state.chat,
+  chatThreads: async () => state.chatThreads,
   folders: async () => state.folders,
   notes: async () => state.notes,
   uploads: async () => state.uploads,
@@ -71,6 +73,9 @@ export const mockContentService: ContentService = {
   },
   saveChat: async (messages) => {
     state.chat = messages;
+  },
+  saveChatThreads: async (threads) => {
+    state.chatThreads = threads;
   },
   saveUploads: async (jobs) => {
     state.uploads = jobs;

@@ -82,6 +82,7 @@ const deps: DispatchDeps = {
     integrations: () => [],
     sttModels: () => [],
     llmModels: () => [],
+    chatThreads: () => [],
     addHistory: () => [],
     replace: () => undefined,
   },

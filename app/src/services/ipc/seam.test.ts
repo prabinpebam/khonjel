@@ -104,6 +104,7 @@ const dispatch = createDispatch({
     integrations: () => [],
     sttModels: () => [],
     llmModels: () => [],
+    chatThreads: () => [],
     addHistory: () => [],
     replace: () => undefined,
   },

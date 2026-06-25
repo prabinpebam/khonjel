@@ -1,5 +1,6 @@
 import type {
   ChatMessage,
+  ChatThread,
   DictionaryEntry,
   Folder,
   HistoryEntry,
@@ -122,15 +123,27 @@ function buildHeatmap(): { date: string; count: number }[] {
   return cells;
 }
 
+export const CHAT_THREADS: ChatThread[] = [
+  {
+    id: "t1",
+    title: "Design review summary",
+    createdAt: "2026-06-20T09:30:00",
+    updatedAt: "2026-06-20T09:31:03",
+    titleStatus: "auto",
+  },
+];
+
 export const CHAT: ChatMessage[] = [
   {
     id: "c1",
+    threadId: "t1",
     role: "user",
     content: "Summarize my design review note into three bullet points.",
     createdAt: "2026-06-20T09:30:00",
   },
   {
     id: "c2",
+    threadId: "t1",
     role: "assistant",
     content:
       "Here are the key points:\n\n- Keep the greige canvas with the white floating panel.\n- Use the violet accent only for interactive state.\n- Charts use teal exclusively.",
@@ -138,12 +151,14 @@ export const CHAT: ChatMessage[] = [
   },
   {
     id: "c3",
+    threadId: "t1",
     role: "user",
     content: "Now rewrite it as a one-line commit message.",
     createdAt: "2026-06-20T09:31:00",
   },
   {
     id: "c4",
+    threadId: "t1",
     role: "assistant",
     content: "`docs: lock design language — greige canvas, violet accent for state, teal charts`",
     createdAt: "2026-06-20T09:31:03",

@@ -28,9 +28,43 @@ export interface InsightsAggregate {
 
 export interface ChatMessage {
   id: string;
+  threadId: string;
   role: "user" | "assistant";
   content: string;
   createdAt: string;
+  /** Streaming lifecycle for an assistant message; absent means a settled (complete) message. */
+  status?: "streaming" | "complete" | "stopped" | "error";
+  /** The model that produced an assistant message (optional, for display). */
+  model?: string;
+}
+
+/** A chat conversation. Messages reference it by `threadId`. */
+export interface ChatThread {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Gates auto-title: "manual" is never overwritten by the auto-titler. */
+  titleStatus: "pending" | "auto" | "manual";
+}
+
+/** A streamed chat token (or terminal event) broadcast main -> renderer during a completion. */
+export interface ChatTokenEvent {
+  requestId: string;
+  threadId: string;
+  kind: "token" | "done" | "error";
+  /** Incremental text for a "token" event. */
+  delta: string;
+  /** Running accumulation, so a late subscriber can resync. */
+  fullText: string;
+  error?: string;
+}
+
+/** A request to start a streamed completion (correlated by `requestId`). */
+export interface ChatSendRequest {
+  requestId: string;
+  threadId: string;
+  messages: { role: "user" | "assistant"; content: string }[];
 }
 
 export interface Folder {

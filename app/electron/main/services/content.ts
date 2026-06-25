@@ -11,6 +11,7 @@
  */
 import type {
   ChatMessage,
+  ChatThread,
   DictionaryEntry,
   Folder,
   HistoryDraft,
@@ -29,6 +30,7 @@ import type { SettingsIO } from "./settings";
 export interface ContentDoc {
   history: HistoryEntry[];
   chat: ChatMessage[];
+  chatThreads: ChatThread[];
   folders: Folder[];
   notes: Note[];
   uploads: UploadJob[];
@@ -50,6 +52,7 @@ export interface ContentDeps {
 export const CONTENT_COLLECTIONS = [
   "history",
   "chat",
+  "chatThreads",
   "folders",
   "notes",
   "uploads",
@@ -64,6 +67,7 @@ export interface ContentStore {
   history: () => HistoryEntry[];
   insights: () => InsightsAggregate;
   chat: () => ChatMessage[];
+  chatThreads: () => ChatThread[];
   folders: () => Folder[];
   notes: () => Note[];
   uploads: () => UploadJob[];
@@ -141,6 +145,7 @@ function defaultDoc(): ContentDoc {
   return {
     history: [],
     chat: [],
+    chatThreads: [],
     folders: [],
     notes: [],
     uploads: [],
@@ -151,14 +156,39 @@ function defaultDoc(): ContentDoc {
   };
 }
 
+/**
+ * Forward-compat: fold any legacy flat chat (messages with no `threadId`) into one "Imported chat"
+ * thread so the threaded UI has somewhere to put them. Idempotent (no-op once messages are stamped).
+ */
+function migrateChat(doc: ContentDoc): ContentDoc {
+  const needs = doc.chat.some((m) => !m.threadId);
+  if (!needs) return doc;
+  const threadId = "thread-imported";
+  const first = doc.chat[0];
+  const last = doc.chat[doc.chat.length - 1];
+  const thread: ChatThread = {
+    id: threadId,
+    title: "Imported chat",
+    createdAt: first?.createdAt ?? "",
+    updatedAt: last?.createdAt ?? first?.createdAt ?? "",
+    titleStatus: "manual",
+  };
+  const chat = doc.chat.map((m) => (m.threadId ? m : { ...m, threadId }));
+  const chatThreads = doc.chatThreads.some((t) => t.id === threadId)
+    ? doc.chatThreads
+    : [thread, ...doc.chatThreads];
+  return { ...doc, chat, chatThreads };
+}
+
 function parse(doc: string | null): ContentDoc {
   const base = defaultDoc();
   if (!doc) return base;
   try {
     const parsed = JSON.parse(doc) as Partial<ContentDoc>;
-    return {
+    return migrateChat({
       history: parsed.history ?? base.history,
       chat: parsed.chat ?? base.chat,
+      chatThreads: parsed.chatThreads ?? base.chatThreads,
       folders: parsed.folders ?? base.folders,
       notes: parsed.notes ?? base.notes,
       uploads: parsed.uploads ?? base.uploads,
@@ -166,7 +196,7 @@ function parse(doc: string | null): ContentDoc {
       snippets: parsed.snippets ?? base.snippets,
       transforms: parsed.transforms ?? base.transforms,
       integrations: parsed.integrations ?? base.integrations,
-    };
+    });
   } catch {
     return base;
   }
@@ -179,6 +209,7 @@ export function createContentStore(io: SettingsIO, deps: ContentDeps): ContentSt
     history: () => read().history,
     insights: () => deps.computeInsights(read().history),
     chat: () => read().chat,
+    chatThreads: () => read().chatThreads,
     folders: () => read().folders,
     notes: () => read().notes,
     uploads: () => read().uploads,

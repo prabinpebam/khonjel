@@ -1,5 +1,6 @@
 import type {
   ChatMessage,
+  ChatThread,
   CleanupResult,
   ConnectionProfile,
   ConnectionTestResult,
@@ -110,6 +111,7 @@ export function createIpcServices(
       history: () => invoke(CHANNELS.contentHistory) as Promise<HistoryEntry[]>,
       insights: () => invoke(CHANNELS.contentInsights) as Promise<InsightsAggregate>,
       chat: () => invoke(CHANNELS.contentChat) as Promise<ChatMessage[]>,
+      chatThreads: () => invoke(CHANNELS.contentChatThreads) as Promise<ChatThread[]>,
       folders: () => invoke(CHANNELS.contentFolders) as Promise<Folder[]>,
       notes: () => invoke(CHANNELS.contentNotes) as Promise<Note[]>,
       uploads: () => invoke(CHANNELS.contentUploads) as Promise<UploadJob[]>,
@@ -129,6 +131,8 @@ export function createIpcServices(
       saveIntegrations: (integrations) =>
         invoke(CHANNELS.contentReplace, "integrations", integrations) as Promise<void>,
       saveChat: (messages) => invoke(CHANNELS.contentReplace, "chat", messages) as Promise<void>,
+      saveChatThreads: (threads) =>
+        invoke(CHANNELS.contentReplace, "chatThreads", threads) as Promise<void>,
       saveUploads: (jobs) => invoke(CHANNELS.contentReplace, "uploads", jobs) as Promise<void>,
       onChanged: (callback) => subscribeContentChanged?.(callback) ?? (() => {}),
     },

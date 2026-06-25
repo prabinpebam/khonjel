@@ -171,6 +171,9 @@ export type {
   HistoryEntry,
   InsightsAggregate,
   ChatMessage,
+  ChatThread,
+  ChatTokenEvent,
+  ChatSendRequest,
   Folder,
   Note,
   UploadState,
@@ -224,6 +227,9 @@ import type {
   HistoryEntry,
   InsightsAggregate,
   ChatMessage,
+  ChatThread,
+  ChatTokenEvent,
+  ChatSendRequest,
   Folder,
   Note,
   UploadJob,
@@ -260,6 +266,7 @@ export interface ContentService {
   history(): Promise<HistoryEntry[]>;
   insights(): Promise<InsightsAggregate>;
   chat(): Promise<ChatMessage[]>;
+  chatThreads(): Promise<ChatThread[]>;
   folders(): Promise<Folder[]>;
   notes(): Promise<Note[]>;
   uploads(): Promise<UploadJob[]>;
@@ -280,6 +287,7 @@ export interface ContentService {
   saveTransforms(transforms: Transform[]): Promise<void>;
   saveIntegrations(integrations: Integration[]): Promise<void>;
   saveChat(messages: ChatMessage[]): Promise<void>;
+  saveChatThreads(threads: ChatThread[]): Promise<void>;
   saveUploads(jobs: UploadJob[]): Promise<void>;
   /** Subscribe to content mutations (e.g. a new dictation appended to history) for live refresh. */
   onChanged(callback: (collection: string) => void): () => void;
@@ -330,6 +338,17 @@ export interface CaptureService {
   pushChunk(sessionId: string, base64Pcm16: string): void;
   stop(sessionId: string): Promise<{ text: string }>;
   onTranscript(callback: (event: TranscriptEvent) => void): () => void;
+}
+
+/**
+ * Streamed chat completion (06 chat spec). Mirrors {@link CaptureService}: `send` is fire-and-forget
+ * and tokens arrive via `onToken`; `stop` aborts an in-flight completion. The ipc adapter bridges to
+ * main (`chat:send`/`chat:stop` + the `khonjel:chat-token` relay); the mock simulates token streaming.
+ */
+export interface ChatService {
+  send(req: ChatSendRequest): Promise<void>;
+  stop(requestId: string): void;
+  onToken(callback: (event: ChatTokenEvent) => void): () => void;
 }
 
 /**

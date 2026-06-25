@@ -46,9 +46,9 @@ export function Chat() {
     const value = text.trim();
     if (!value || pending) return;
     const now = new Date().toISOString();
-    const user: ChatMessage = { id: crypto.randomUUID(), role: "user", content: value, createdAt: now };
+    const user: ChatMessage = { id: crypto.randomUUID(), threadId: "thread-imported", role: "user", content: value, createdAt: now };
     const pendingId = crypto.randomUUID();
-    const placeholder: ChatMessage = { id: pendingId, role: "assistant", content: "\u2026", createdAt: now };
+    const placeholder: ChatMessage = { id: pendingId, threadId: "thread-imported", role: "assistant", content: "\u2026", createdAt: now };
     const conversation = [...messages, user].map((m) => ({ role: m.role, content: m.content }));
     setMessages((prev) => [...prev, user, placeholder]);
     setInput("");

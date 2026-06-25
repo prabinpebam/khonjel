@@ -12,6 +12,7 @@ import { CHANNELS, type Channel, ipcError } from "./ipc-contract";
 import { RequestSchemas } from "./ipc-schemas";
 import type {
   ChatMessage,
+  ChatThread,
   ChatTurn,
   CleanupOptions,
   CleanupResult,
@@ -86,6 +87,7 @@ export interface DispatchDeps {
     history: () => HistoryEntry[] | Promise<HistoryEntry[]>;
     insights: () => InsightsAggregate | Promise<InsightsAggregate>;
     chat: () => ChatMessage[] | Promise<ChatMessage[]>;
+    chatThreads: () => ChatThread[] | Promise<ChatThread[]>;
     folders: () => Folder[] | Promise<Folder[]>;
     notes: () => Note[] | Promise<Note[]>;
     uploads: () => UploadJob[] | Promise<UploadJob[]>;
@@ -156,6 +158,7 @@ export function createDispatch(deps: DispatchDeps): Dispatch {
     [CHANNELS.contentHistory]: () => deps.content.history(),
     [CHANNELS.contentInsights]: () => deps.content.insights(),
     [CHANNELS.contentChat]: () => deps.content.chat(),
+    [CHANNELS.contentChatThreads]: () => deps.content.chatThreads(),
     [CHANNELS.contentFolders]: () => deps.content.folders(),
     [CHANNELS.contentNotes]: () => deps.content.notes(),
     [CHANNELS.contentUploads]: () => deps.content.uploads(),

@@ -123,6 +123,16 @@ const ChatMessageSchema = z
   })
   .passthrough();
 
+const ChatThreadSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    titleStatus: z.enum(["pending", "auto", "manual"]),
+  })
+  .passthrough();
+
 const FolderSchema = z.object({ id: z.string(), name: z.string(), count: z.number() }).passthrough();
 
 const NoteSchema = z
@@ -340,6 +350,7 @@ const HistoryDraftSchema = z.object({
 const ContentCollectionSchema = z.enum([
   "history",
   "chat",
+  "chatThreads",
   "folders",
   "notes",
   "uploads",
@@ -469,6 +480,7 @@ export const RequestSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.contentHistory]: z.tuple([]),
   [CHANNELS.contentInsights]: z.tuple([]),
   [CHANNELS.contentChat]: z.tuple([]),
+  [CHANNELS.contentChatThreads]: z.tuple([]),
   [CHANNELS.contentFolders]: z.tuple([]),
   [CHANNELS.contentNotes]: z.tuple([]),
   [CHANNELS.contentUploads]: z.tuple([]),
@@ -527,6 +539,7 @@ export const ResponseSchemas: Record<Channel, z.ZodTypeAny> = {
   [CHANNELS.contentHistory]: z.array(HistoryEntrySchema),
   [CHANNELS.contentInsights]: InsightsAggregateSchema,
   [CHANNELS.contentChat]: z.array(ChatMessageSchema),
+  [CHANNELS.contentChatThreads]: z.array(ChatThreadSchema),
   [CHANNELS.contentFolders]: z.array(FolderSchema),
   [CHANNELS.contentNotes]: z.array(NoteSchema),
   [CHANNELS.contentUploads]: z.array(UploadJobSchema),
