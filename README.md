@@ -12,9 +12,22 @@ Speak anywhere, and Khonjel transcribes, cleans up, and places the text right wh
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 
+[![Download for Windows](https://img.shields.io/github/v/release/prabinpebam/khonjel?label=Download%20for%20Windows&logo=windows&color=2ea44f)](https://github.com/prabinpebam/khonjel/releases/latest)
+
 </div>
 
 > **Khonjel** is Manipuri for *"Voice."* It works offline by default — your audio and transcripts never leave your machine unless *you* connect a cloud provider.
+
+---
+
+## Download
+
+**[Download the latest release](https://github.com/prabinpebam/khonjel/releases/latest)** — a single portable `.exe` for **Windows 10/11 (x64)**. No installer: download `Khonjel-<version>-portable.exe` from the release assets and run it.
+
+- If **Windows SmartScreen** appears on first run, choose **More info -> Run anyway** (the portable build is unsigned).
+- Khonjel works immediately with a built-in fallback; open **Settings** to download the local whisper.cpp / llama.cpp engines for full on-device transcription and cleanup.
+
+Browse [all releases](https://github.com/prabinpebam/khonjel/releases) for release notes and previous versions.
 
 ---
 
