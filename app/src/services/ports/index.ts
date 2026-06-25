@@ -398,5 +398,6 @@ export interface Services {
   secrets: SecretsService;
   models: ModelManagementService;
   capture: CaptureService;
+  chat: ChatService;
   acceleration: AccelerationService;
 }

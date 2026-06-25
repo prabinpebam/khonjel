@@ -61,6 +61,14 @@ contextBridge.exposeInMainWorld("khonjel", {
     ipcRenderer.on("khonjel:transcript", listener);
     return () => ipcRenderer.removeListener("khonjel:transcript", listener);
   },
+  // Streaming chat: start/stop a completion (one-way) and subscribe to the streamed tokens.
+  chatSend: (req: unknown) => ipcRenderer.send("chat:send", req),
+  chatStop: (requestId: string) => ipcRenderer.send("chat:stop", requestId),
+  onChatToken: (callback: (event: unknown) => void) => {
+    const listener = (_event: unknown, payload: unknown) => callback(payload);
+    ipcRenderer.on("khonjel:chat-token", listener);
+    return () => ipcRenderer.removeListener("khonjel:chat-token", listener);
+  },
   // Content-mutation relay: main sends "khonjel:content-changed" (with the collection) after a
   // mutation (e.g. a new dictation appended to history), so views can refresh live.
   onContentChanged: (callback: (collection: string) => void) => {

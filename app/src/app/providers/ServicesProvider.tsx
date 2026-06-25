@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ServicesContext, type Services } from "@services";
-import type { ModelProgress, ModelRuntimeEvent, TranscriptEvent, AccelerationProgress, AccelerationState } from "@services/ports";
+import type { ModelProgress, ModelRuntimeEvent, TranscriptEvent, AccelerationProgress, AccelerationState, ChatSendRequest, ChatTokenEvent } from "@services/ports";
 // ServicesProvider is the ONE place allowed to bind a concrete adapter (ESLint allowlists it).
 import { mockServices } from "@services/adapters/mock";
 import { createIpcServices } from "@services/adapters/ipc";
@@ -26,6 +26,12 @@ declare global {
       capturePushChunk?: (sessionId: string, base64Pcm16: string) => void;
       /** Subscribe to the live transcript from a streaming capture session; returns an unsubscribe fn. */
       onTranscript?: (callback: (event: TranscriptEvent) => void) => () => void;
+      /** Start a streamed chat completion (one-way); tokens arrive via onChatToken. */
+      chatSend?: (req: ChatSendRequest) => void;
+      /** Abort an in-flight chat completion. */
+      chatStop?: (requestId: string) => void;
+      /** Subscribe to streamed chat tokens from main; returns an unsubscribe fn. */
+      onChatToken?: (callback: (event: ChatTokenEvent) => void) => () => void;
     };
   }
 }
@@ -50,6 +56,13 @@ function resolveServices(): Services {
       bridge.onModelRuntime ? (cb) => bridge.onModelRuntime!(cb) : undefined,
       bridge.onAccelerationProgress ? (cb) => bridge.onAccelerationProgress!(cb) : undefined,
       bridge.onAccelerationState ? (cb) => bridge.onAccelerationState!(cb) : undefined,
+      bridge.chatSend && bridge.chatStop && bridge.onChatToken
+        ? {
+            send: (req) => bridge.chatSend!(req),
+            stop: (id) => bridge.chatStop!(id),
+            onToken: (cb) => bridge.onChatToken!(cb),
+          }
+        : undefined,
     );
   }
   return mockServices;

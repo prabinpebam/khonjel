@@ -1,6 +1,8 @@
 import type {
   ChatMessage,
   ChatThread,
+  ChatTokenEvent,
+  ChatSendRequest,
   CleanupResult,
   ConnectionProfile,
   ConnectionTestResult,
@@ -66,6 +68,13 @@ export interface CaptureBridge {
   onTranscript: (callback: (event: TranscriptEvent) => void) => () => void;
 }
 
+/** The chat bridge (preload): send a streamed completion, stop it, and subscribe to its tokens. */
+export interface ChatBridge {
+  send: (req: ChatSendRequest) => void;
+  stop: (requestId: string) => void;
+  onToken: (callback: (event: ChatTokenEvent) => void) => () => void;
+}
+
 export function createIpcServices(
   invoke: Invoke,
   subscribeModelProgress?: SubscribeModelProgress,
@@ -74,6 +83,7 @@ export function createIpcServices(
   subscribeModelRuntime?: SubscribeModelRuntime,
   subscribeAccelerationProgress?: SubscribeAccelerationProgress,
   subscribeAccelerationState?: SubscribeAccelerationState,
+  chatBridge?: ChatBridge,
 ): Services {
   return {
     system: {
@@ -155,6 +165,13 @@ export function createIpcServices(
       stop: (id) => invoke(CHANNELS.captureStop, id) as Promise<{ text: string }>,
       pushChunk: (id, base64Pcm16) => captureBridge?.pushChunk(id, base64Pcm16),
       onTranscript: (callback) => captureBridge?.onTranscript(callback) ?? (() => {}),
+    },
+    chat: {
+      send: async (req) => {
+        chatBridge?.send(req);
+      },
+      stop: (requestId) => chatBridge?.stop(requestId),
+      onToken: (callback) => chatBridge?.onToken(callback) ?? (() => {}),
     },
     acceleration: {
       profile: () => invoke(CHANNELS.accelerationProfile) as Promise<GpuProfile>,

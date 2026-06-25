@@ -8,6 +8,7 @@ import { mockConnectionService } from "./connections";
 import { mockSecretsService } from "./secrets";
 import { mockModelService } from "./models";
 import { mockCaptureService } from "./capture";
+import { mockChatService } from "./chat";
 import { mockAccelerationService } from "./acceleration";
 
 /** The mock implementation of every port. Swapped for real adapters later. */
@@ -21,5 +22,6 @@ export const mockServices: Services = {
   secrets: mockSecretsService,
   models: mockModelService,
   capture: mockCaptureService,
+  chat: mockChatService,
   acceleration: mockAccelerationService,
 };
