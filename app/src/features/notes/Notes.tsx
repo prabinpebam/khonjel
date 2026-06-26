@@ -6,6 +6,7 @@ import { useDictationField } from "@hooks/useDictationField";
 import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
 import { SearchInput } from "@components/common/SearchInput";
+import { Panel } from "@components/common/Panel";
 import { Button } from "@components/ui/button";
 import { Select } from "@components/ui/select";
 import { Textarea } from "@components/ui/textarea";
@@ -168,7 +169,7 @@ export function Notes() {
       />
 
       <div className="flex min-h-0 flex-1 gap-4">
-        <aside className="flex w-52 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+        <Panel as="aside" className="w-52 shrink-0">
           <div className="border-b border-border p-2.5">
             <SearchInput
               value={query}
@@ -257,9 +258,9 @@ export function Notes() {
               );
             })}
           </nav>
-        </aside>
+        </Panel>
 
-        <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+        <Panel className="w-72 shrink-0">
           <div className="flex-1 overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="p-5 text-sm text-muted-foreground">
@@ -287,9 +288,9 @@ export function Notes() {
               })
             )}
           </div>
-        </div>
+        </Panel>
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+        <Panel className="min-w-0 flex-1">
           {selected ? (
             <>
               <div className="flex items-center gap-2 border-b border-border p-4">
@@ -383,7 +384,7 @@ export function Notes() {
               Select a note to start editing.
             </div>
           )}
-        </div>
+        </Panel>
       </div>
     </div>
   );

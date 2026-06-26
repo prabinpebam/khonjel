@@ -8,6 +8,7 @@ import { useSettingsStore } from "@stores/settings";
 import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
 import { SearchInput } from "@components/common/SearchInput";
+import { Panel } from "@components/common/Panel";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { Textarea } from "@components/ui/textarea";
@@ -262,7 +263,7 @@ export function Chat() {
       />
 
       <div className="flex min-h-0 flex-1 gap-4">
-        <aside className="flex w-60 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+        <Panel as="aside" className="w-60 shrink-0">
           <div className="flex flex-col gap-2 border-b border-border p-2.5">
             <Button variant="secondary" size="sm" className="w-full" data-eval="chat-new" onClick={newChat}>
               <Plus />
@@ -359,9 +360,9 @@ export function Chat() {
               ))
             )}
           </div>
-        </aside>
+        </Panel>
 
-        <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+        <Panel as="section" className="min-w-0 flex-1">
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             <div className="flex flex-1 flex-col px-6 py-5">
               {messages.length === 0 ? (
@@ -443,7 +444,7 @@ export function Chat() {
               </div>
             </div>
           </div>
-        </section>
+        </Panel>
       </div>
     </div>
   );
