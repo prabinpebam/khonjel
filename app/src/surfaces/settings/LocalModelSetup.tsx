@@ -16,6 +16,7 @@ import { useModelsStore } from "@stores/models";
 import { useSettingsStore } from "@stores/settings";
 import type { ModelReadiness, ModelStatus } from "@services/ports";
 import { Button } from "@components/ui/button";
+import { Progress } from "@components/ui/progress";
 import { cn } from "@lib/utils";
 import { isTargetSettled } from "./local-setup-logic";
 
@@ -272,16 +273,7 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
         ) : null}
 
         {running && totalBytes > 0 ? (
-          <div className="h-1.5 w-full overflow-hidden rounded-pill bg-surface-2">
-            <div
-              className="h-full rounded-pill bg-accent transition-[width] duration-300"
-              role="progressbar"
-              aria-valuenow={pct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+          <Progress value={pct} tone="accent" className="h-1.5" barClassName="duration-300" />
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
@@ -417,16 +409,7 @@ function RecommendedCard({
 
       {downloading ? (
         <div className="mt-2">
-          <div className="h-1.5 w-full overflow-hidden rounded-pill bg-surface">
-            <div
-              className="h-full rounded-pill bg-accent transition-[width] duration-300"
-              role="progressbar"
-              aria-valuenow={pct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+          <Progress value={pct} tone="accent" className="h-1.5 bg-surface" barClassName="duration-300" />
           <p className="mt-1 text-xs text-muted-foreground">
             {fmt(model?.bytesDone)} / {fmt(model?.bytesTotal)}
           </p>

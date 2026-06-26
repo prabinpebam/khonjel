@@ -5,6 +5,7 @@ import type { ModelCompatibility, ModelReadiness, ModelStatus } from "@services/
 import { useSettingsStore } from "@stores/settings";
 import { useModelsStore } from "@stores/models";
 import { Button } from "@components/ui/button";
+import { Progress } from "@components/ui/progress";
 import { cn } from "@lib/utils";
 
 /** Bytes to a short "466 MB" / "1.5 GB" label for progress text. */
@@ -194,16 +195,7 @@ function ModelRow({ model, selected, onSelect, onDownload, onCancel, onRemove, o
 
         {busy ? (
           <div className="mt-1 flex items-center gap-2">
-            <div className="h-1.5 w-32 overflow-hidden rounded-pill bg-surface-2">
-              <div
-                className="h-full rounded-pill bg-accent"
-                role="progressbar"
-                aria-valuenow={pct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
+            <Progress value={pct} tone="accent" className="h-1.5 w-32" />
             <span className="text-xs text-muted-foreground">
               {model.state === "verifying"
                 ? "Verifying…"
