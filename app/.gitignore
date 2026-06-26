@@ -2,6 +2,9 @@
 dist
 dist-ssr
 
+# Storybook static build (design-system inventory)
+storybook-static
+
 # Electron packaging output
 release
 

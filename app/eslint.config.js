@@ -12,7 +12,7 @@ import tseslint from "typescript-eslint";
  * docs/product-spec/03-ux-ui/design-system/01-intent.md and 06-test-and-validation-strategy.md.
  */
 export default tseslint.config(
-  { ignores: ["dist", "node_modules", "coverage", "electron/main.cjs", "electron/preload.cjs"] },
+  { ignores: ["dist", "storybook-static", "node_modules", "coverage", "electron/main.cjs", "electron/preload.cjs"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   jsxA11y.flatConfigs.recommended,
@@ -47,6 +47,15 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  // Storybook stories: a story's `render` is mounted as a component, so hooks are valid there;
+  // stories also export a `meta` object beside the story objects (no Fast Refresh concern).
+  {
+    files: ["**/*.stories.{ts,tsx}"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+      "react-refresh/only-export-components": "off",
     },
   },
   // The services layer is allowed to wire its own adapters.
