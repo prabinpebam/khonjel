@@ -16,6 +16,7 @@ interface SelectProps {
   placeholder?: string;
   className?: string;
   "aria-label"?: string;
+  "data-eval"?: string;
 }
 
 /** Custom dropdown (listbox) with a fully styled, portaled option list. No deps. */
@@ -26,6 +27,7 @@ export function Select({
   placeholder,
   className,
   "aria-label": ariaLabel,
+  "data-eval": dataEval,
 }: SelectProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -121,6 +123,7 @@ export function Select({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
+        data-eval={dataEval}
         onClick={() => (open ? closeMenu() : openMenu(selectedIndex))}
         onKeyDown={onTriggerKeyDown}
         className="inline-flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border bg-surface ps-3 pe-2 text-sm text-foreground transition-colors hover:bg-surface-2"
@@ -143,6 +146,8 @@ export function Select({
         ? createPortal(
             <div
               ref={popupRef}
+              role="listbox"
+              aria-label={ariaLabel}
               className="fixed z-50 max-h-64 overflow-y-auto rounded-md border border-border bg-surface p-1 shadow-pop"
               style={{ top: rect.top, left: rect.left, minWidth: rect.width }}
             >
@@ -155,7 +160,8 @@ export function Select({
                       optionRefs.current[i] = el;
                     }}
                     type="button"
-                    aria-current={isSelected ? "true" : undefined}
+                    role="option"
+                    aria-selected={isSelected}
                     onClick={() => selectAt(i)}
                     onKeyDown={(e) => onOptionKeyDown(e, i)}
                     className={cn(
