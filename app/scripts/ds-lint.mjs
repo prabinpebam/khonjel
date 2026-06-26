@@ -35,9 +35,9 @@ const RULES = [
     msg: "rgb()/rgba() literal. Use a token or color-mix(in srgb, var(--token) N%, transparent).",
   },
   {
-    id: "arbitrary-px",
-    re: /\b(?:p|px|py|pt|pb|pl|pr|ps|pe|m|mx|my|mt|mb|ml|mr|ms|me|gap|gap-x|gap-y|w|h|min-w|min-h|max-w|max-h|rounded(?:-[a-z]+)?|text|leading|tracking|inset|top|bottom|left|right|start|end|size|space-x|space-y)-\[\d*\.?\d+px\]/,
-    msg: "Bare px in a utility. Use the spacing/radius/type scale, or a named token var: -[var(--name)].",
+    id: "arbitrary-size",
+    re: /\b(?:p|px|py|pt|pb|pl|pr|ps|pe|m|mx|my|mt|mb|ml|mr|ms|me|gap|gap-x|gap-y|w|h|min-w|min-h|max-w|max-h|rounded(?:-[a-z]+)?|text|leading|tracking|inset|top|bottom|left|right|start|end|size|space-x|space-y)-\[\d*\.?\d+(?:px|rem|em|ch|%)\]/,
+    msg: "Bare length in a utility. Use the spacing/radius/type scale, or a named token: -[var(--name)]. (Viewport units vh/vw allowed for overlay sizing.)",
   },
   {
     id: "important",
@@ -71,6 +71,22 @@ function walk(dir) {
   return out;
 }
 
+/**
+ * Layering (P4): a feature must not import another feature's internals. Returns the offending
+ * feature id, or null. Promote shared code to common/ instead of reaching sideways.
+ * @param {string} file @param {string} line @returns {string | null}
+ */
+function crossFeatureImport(file, line) {
+  const rel = relative(ROOT, file).replace(/\\/g, "/");
+  const own = rel.match(/src\/features\/([^/]+)\//)?.[1];
+  if (!own) return null;
+  const spec = line.match(/\bfrom\s+["']([^"']+)["']/)?.[1];
+  if (!spec) return null;
+  const other =
+    spec.match(/@features\/([a-z-]+)\//)?.[1] ?? spec.match(/(?:^|\/)features\/([a-z-]+)\//)?.[1];
+  return other && other !== own ? other : null;
+}
+
 let violations = 0;
 for (const file of walk(SRC)) {
   const lines = readFileSync(file, "utf8").split(/\r?\n/);
@@ -83,6 +99,14 @@ for (const file of walk(SRC)) {
         console.error(`${relative(ROOT, file)}:${i + 1}  [${rule.id}]  ${rule.msg}`);
         console.error(`    ${line.trim()}`);
       }
+    }
+    const otherFeature = crossFeatureImport(file, line);
+    if (otherFeature) {
+      violations++;
+      console.error(
+        `${relative(ROOT, file)}:${i + 1}  [feature-cross-import]  Imports another feature ("${otherFeature}"). Promote shared code to common/ (P4/P11).`,
+      );
+      console.error(`    ${line.trim()}`);
     }
   });
 }

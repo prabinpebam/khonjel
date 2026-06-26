@@ -66,6 +66,7 @@
   --titlebar-height: 52px;
   --content-max-width: 1040px;
   --rail-width: 260px;
+  --chat-bubble-max: 72%; /* chat bubble / edit field max width within the conversation column */
 }
 
 /* ===== Color — Dark (counterpart) ===== */

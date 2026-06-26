@@ -535,7 +535,7 @@ function MessageBubble({
           onChange={(e) => setEditText(e.target.value)}
           aria-label="Edit message"
           data-eval="chat-edit-input"
-          className="max-h-40 w-[72%] resize-none"
+          className="max-h-40 w-[var(--chat-bubble-max)] resize-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -565,7 +565,7 @@ function MessageBubble({
     >
       <div
         className={cn(
-          "max-w-[72%] rounded-lg px-4 py-2.5 text-sm",
+          "max-w-[var(--chat-bubble-max)] rounded-lg px-4 py-2.5 text-sm",
           isUser ? "whitespace-pre-wrap bg-primary text-primary-foreground" : "border border-border bg-surface-2 text-foreground",
           isError && "whitespace-pre-wrap border-danger text-danger",
         )}

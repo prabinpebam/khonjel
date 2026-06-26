@@ -17,7 +17,7 @@ function InlineNodes({ nodes }: { nodes: MdInline[] }) {
             return <span key={idx}>{node.value}</span>;
           case "code":
             return (
-              <code key={idx} className="rounded bg-foreground/10 px-1 py-0.5 font-mono text-[0.85em]">
+              <code key={idx} className="rounded bg-foreground/10 px-1 py-0.5 font-mono">
                 {node.value}
               </code>
             );
