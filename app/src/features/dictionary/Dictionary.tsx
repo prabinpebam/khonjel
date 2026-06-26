@@ -4,6 +4,7 @@ import { useServices } from "@services";
 import type { DictionaryEntry, LibraryScope, Snippet } from "@services/ports";
 import { PageHeader } from "@components/common/PageHeader";
 import { PromoBanner } from "@components/common/PromoBanner";
+import { RowActions } from "@components/common/RowActions";
 import { SearchInput } from "@components/common/SearchInput";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
@@ -279,7 +280,7 @@ export function Dictionary() {
                   {entry.source === "auto-learn" ? <Badge variant="accent">Auto-learned</Badge> : null}
                   {entry.scope === "team" ? <Badge variant="neutral">Team</Badge> : null}
                 </div>
-                <RowActions onEdit={() => editEntry(entry)} onDelete={() => deleteEntry(entry.id)} />
+                <EntryActions onEdit={() => editEntry(entry)} onDelete={() => deleteEntry(entry.id)} />
               </div>
             ))
           )
@@ -294,7 +295,7 @@ export function Dictionary() {
                 <span className="truncate text-muted-foreground">{snippet.expansion}</span>
                 {snippet.scope === "team" ? <Badge variant="neutral">Team</Badge> : null}
               </div>
-              <RowActions onEdit={() => editSnippet(snippet)} onDelete={() => deleteSnippet(snippet.id)} />
+              <EntryActions onEdit={() => editSnippet(snippet)} onDelete={() => deleteSnippet(snippet.id)} />
             </div>
           ))
         )}
@@ -303,9 +304,9 @@ export function Dictionary() {
   );
 }
 
-function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+function EntryActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
   return (
-    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+    <RowActions className="shrink-0 gap-0.5">
       <Button variant="ghost" size="icon" aria-label="Edit" onClick={onEdit}>
         <Pencil />
       </Button>
@@ -318,7 +319,7 @@ function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => 
       >
         <Trash2 />
       </Button>
-    </div>
+    </RowActions>
   );
 }
 

@@ -8,6 +8,7 @@ import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
 import { SearchInput } from "@components/common/SearchInput";
 import { Panel } from "@components/common/Panel";
+import { RowActions } from "@components/common/RowActions";
 import { Button } from "@components/ui/button";
 import { Select } from "@components/ui/select";
 import { Textarea } from "@components/ui/textarea";
@@ -232,7 +233,7 @@ export function Notes() {
                     </button>
                   )}
                   {editable && renamingFolderId !== folder.id ? (
-                    <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <RowActions className="shrink-0 gap-1">
                       <button
                         type="button"
                         aria-label="Rename folder"
@@ -249,7 +250,7 @@ export function Notes() {
                       >
                         <Trash2 className="size-3.5 text-tertiary-foreground hover:text-danger" />
                       </button>
-                    </div>
+                    </RowActions>
                   ) : null}
                 </div>
               );

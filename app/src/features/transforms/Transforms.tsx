@@ -5,6 +5,7 @@ import type { Transform } from "@services/ports";
 import { useSettingsStore } from "@stores/settings";
 import { PageHeader } from "@components/common/PageHeader";
 import { PromoBanner } from "@components/common/PromoBanner";
+import { RowActions } from "@components/common/RowActions";
 import { Button } from "@components/ui/button";
 import { Card } from "@components/ui/card";
 import { Input } from "@components/ui/input";
@@ -116,7 +117,7 @@ export function Transforms() {
           <Card key={transform.id} className="group flex flex-col gap-3 p-5">
             <div className="flex items-start justify-between">
               <Keycap>{transform.hotkey}</Keycap>
-              <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <RowActions className="gap-1">
                 <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setDraft({ ...transform })}>
                   <Pencil />
                 </Button>
@@ -131,7 +132,7 @@ export function Transforms() {
                     <Trash2 />
                   </Button>
                 ) : null}
-              </div>
+              </RowActions>
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">{transform.name}</p>

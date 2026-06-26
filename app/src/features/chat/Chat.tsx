@@ -10,6 +10,7 @@ import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
 import { SearchInput } from "@components/common/SearchInput";
 import { Panel } from "@components/common/Panel";
+import { RowActions } from "@components/common/RowActions";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { Textarea } from "@components/ui/textarea";
@@ -335,29 +336,29 @@ export function Chat() {
                       ) : null}
                     </div>
                   )}
-                  <button
-                    type="button"
-                    aria-label="Rename conversation"
-                    className="opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setRenamingId(t.id);
-                    }}
-                  >
-                    <Pencil className="size-3.5 text-tertiary-foreground hover:text-foreground" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Delete conversation"
-                    data-eval="chat-thread-delete"
-                    className="opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeThread(t.id);
-                    }}
-                  >
-                    <Trash2 className="size-3.5 text-tertiary-foreground hover:text-danger" />
-                  </button>
+                  <RowActions className="gap-1">
+                    <button
+                      type="button"
+                      aria-label="Rename conversation"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRenamingId(t.id);
+                      }}
+                    >
+                      <Pencil className="size-3.5 text-tertiary-foreground hover:text-foreground" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Delete conversation"
+                      data-eval="chat-thread-delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeThread(t.id);
+                      }}
+                    >
+                      <Trash2 className="size-3.5 text-tertiary-foreground hover:text-danger" />
+                    </button>
+                  </RowActions>
                 </div>
               ))
             )}
@@ -580,7 +581,7 @@ function MessageBubble({
       </div>
       {isStopped ? <span className="px-1 text-xs text-tertiary-foreground">Stopped</span> : null}
       {!streaming ? (
-        <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <RowActions className="gap-0.5">
           <Button
             variant="ghost"
             size="icon"
@@ -606,7 +607,7 @@ function MessageBubble({
               <RefreshCw />
             </Button>
           )}
-        </div>
+        </RowActions>
       ) : null}
     </div>
   );

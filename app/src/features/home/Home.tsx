@@ -8,6 +8,7 @@ import { EMPTY_INSIGHTS } from "@lib/defaults";
 import { learnCorrections } from "@lib/dictionary/auto-learn";
 import { PageHeader } from "@components/common/PageHeader";
 import { StatCard } from "@components/common/StatCard";
+import { RowActions } from "@components/common/RowActions";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { Keycap } from "@components/ui/keycap";
@@ -271,7 +272,7 @@ function HistoryRow({
         )}
       </div>
       {!editing ? (
-        <div className="flex shrink-0 items-start gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <RowActions className="shrink-0 items-start gap-0.5">
           <Button
             variant="ghost"
             size="icon"
@@ -293,7 +294,7 @@ function HistoryRow({
           >
             <Trash2 />
           </Button>
-        </div>
+        </RowActions>
       ) : null}
     </div>
   );
