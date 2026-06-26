@@ -6,6 +6,7 @@ import { decodeFileToWavBase64 } from "@lib/audio/decode";
 import { PageHeader } from "@components/common/PageHeader";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
+import { Card } from "@components/ui/card";
 import { formatDuration } from "@lib/format";
 import { cn } from "@lib/utils";
 
@@ -151,9 +152,9 @@ export function Upload() {
 
       <div className="mt-6 flex flex-col gap-3">
         {jobs.map((job) => (
-          <div
+          <Card
             key={job.id}
-            className="flex items-start gap-3 rounded-md border border-border bg-surface p-4"
+            className="flex items-start gap-3 p-4"
           >
             <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-md bg-surface-2 text-muted-foreground">
               <FileAudio className="size-4" />
@@ -215,7 +216,7 @@ export function Upload() {
             >
               <Trash2 />
             </Button>
-          </div>
+          </Card>
         ))}
       </div>
     </div>

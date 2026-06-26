@@ -4,6 +4,7 @@ import { useServices } from "@services";
 import type { ConnectionAuthMode, ConnectionKind, ConnectionProfile } from "@services/ports";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
+import { Card } from "@components/ui/card";
 import { Input } from "@components/ui/input";
 import { Label } from "@components/ui/label";
 import { Select } from "@components/ui/select";
@@ -201,7 +202,7 @@ export function ConnectionsSettings() {
             </div>
           ) : null}
         </div>
-        <div className="rounded-md border border-border bg-surface p-5">
+        <Card className="p-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="conn-id">Name</Label>
@@ -314,7 +315,7 @@ export function ConnectionsSettings() {
               </>
             )}
           </Button>
-        </div>
+        </Card>
       </section>
     </div>
   );

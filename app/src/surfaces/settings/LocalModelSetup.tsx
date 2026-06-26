@@ -16,6 +16,7 @@ import { useModelsStore } from "@stores/models";
 import { useSettingsStore } from "@stores/settings";
 import type { ModelReadiness, ModelStatus } from "@services/ports";
 import { Button } from "@components/ui/button";
+import { Card } from "@components/ui/card";
 import { Progress } from "@components/ui/progress";
 import { cn } from "@lib/utils";
 import { isTargetSettled } from "./local-setup-logic";
@@ -208,9 +209,10 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
   };
 
   return (
-    <section
+    <Card
+      as="section"
       data-eval="local-model-setup"
-      className="rounded-md border border-border bg-surface p-4"
+      className="p-4"
       aria-label="Local model setup"
     >
       <div className="flex flex-col gap-4">
@@ -325,7 +327,7 @@ export function LocalModelSetup({ compact = false }: { compact?: boolean }) {
           </span>
         </div>
       </div>
-    </section>
+    </Card>
   );
 }
 

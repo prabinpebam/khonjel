@@ -1,9 +1,15 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ElementType } from "react";
 import { cn } from "@lib/utils";
 
-export function Card({ className, ...props }: ComponentProps<"div">) {
+type CardProps = ComponentProps<"div"> & {
+  /** Render as a landmark element (e.g. "section") to keep semantics + aria-label. */
+  as?: "div" | "section" | "article";
+};
+
+export function Card({ as = "div", className, ...props }: CardProps) {
+  const Tag = as as ElementType;
   return (
-    <div
+    <Tag
       className={cn("rounded-md border border-border bg-surface shadow-card", className)}
       {...props}
     />

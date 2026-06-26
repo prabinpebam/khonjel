@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSettingsStore } from "@stores/settings";
+import { Card } from "@components/ui/card";
 import { Tabs } from "@components/ui/tabs";
 import { InferenceConfigBlock, InferenceModeSelector } from "../inference";
 import { LocalModelSetup } from "../LocalModelSetup";
@@ -33,7 +34,7 @@ export function SpeechToTextSettings() {
           />
         </section>
 
-        <section className="rounded-md border border-border bg-surface p-5">
+        <Card as="section" className="p-5">
           {mode === "local" ? (
             <div className="mb-4 flex flex-col gap-4">
               <LocalModelSetup compact={tab !== "dictation"} />
@@ -41,7 +42,7 @@ export function SpeechToTextSettings() {
             </div>
           ) : null}
           <InferenceConfigBlock prefix={prefix} kind="stt" />
-        </section>
+        </Card>
       </div>
     </div>
   );

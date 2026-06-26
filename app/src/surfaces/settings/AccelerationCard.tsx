@@ -4,6 +4,7 @@ import { useServices } from "@services";
 import { useAccelerationStore } from "@stores/acceleration";
 import type { AccelerationMode } from "@services/ports";
 import { Button } from "@components/ui/button";
+import { Card } from "@components/ui/card";
 import { cn } from "@lib/utils";
 
 function fmtBytes(bytes?: number): string {
@@ -56,10 +57,11 @@ export function AccelerationCard() {
   const speedup = lastTest?.speedup ? `${Math.round(lastTest.speedup)}x` : plan?.estimatedSpeedup;
 
   return (
-    <section
+    <Card
+      as="section"
       data-eval="acceleration-card"
       data-eval-accel-state={view}
-      className="rounded-md border border-border bg-surface p-4"
+      className="p-4"
       aria-label="GPU acceleration"
     >
       <div className="flex flex-col gap-3">
@@ -140,7 +142,7 @@ export function AccelerationCard() {
 
         <AdvancedSection />
       </div>
-    </section>
+    </Card>
   );
 }
 

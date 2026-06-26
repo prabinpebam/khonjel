@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@stores/settings";
 import { SettingGroup } from "@components/common/SettingRow";
+import { Card } from "@components/ui/card";
 import { Label } from "@components/ui/label";
 import { Tabs } from "@components/ui/tabs";
 import { Textarea } from "@components/ui/textarea";
@@ -54,7 +55,7 @@ export function LanguageModelsSettings() {
         />
       </section>
 
-      <section className="rounded-md border border-border bg-surface p-5">
+      <Card as="section" className="p-5">
         {chatMode === "local" ? (
           <div className="mb-4 flex flex-col gap-4">
             <LocalModelSetup />
@@ -62,7 +63,7 @@ export function LanguageModelsSettings() {
           </div>
         ) : null}
         <InferenceConfigBlock prefix="llm.chat" kind="llm" />
-      </section>
+      </Card>
 
       <div>
         <h3 className="mb-3 text-sm font-semibold text-foreground">Per-task options</h3>
