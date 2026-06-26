@@ -1,47 +1,30 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useThemeStore, type Theme } from "@stores/theme";
-import { cn } from "@lib/utils";
+import { Segmented } from "@components/ui/segmented";
 
-const THEME_OPTIONS: { id: Theme; icon: typeof Sun; label: string }[] = [
-  { id: "light", icon: Sun, label: "Light" },
-  { id: "dark", icon: Moon, label: "Dark" },
-  { id: "auto", icon: Monitor, label: "Auto" },
+const THEME_OPTIONS = [
+  { value: "light" as Theme, label: "Light", icon: Sun },
+  { value: "dark" as Theme, label: "Dark", icon: Moon },
+  { value: "auto" as Theme, label: "Auto", icon: Monitor },
 ];
 
 /**
- * Light / Dark / Auto theme switcher (a compact segmented control). Reads/writes the persisted
- * theme store; ThemeProvider applies it to the DOM. Lives in the title bar so it ships in the
- * desktop app, not just the dev mock.
+ * Light / Dark / Auto theme switcher for the title bar: the compact icon-only form of the shared
+ * Segmented control. Reads/writes the persisted theme store; ThemeProvider applies it to the DOM.
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
 
   return (
-    <div
-      role="group"
+    <Segmented<Theme>
       aria-label="Theme"
-      className={cn("flex items-center gap-0.5 rounded-pill bg-foreground/5 p-0.5", className)}
-    >
-      {THEME_OPTIONS.map(({ id, icon: Icon, label }) => (
-        <button
-          key={id}
-          type="button"
-          onClick={() => setTheme(id)}
-          aria-pressed={theme === id}
-          aria-label={`${label} theme`}
-          data-eval="theme-option"
-          data-eval-theme={id}
-          className={cn(
-            "grid size-7 place-items-center rounded-pill transition-colors",
-            theme === id
-              ? "bg-accent-soft text-accent"
-              : "text-muted-foreground hover:bg-foreground/10 hover:text-foreground",
-          )}
-        >
-          <Icon className="size-4" />
-        </button>
-      ))}
-    </div>
+      size="icon"
+      tone="soft"
+      value={theme}
+      onChange={setTheme}
+      options={THEME_OPTIONS}
+      className={className}
+    />
   );
 }
