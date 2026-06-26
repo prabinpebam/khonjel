@@ -25,7 +25,7 @@ const VIEWS: Record<NavId, ComponentType> = {
 };
 
 /** Views that own the full content height and scroll internally (bordered, app-like boundary). */
-const FILL_VIEWS = new Set<NavId>(["notes"]);
+const FILL_VIEWS = new Set<NavId>(["chat", "notes"]);
 
 /** The primary desktop window: title bar + sidebar + floating content panel. */
 export function ControlPanel() {

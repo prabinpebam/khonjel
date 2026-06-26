@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, Loader2, Mic, Pencil, Plus, RefreshCw, SendHorizontal, Square, Trash2 } from "lucide-react";
+import { Check, Copy, Loader2, Mic, Pencil, Plus, RefreshCw, Search, SendHorizontal, Square, Trash2, X } from "lucide-react";
 import { useServices } from "@services";
 import type { ChatMessage, ChatThread, ChatTokenEvent } from "@services/ports";
 import { useDictationField } from "@hooks/useDictationField";
@@ -9,11 +9,13 @@ import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
+import { Input } from "@components/ui/input";
 import { Textarea } from "@components/ui/textarea";
 import { cn } from "@lib/utils";
 import { autoTitleThread, createThread, deleteThread, renameThread, sortThreads, touchThread } from "@lib/chat/threads";
 import { chatTitlePrompt, cleanTitle, deriveThreadTitle } from "@lib/chat/title";
 import { splitReasoning } from "@lib/chat/stream";
+import { searchThreads, splitHighlight } from "@lib/chat/search";
 import { precedingUserMessage, toTurns, truncateAfter } from "@lib/chat/regenerate";
 import { Markdown } from "./Markdown";
 
@@ -30,6 +32,7 @@ export function Chat() {
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [threadQuery, setThreadQuery] = useState("");
   const levelRef = useRef(0);
   const dictation = useDictationField(input, setInput, { onLevel: (n) => (levelRef.current = n) });
   const loadedRef = useRef(false);
@@ -42,6 +45,10 @@ export function Chat() {
   const pinnedRef = useRef(true);
 
   const sortedThreads = useMemo(() => sortThreads(threads), [threads]);
+  const results = useMemo(
+    () => searchThreads(sortedThreads, allMessages, threadQuery),
+    [sortedThreads, allMessages, threadQuery],
+  );
   const messages = useMemo(() => allMessages.filter((m) => m.threadId === activeId), [allMessages, activeId]);
 
   // Load persisted threads + messages.
@@ -248,172 +255,229 @@ export function Chat() {
   }
 
   return (
-    <div className="flex min-h-full" data-eval="chat-root">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-border pr-3">
-        <Button variant="secondary" size="sm" className="mb-3" data-eval="chat-new" onClick={newChat}>
-          <Plus />
-          New chat
-        </Button>
-        <div className="flex flex-col gap-0.5 overflow-y-auto" role="listbox" aria-label="Conversations">
-          {sortedThreads.length === 0 ? (
-            <p className="px-2 py-1 text-xs text-tertiary-foreground">No conversations yet.</p>
-          ) : (
-            sortedThreads.map((t) => (
-              <div
-                key={t.id}
-                role="option"
-                aria-selected={t.id === activeId}
-                data-eval="chat-thread"
-                tabIndex={0}
-                onClick={() => setActiveId(t.id)}
-                onDoubleClick={() => setRenamingId(t.id)}
-                onKeyDown={(e) => {
-                  if (renamingId === t.id) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setActiveId(t.id);
-                  } else if (e.key === "F2") {
-                    setRenamingId(t.id);
-                  }
-                }}
-                className={cn(
-                  "group flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                  t.id === activeId ? "bg-sidebar-selected text-foreground" : "text-muted-foreground hover:bg-foreground/5",
-                )}
-              >
-                {renamingId === t.id ? (
-                  <input
-                    ref={(el) => el?.focus()}
-                    defaultValue={t.title}
-                    aria-label="Conversation title"
-                    className="min-w-0 flex-1 rounded-sm bg-surface px-1 text-sm text-foreground outline-none"
-                    onClick={(e) => e.stopPropagation()}
-                    onBlur={(e) => commitRename(t.id, e.target.value)}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                      if (e.key === "Enter") commitRename(t.id, e.currentTarget.value);
-                      if (e.key === "Escape") setRenamingId(null);
-                    }}
-                  />
-                ) : (
-                  <span className="min-w-0 flex-1 truncate text-left">{t.title || "New chat"}</span>
-                )}
-                <button
-                  type="button"
-                  aria-label="Rename conversation"
-                  className="opacity-0 transition-opacity group-hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setRenamingId(t.id);
-                  }}
-                >
-                  <Pencil className="size-3.5 text-tertiary-foreground hover:text-foreground" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Delete conversation"
-                  data-eval="chat-thread-delete"
-                  className="opacity-0 transition-opacity group-hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeThread(t.id);
-                  }}
-                >
-                  <Trash2 className="size-3.5 text-tertiary-foreground hover:text-danger" />
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </aside>
+    <div className="flex min-h-0 flex-1 flex-col" data-eval="chat-root">
+      <PageHeader
+        title="Chat"
+        actions={<Badge variant="accent" data-eval="chat-model">{`${llm.scope} \u00b7 ${llm.model}`}</Badge>}
+      />
 
-      <div className="flex min-h-full flex-1 flex-col pl-5">
-        <PageHeader
-          title="Chat"
-          actions={<Badge variant="accent" data-eval="chat-model">{`${llm.scope} \u00b7 ${llm.model}`}</Badge>}
-        />
-
-        <div className="flex-1">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <p className="text-sm text-muted-foreground">Ask me anything.</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => send(s)}
-                    className="rounded-pill border border-border bg-surface px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-surface-2"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4" role="log" aria-live="polite" aria-busy={streamingId !== null}>
-              {messages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  streaming={message.id === streamingId}
-                  busy={streamingId !== null}
-                  onRegenerate={() => regenerate(message.id)}
-                  onEdit={(text) => editAndResend(message.id, text)}
-                />
-              ))}
-            </div>
-          )}
-          <div ref={bottomRef} className="h-px scroll-mb-24" aria-hidden="true" />
-        </div>
-
-        <div className="sticky bottom-0 -mx-8 mt-6 border-t border-border bg-surface px-8 py-4">
-          <div className="flex items-end gap-2">
-            <Button
-              variant={dictation.status === "recording" ? "destructive" : "ghost"}
-              size="icon"
-              aria-label={
-                dictation.status === "recording"
-                  ? "Stop dictation"
-                  : dictation.status === "transcribing"
-                    ? "Transcribing"
-                    : "Voice input"
-              }
-              disabled={dictation.status === "transcribing"}
-              onClick={dictation.toggle}
-            >
-              {dictation.status === "transcribing" ? <Loader2 className="animate-spin" /> : <Mic />}
+      <div className="flex min-h-0 flex-1 gap-4">
+        <aside className="flex w-60 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+          <div className="flex flex-col gap-2 border-b border-border p-2.5">
+            <Button variant="secondary" size="sm" className="w-full" data-eval="chat-new" onClick={newChat}>
+              <Plus />
+              New chat
             </Button>
-            {dictation.status === "recording" && (
-              <MicWaveform levelRef={levelRef} active barCount={20} className="h-9 w-16 shrink-0" />
-            )}
-            <Textarea
-              rows={1}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  send(input);
-                }
-              }}
-              placeholder="Message Khonjel..."
-              className="max-h-32 min-h-11 flex-1 resize-none"
-              data-eval="chat-input"
-            />
-            {streamingId ? (
-              <Button variant="destructive" aria-label="Stop" data-eval="chat-stop" onClick={stop}>
-                <Square />
-              </Button>
+            <div className="relative">
+              <Search className="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2 text-tertiary-foreground" />
+              <Input
+                aria-label="Search conversations"
+                placeholder="Search chats…"
+                value={threadQuery}
+                onChange={(e) => setThreadQuery(e.target.value)}
+                className="h-8 ps-8 pe-8"
+                data-eval="chat-search"
+              />
+              {threadQuery ? (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  data-eval="chat-search-clear"
+                  onClick={() => setThreadQuery("")}
+                  className="absolute end-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-tertiary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2" role="listbox" aria-label="Conversations">
+            {results.length === 0 ? (
+              <p className="px-2 py-1 text-xs text-tertiary-foreground">
+                {threadQuery ? "No conversations match." : "No conversations yet."}
+              </p>
             ) : (
-              <Button aria-label="Send" data-eval="chat-send" onClick={() => send(input)}>
-                <SendHorizontal />
-              </Button>
+              results.map(({ thread: t, snippet }) => (
+                <div
+                  key={t.id}
+                  role="option"
+                  aria-selected={t.id === activeId}
+                  data-eval="chat-thread"
+                  tabIndex={0}
+                  onClick={() => setActiveId(t.id)}
+                  onDoubleClick={() => setRenamingId(t.id)}
+                  onKeyDown={(e) => {
+                    if (renamingId === t.id) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setActiveId(t.id);
+                    } else if (e.key === "F2") {
+                      setRenamingId(t.id);
+                    }
+                  }}
+                  className={cn(
+                    "group flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    t.id === activeId ? "bg-sidebar-selected text-foreground" : "text-muted-foreground hover:bg-foreground/5",
+                  )}
+                >
+                  {renamingId === t.id ? (
+                    <input
+                      ref={(el) => el?.focus()}
+                      defaultValue={t.title}
+                      aria-label="Conversation title"
+                      className="min-w-0 flex-1 rounded-sm bg-surface px-1 text-sm text-foreground outline-none"
+                      onClick={(e) => e.stopPropagation()}
+                      onBlur={(e) => commitRename(t.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === "Enter") commitRename(t.id, e.currentTarget.value);
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                    />
+                  ) : (
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-left">
+                        <HighlightText text={t.title || "New chat"} query={threadQuery} />
+                      </span>
+                      {snippet ? (
+                        <span className="truncate text-xs text-tertiary-foreground" data-eval="chat-thread-snippet">
+                          <HighlightText text={snippet} query={threadQuery} />
+                        </span>
+                      ) : null}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    aria-label="Rename conversation"
+                    className="opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenamingId(t.id);
+                    }}
+                  >
+                    <Pencil className="size-3.5 text-tertiary-foreground hover:text-foreground" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Delete conversation"
+                    data-eval="chat-thread-delete"
+                    className="opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeThread(t.id);
+                    }}
+                  >
+                    <Trash2 className="size-3.5 text-tertiary-foreground hover:text-danger" />
+                  </button>
+                </div>
+              ))
             )}
           </div>
-        </div>
+        </aside>
+
+        <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <div className="flex flex-1 flex-col px-6 py-5">
+              {messages.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+                  <p className="text-sm text-muted-foreground">Ask me anything.</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {SUGGESTIONS.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => send(s)}
+                        className="rounded-pill border border-border bg-surface px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-surface-2"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4" role="log" aria-live="polite" aria-busy={streamingId !== null}>
+                  {messages.map((message) => (
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      streaming={message.id === streamingId}
+                      busy={streamingId !== null}
+                      onRegenerate={() => regenerate(message.id)}
+                      onEdit={(text) => editAndResend(message.id, text)}
+                    />
+                  ))}
+                </div>
+              )}
+              <div ref={bottomRef} className="h-px scroll-mb-24" aria-hidden="true" />
+            </div>
+
+            <div className="sticky bottom-0 border-t border-border bg-surface/75 px-6 py-3 backdrop-blur">
+              <div className="flex items-end gap-2">
+                <Button
+                  variant={dictation.status === "recording" ? "destructive" : "ghost"}
+                  size="icon"
+                  aria-label={
+                    dictation.status === "recording"
+                      ? "Stop dictation"
+                      : dictation.status === "transcribing"
+                        ? "Transcribing"
+                        : "Voice input"
+                  }
+                  disabled={dictation.status === "transcribing"}
+                  onClick={dictation.toggle}
+                >
+                  {dictation.status === "transcribing" ? <Loader2 className="animate-spin" /> : <Mic />}
+                </Button>
+                {dictation.status === "recording" && (
+                  <MicWaveform levelRef={levelRef} active barCount={20} className="h-9 w-16 shrink-0" />
+                )}
+                <Textarea
+                  rows={1}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      send(input);
+                    }
+                  }}
+                  placeholder="Message Khonjel..."
+                  className="max-h-32 min-h-11 flex-1 resize-none"
+                  data-eval="chat-input"
+                />
+                {streamingId ? (
+                  <Button variant="destructive" aria-label="Stop" data-eval="chat-stop" onClick={stop}>
+                    <Square />
+                  </Button>
+                ) : (
+                  <Button aria-label="Send" data-eval="chat-send" onClick={() => send(input)}>
+                    <SendHorizontal />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
+  );
+}
+
+/** Render text with case-insensitive matches of `query` highlighted. */
+function HighlightText({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>;
+  return (
+    <>
+      {splitHighlight(text, query).map((part, i) =>
+        part.hit ? (
+          <mark key={i} className="rounded-sm bg-primary/25 text-foreground">
+            {part.text}
+          </mark>
+        ) : (
+          <span key={i}>{part.text}</span>
+        ),
+      )}
+    </>
   );
 }
 
