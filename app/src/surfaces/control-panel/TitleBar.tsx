@@ -1,6 +1,7 @@
 import { Minus, PanelLeft, Square, X } from "lucide-react";
 import { useUiStore } from "@stores/ui";
 import { Button } from "@components/ui/button";
+import { ThemeToggle } from "@components/common/ThemeToggle";
 
 /**
  * Window chrome (52px). In the mock the controls are inert; in the desktop app the
@@ -21,31 +22,34 @@ export function TitleBar() {
           <PanelLeft />
         </Button>
       </div>
-      <div className="app-no-drag flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Minimize"
-          onClick={() => window.electronAPI?.minimize?.()}
-        >
-          <Minus />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Maximize"
-          onClick={() => window.electronAPI?.toggleMaximize?.()}
-        >
-          <Square />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Close"
-          onClick={() => window.electronAPI?.close?.()}
-        >
-          <X />
-        </Button>
+      <div className="app-no-drag flex items-center gap-2">
+        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Minimize"
+            onClick={() => window.electronAPI?.minimize?.()}
+          >
+            <Minus />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Maximize"
+            onClick={() => window.electronAPI?.toggleMaximize?.()}
+          >
+            <Square />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Close"
+            onClick={() => window.electronAPI?.close?.()}
+          >
+            <X />
+          </Button>
+        </div>
       </div>
     </header>
   );
