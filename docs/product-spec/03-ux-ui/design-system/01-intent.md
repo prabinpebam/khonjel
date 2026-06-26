@@ -153,9 +153,15 @@ operated by keyboard and announced by a screen reader, it is **not done**.
 ### P8 — Directionality & locale are not the component's problem
 Use **logical** Tailwind utilities (`ps-*`, `pe-*`, `ms-*`, `me-*`, `start-*`, `end-*`,
 `text-start`) — never `left/right/ml/mr`. Direction-carrying icons (chevrons, back arrows)
-resolve via a prop, not a CSS override. Root `dir` drives the whole app. Copy is
-externalized through i18n (`react-i18next`); **no hardcoded user-facing strings** in
-shared components — text comes from props/i18n keys.
+resolve via a prop, not a CSS override. Root `dir` drives the whole app.
+
+**Locale posture (2026-06-26): English-only for now.** Khonjel ships a single English
+locale and does **not** yet run an i18n layer (no `react-i18next`); user-facing copy is
+authored inline in English. The *structural* half of this principle still holds and is
+enforced today — logical utilities only, direction-via-props, `dir`-driven layout — so
+adopting i18n later is a copy-extraction exercise, not a re-layout. Until a second locale
+is on the roadmap, literal English strings in components are **allowed** (a deliberate
+scope call, not drift).
 
 ### P9 — Motion respects user preference
 All transitions/animations reference **motion-duration tokens** (`--motion-fast/…`).
@@ -236,7 +242,7 @@ stays in the feature and is cleanly removable. Feature components still consume 
 - **No hardcoded transition durations** (`transition: … 200ms`, `duration-200` literals tied to no token). Reference motion tokens.
 - **No `z-[999]` magic numbers.** Use the `--z-*` scale.
 - **No emoji** in any UI copy, label, status, or tooltip. Use **lucide** icons (e.g. `Check`, `CircleAlert`, `TriangleAlert`). Emoji render inconsistently and can't be token-styled.
-- **No hardcoded user-facing strings in shared components.** Text is props / i18n keys (P8).
+- **Copy is English-only for now (P8).** No i18n layer yet (no `react-i18next`); inline English strings are allowed — a deliberate scope call, not drift. The logical-utility / direction-via-props rules still apply.
 - **No business content baked into design components** (P12); no forked render helpers; no markup outside the component layer.
 - **No bypassing Radix semantics** (don't replace a Radix primitive with a bare `div` + onClick) (P7).
 
