@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownUp, ArrowRight, Pencil, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
+import { ArrowDownUp, ArrowRight, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useServices } from "@services";
 import type { DictionaryEntry, LibraryScope, Snippet } from "@services/ports";
 import { PageHeader } from "@components/common/PageHeader";
 import { PromoBanner } from "@components/common/PromoBanner";
+import { SearchInput } from "@components/common/SearchInput";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
 import { Card } from "@components/ui/card";
@@ -212,16 +213,13 @@ export function Dictionary() {
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 size-4 -translate-y-1/2 text-tertiary-foreground start-2" />
-            <Input
-              aria-label="Search"
-              placeholder="Search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-48 ps-8"
-            />
-          </div>
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder="Search"
+            aria-label="Search"
+            className="w-48"
+          />
           <Button
             variant="ghost"
             size="icon"

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FolderPlus, Loader2, Mic, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { FolderPlus, Loader2, Mic, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useServices } from "@services";
 import type { Folder, Note } from "@services/ports";
 import { useDictationField } from "@hooks/useDictationField";
 import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
+import { SearchInput } from "@components/common/SearchInput";
 import { Button } from "@components/ui/button";
-import { Input } from "@components/ui/input";
 import { Select } from "@components/ui/select";
 import { Textarea } from "@components/ui/textarea";
 import { formatRelative } from "@lib/format";
@@ -170,26 +170,12 @@ export function Notes() {
       <div className="flex min-h-0 flex-1 gap-4">
         <aside className="flex w-52 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface">
           <div className="border-b border-border p-2.5">
-            <div className="relative">
-              <Search className="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2 text-tertiary-foreground" />
-              <Input
-                aria-label="Search notes"
-                placeholder="Search notes…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="ps-8 pe-8"
-              />
-              {query ? (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => setQuery("")}
-                  className="absolute end-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-tertiary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
-                >
-                  <X className="size-4" />
-                </button>
-              ) : null}
-            </div>
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder="Search notes…"
+              aria-label="Search notes"
+            />
           </div>
           <div className="flex items-center justify-between px-3 pb-1 pt-2.5">
             <span className="text-xs font-semibold uppercase tracking-wide text-tertiary-foreground">Folders</span>

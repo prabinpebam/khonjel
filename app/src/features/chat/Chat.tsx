@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, Loader2, Mic, Pencil, Plus, RefreshCw, Search, SendHorizontal, Square, Trash2, X } from "lucide-react";
+import { Check, Copy, Loader2, Mic, Pencil, Plus, RefreshCw, SendHorizontal, Square, Trash2 } from "lucide-react";
 import { useServices } from "@services";
 import type { ChatMessage, ChatThread, ChatTokenEvent } from "@services/ports";
 import { useDictationField } from "@hooks/useDictationField";
@@ -7,9 +7,9 @@ import { useActiveModel } from "@hooks/useActiveModel";
 import { useSettingsStore } from "@stores/settings";
 import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
+import { SearchInput } from "@components/common/SearchInput";
 import { Badge } from "@components/ui/badge";
 import { Button } from "@components/ui/button";
-import { Input } from "@components/ui/input";
 import { Textarea } from "@components/ui/textarea";
 import { cn } from "@lib/utils";
 import { autoTitleThread, createThread, deleteThread, renameThread, sortThreads, touchThread } from "@lib/chat/threads";
@@ -268,28 +268,14 @@ export function Chat() {
               <Plus />
               New chat
             </Button>
-            <div className="relative">
-              <Search className="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2 text-tertiary-foreground" />
-              <Input
-                aria-label="Search conversations"
-                placeholder="Search chats…"
-                value={threadQuery}
-                onChange={(e) => setThreadQuery(e.target.value)}
-                className="h-8 ps-8 pe-8"
-                data-eval="chat-search"
-              />
-              {threadQuery ? (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  data-eval="chat-search-clear"
-                  onClick={() => setThreadQuery("")}
-                  className="absolute end-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-tertiary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
-                >
-                  <X className="size-4" />
-                </button>
-              ) : null}
-            </div>
+            <SearchInput
+              value={threadQuery}
+              onChange={setThreadQuery}
+              placeholder="Search chats…"
+              aria-label="Search conversations"
+              size="sm"
+              data-eval="chat-search"
+            />
           </div>
           <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2" role="listbox" aria-label="Conversations">
             {results.length === 0 ? (
