@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Mic, Plus, Search, Sparkles, Trash2 } from "lucide-react";
+import { FolderPlus, Loader2, Mic, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import { useServices } from "@services";
 import type { Folder, Note } from "@services/ports";
-import { useAsync } from "@hooks/useAsync";
 import { useDictationField } from "@hooks/useDictationField";
 import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
+import { Select } from "@components/ui/select";
 import { Textarea } from "@components/ui/textarea";
 import { formatRelative } from "@lib/format";
+import { ALL_FOLDER_ID, createFolder, deleteFolder, renameFolder, withFolderCounts } from "@lib/notes/folders";
 import { cn } from "@lib/utils";
 
 function preview(body: string): string {
@@ -18,20 +19,22 @@ function preview(body: string): string {
 
 export function Notes() {
   const { content, inference } = useServices();
-  const folders = useAsync(() => content.folders(), [] as Folder[]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
-  const [folderId, setFolderId] = useState("all");
+  const [folderId, setFolderId] = useState(ALL_FOLDER_ID);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const loadedRef = useRef(false);
 
   useEffect(() => {
     let live = true;
-    void content.notes().then((loaded) => {
+    void Promise.all([content.notes(), content.folders()]).then(([loadedNotes, loadedFolders]) => {
       if (!live) return;
-      setNotes(loaded);
-      setSelectedId((cur) => cur ?? loaded[0]?.id ?? null);
+      setNotes(loadedNotes);
+      setFolders(loadedFolders);
+      setSelectedId((cur) => cur ?? loadedNotes[0]?.id ?? null);
       loadedRef.current = true;
     });
     return () => {
@@ -45,6 +48,13 @@ export function Notes() {
     const timer = setTimeout(() => void content.saveNotes(notes), 500);
     return () => clearTimeout(timer);
   }, [notes, content]);
+
+  // Persist folder (group) changes with live counts.
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    const timer = setTimeout(() => void content.saveFolders(withFolderCounts(folders, notes)), 500);
+    return () => clearTimeout(timer);
+  }, [folders, notes, content]);
 
   const selected = notes.find((note) => note.id === selectedId) ?? null;
   const selectedIdValue = selected?.id ?? null;
@@ -67,12 +77,14 @@ export function Notes() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return notes.filter((note) => {
-      const inFolder = folderId === "all" || note.folderId === folderId;
+      const inFolder = folderId === ALL_FOLDER_ID || note.folderId === folderId;
       const matches =
         q === "" || note.title.toLowerCase().includes(q) || note.preview.toLowerCase().includes(q);
       return inFolder && matches;
     });
   }, [notes, folderId, query]);
+
+  const displayFolders = useMemo(() => withFolderCounts(folders, notes), [folders, notes]);
 
   function updateSelected(patch: Partial<Note>) {
     if (!selected) return;
@@ -92,12 +104,32 @@ export function Notes() {
       title: "Untitled note",
       preview: "",
       body: "",
-      folderId: folderId === "all" ? (folders[0]?.id ?? "all") : folderId,
+      folderId: folderId === ALL_FOLDER_ID ? "" : folderId,
       updatedAt: new Date().toISOString(),
       fromRecording: false,
     };
     setNotes((prev) => [note, ...prev]);
     setSelectedId(note.id);
+  }
+
+  function addFolder() {
+    const { folders: next, id } = createFolder(folders);
+    setFolders(next);
+    setFolderId(id);
+    setRenamingFolderId(id);
+  }
+
+  function commitFolderRename(id: string, name: string) {
+    setFolders((prev) => renameFolder(prev, id, name));
+    setRenamingFolderId(null);
+  }
+
+  function removeFolder(id: string) {
+    const result = deleteFolder(folders, notes, id);
+    setFolders(result.folders);
+    setNotes(result.notes);
+    if (folderId === id) setFolderId(ALL_FOLDER_ID);
+    setRenamingFolderId((cur) => (cur === id ? null : cur));
   }
 
   function deleteSelected() {
@@ -124,7 +156,7 @@ export function Notes() {
   }
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       <PageHeader
         title="Notes"
         actions={
@@ -135,71 +167,143 @@ export function Notes() {
         }
       />
 
-      <div className="grid h-[70vh] grid-cols-[minmax(140px,168px)_minmax(180px,232px)_minmax(0,1fr)] gap-4">
-        <aside className="flex flex-col gap-3 overflow-y-auto">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 size-4 -translate-y-1/2 text-tertiary-foreground start-2" />
-            <Input
-              aria-label="Search notes"
-              placeholder="Search notes…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="ps-8"
-            />
-          </div>
-          <nav className="flex flex-col gap-0.5">
-            {folders.map((folder) => {
-              const active = folder.id === folderId;
-              return (
+      <div className="flex min-h-0 flex-1 gap-4">
+        <aside className="flex w-52 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+          <div className="border-b border-border p-2.5">
+            <div className="relative">
+              <Search className="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2 text-tertiary-foreground" />
+              <Input
+                aria-label="Search notes"
+                placeholder="Search notes…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="ps-8 pe-8"
+              />
+              {query ? (
                 <button
-                  key={folder.id}
                   type="button"
-                  onClick={() => setFolderId(folder.id)}
+                  aria-label="Clear search"
+                  onClick={() => setQuery("")}
+                  className="absolute end-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-tertiary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex items-center justify-between px-3 pb-1 pt-2.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-tertiary-foreground">Folders</span>
+            <button
+              type="button"
+              aria-label="New folder"
+              data-eval="folder-new"
+              onClick={addFolder}
+              className="rounded p-1 text-tertiary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              <FolderPlus className="size-4" />
+            </button>
+          </div>
+          <nav className="flex-1 overflow-y-auto px-2 pb-2" aria-label="Folders">
+            {displayFolders.map((folder) => {
+              const active = folder.id === folderId;
+              const editable = folder.id !== ALL_FOLDER_ID;
+              return (
+                <div
+                  key={folder.id}
+                  data-eval="folder-row"
                   className={cn(
-                    "flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm transition-colors",
+                    "group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm transition-colors",
                     active
-                      ? "bg-surface text-foreground shadow-nav"
+                      ? "bg-surface-2 text-foreground"
                       : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
                   )}
                 >
-                  <span className="truncate">{folder.name}</span>
-                  <span className="text-xs text-tertiary-foreground">{folder.count}</span>
-                </button>
+                  {renamingFolderId === folder.id ? (
+                    <input
+                      ref={(el) => {
+                        if (el) {
+                          el.focus();
+                          el.select();
+                        }
+                      }}
+                      defaultValue={folder.name}
+                      aria-label="Folder name"
+                      data-eval="folder-rename-input"
+                      className="min-w-0 flex-1 rounded-sm bg-surface px-1 text-sm text-foreground outline-none ring-1 ring-ring"
+                      onBlur={(e) => commitFolderRename(folder.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitFolderRename(folder.id, e.currentTarget.value);
+                        if (e.key === "Escape") setRenamingFolderId(null);
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setFolderId(folder.id)}
+                      onDoubleClick={() => editable && setRenamingFolderId(folder.id)}
+                      className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+                    >
+                      <span className="truncate">{folder.name}</span>
+                      <span className="shrink-0 text-xs text-tertiary-foreground">{folder.count}</span>
+                    </button>
+                  )}
+                  {editable && renamingFolderId !== folder.id ? (
+                    <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        type="button"
+                        aria-label="Rename folder"
+                        data-eval="folder-rename"
+                        onClick={() => setRenamingFolderId(folder.id)}
+                      >
+                        <Pencil className="size-3.5 text-tertiary-foreground hover:text-foreground" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Delete folder"
+                        data-eval="folder-delete"
+                        onClick={() => removeFolder(folder.id)}
+                      >
+                        <Trash2 className="size-3.5 text-tertiary-foreground hover:text-danger" />
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </nav>
         </aside>
 
-        <div className="overflow-y-auto rounded-md border border-border bg-surface">
-          {filtered.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">
-              {query ? `No matches for "${query}".` : "No notes in this folder."}
-            </p>
-          ) : (
-            filtered.map((note) => {
-              const active = note.id === selectedId;
-              return (
-                <button
-                  key={note.id}
-                  type="button"
-                  onClick={() => setSelectedId(note.id)}
-                  className={cn(
-                    "flex w-full flex-col gap-1 border-b border-border-subtle px-4 py-3 text-left transition-colors",
-                    active ? "bg-surface-2" : "hover:bg-surface-2",
-                  )}
-                >
-                  <span className="truncate text-sm font-semibold text-foreground">{note.title}</span>
-                  <span className="line-clamp-2 text-xs text-muted-foreground">{note.preview}</span>
-                  <span className="text-xs text-tertiary-foreground">
-                    {formatRelative(note.updatedAt)}
-                  </span>
-                </button>
-              );
-            })
-          )}
+        <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+          <div className="flex-1 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="p-5 text-sm text-muted-foreground">
+                {query ? `No matches for "${query}".` : "No notes in this folder."}
+              </p>
+            ) : (
+              filtered.map((note) => {
+                const active = note.id === selectedId;
+                return (
+                  <button
+                    key={note.id}
+                    type="button"
+                    data-eval="note-row"
+                    onClick={() => setSelectedId(note.id)}
+                    className={cn(
+                      "flex w-full flex-col gap-1 border-b border-border-subtle px-4 py-3 text-left transition-colors",
+                      active ? "bg-surface-2" : "hover:bg-surface-2",
+                    )}
+                  >
+                    <span className="truncate text-sm font-semibold text-foreground">{note.title}</span>
+                    <span className="line-clamp-2 text-xs text-muted-foreground">{note.preview}</span>
+                    <span className="text-xs text-tertiary-foreground">{formatRelative(note.updatedAt)}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
 
-        <div className="flex min-w-0 flex-col rounded-md border border-border bg-surface">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
           {selected ? (
             <>
               <div className="flex items-center gap-2 border-b border-border p-4">
@@ -208,6 +312,19 @@ export function Notes() {
                   value={selected.title}
                   onChange={(e) => updateSelected({ title: e.target.value })}
                   className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-foreground outline-none"
+                />
+                <Select
+                  aria-label="Move to folder"
+                  data-eval="note-folder"
+                  className="w-40 shrink-0"
+                  value={selected.folderId}
+                  onValueChange={(folderId) => updateSelected({ folderId })}
+                  options={[
+                    { value: "", label: "Uncategorized" },
+                    ...folders
+                      .filter((f) => f.id !== ALL_FOLDER_ID)
+                      .map((f) => ({ value: f.id, label: f.name })),
+                  ]}
                 />
                 {dictation.status === "recording" && (
                   <MicWaveform levelRef={levelRef} active barCount={18} className="h-8 w-16 shrink-0" />
@@ -235,7 +352,7 @@ export function Notes() {
                 aria-label="Note body"
                 value={selected.body}
                 onChange={(e) => updateSelected({ body: e.target.value })}
-                className="flex-1 resize-none rounded-none border-0 font-mono"
+                className="min-h-0 flex-1 resize-none rounded-none border-0 font-mono"
               />
               <div className="flex flex-wrap items-center gap-2 border-t border-border p-3">
                 <Button

@@ -24,6 +24,9 @@ const VIEWS: Record<NavId, ComponentType> = {
   transforms: Transforms,
 };
 
+/** Views that own the full content height and scroll internally (bordered, app-like boundary). */
+const FILL_VIEWS = new Set<NavId>(["notes"]);
+
 /** The primary desktop window: title bar + sidebar + floating content panel. */
 export function ControlPanel() {
   const activeView = useUiStore((s) => s.activeView);
@@ -62,7 +65,7 @@ export function ControlPanel() {
       <TitleBar />
       <div className="flex min-h-0 flex-1">
         <Sidebar />
-        <ContentPanel view={activeView}>
+        <ContentPanel view={activeView} fill={FILL_VIEWS.has(activeView)}>
           <View />
         </ContentPanel>
       </div>
