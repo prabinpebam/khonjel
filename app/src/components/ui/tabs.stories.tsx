@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Tabs } from "./tabs";
 
@@ -31,6 +32,18 @@ export const Default: Story = {
           { value: "note", label: "Note Formatting" },
         ]}
       />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("tab", { name: "Dictation Cleanup" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await userEvent.click(canvas.getByRole("tab", { name: "Voice Agent" }));
+    await expect(canvas.getByRole("tab", { name: "Voice Agent" })).toHaveAttribute(
+      "aria-selected",
+      "true",
     );
   },
 };

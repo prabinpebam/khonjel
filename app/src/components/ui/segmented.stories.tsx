@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { Monitor, Moon, Sun } from "lucide-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Segmented } from "./segmented";
@@ -22,6 +23,13 @@ export const Solid: Story = {
   render: () => {
     const [value, setValue] = useState("light");
     return <Segmented value={value} onChange={setValue} options={OPTIONS} aria-label="Theme" />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const dark = canvas.getByRole("button", { name: "Dark" });
+    await expect(dark).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(dark);
+    await expect(dark).toHaveAttribute("aria-pressed", "true");
   },
 };
 

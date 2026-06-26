@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { SearchInput } from "./SearchInput";
 
@@ -29,6 +30,14 @@ export const Default: Story = {
         aria-label="Search notes"
       />
     );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("textbox", { name: "Search notes" });
+    await userEvent.type(input, "kickoff");
+    await expect(input).toHaveValue("kickoff");
+    await userEvent.click(canvas.getByRole("button", { name: "Clear search" }));
+    await expect(input).toHaveValue("");
   },
 };
 
