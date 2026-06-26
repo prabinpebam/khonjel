@@ -65,7 +65,7 @@
   --sidebar-width: 218px;
   --titlebar-height: 52px;
   --content-max-width: 1040px;
-  --rail-width: 260px;
+  --home-rail-width: 260px; /* Home's right rail; chat/notes panes size their own panels */
   --chat-bubble-max: 72%; /* chat bubble / edit field max width within the conversation column */
 }
 

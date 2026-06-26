@@ -137,7 +137,7 @@ export function Home() {
     <div>
       <PageHeader title={firstName ? `Welcome back, ${firstName}` : "Welcome back"} description="Your dictation history and stats." />
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_var(--rail-width)]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_var(--home-rail-width)]">
         <section>
           {history.length === 0 ? (
             <EmptyHistory
