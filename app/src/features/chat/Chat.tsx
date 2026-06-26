@@ -4,6 +4,7 @@ import { useServices } from "@services";
 import type { ChatMessage, ChatThread, ChatTokenEvent } from "@services/ports";
 import { useDictationField } from "@hooks/useDictationField";
 import { useActiveModel } from "@hooks/useActiveModel";
+import { useAutoFocus } from "@hooks/useAutoFocus";
 import { useSettingsStore } from "@stores/settings";
 import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
@@ -34,6 +35,7 @@ export function Chat() {
   const [input, setInput] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [threadQuery, setThreadQuery] = useState("");
+  const autoFocusInput = useAutoFocus<HTMLInputElement>();
   const levelRef = useRef(0);
   const dictation = useDictationField(input, setInput, { onLevel: (n) => (levelRef.current = n) });
   const loadedRef = useRef(false);
@@ -309,7 +311,7 @@ export function Chat() {
                 >
                   {renamingId === t.id ? (
                     <input
-                      ref={(el) => el?.focus()}
+                      ref={autoFocusInput}
                       defaultValue={t.title}
                       aria-label="Conversation title"
                       className="min-w-0 flex-1 rounded-sm bg-surface px-1 text-sm text-foreground outline-none"
@@ -484,6 +486,7 @@ function MessageBubble({
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState("");
+  const autoFocusEdit = useAutoFocus<HTMLTextAreaElement>();
   const reasoningOn = useSettingsStore((s) => s.toggles["llm.chat.reasoning"] ?? false);
   const isUser = message.role === "user";
   const isError = message.status === "error";
@@ -516,7 +519,7 @@ function MessageBubble({
     return (
       <div data-eval="chat-message" data-eval-role={message.role} className="flex flex-col items-end gap-1">
         <Textarea
-          ref={(el) => el?.focus()}
+          ref={autoFocusEdit}
           rows={2}
           value={editText}
           onChange={(e) => setEditText(e.target.value)}

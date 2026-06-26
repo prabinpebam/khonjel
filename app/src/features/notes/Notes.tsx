@@ -3,6 +3,7 @@ import { FolderPlus, Loader2, Mic, Pencil, Plus, Sparkles, Trash2 } from "lucide
 import { useServices } from "@services";
 import type { Folder, Note } from "@services/ports";
 import { useDictationField } from "@hooks/useDictationField";
+import { useAutoFocus } from "@hooks/useAutoFocus";
 import { PageHeader } from "@components/common/PageHeader";
 import { MicWaveform } from "@components/common/MicWaveform";
 import { SearchInput } from "@components/common/SearchInput";
@@ -26,6 +27,7 @@ export function Notes() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const autoFocusRename = useAutoFocus<HTMLInputElement>({ select: true });
   const [busy, setBusy] = useState(false);
   const loadedRef = useRef(false);
 
@@ -207,12 +209,7 @@ export function Notes() {
                 >
                   {renamingFolderId === folder.id ? (
                     <input
-                      ref={(el) => {
-                        if (el) {
-                          el.focus();
-                          el.select();
-                        }
-                      }}
+                      ref={autoFocusRename}
                       defaultValue={folder.name}
                       aria-label="Folder name"
                       data-eval="folder-rename-input"
