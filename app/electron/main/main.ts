@@ -66,6 +66,10 @@ let stopParakeetServer: (() => void) | null = null;
 let hotkeyManager: HotkeyManager | null = null;
 // Resolved once the dispatch is built; lets the module-level logger read the live logging level.
 let activeSettings: ReturnType<typeof createSettingsStore> | null = null;
+
+// The LLM task slots, each routable to the local engine or a cloud/self-hosted connection. Used to
+// decide whether the local model needs loading at all (so a fully cloud setup holds no GPU VRAM).
+const LLM_TASKS = ["chat", "cleanup", "agent", "note"] as const;
 let updaterControls: AutoUpdaterControls | null = null;
 
 // Level-gated file logger -> app logs dir (Settings -> System -> "Open logs"). The verbosity follows
@@ -434,6 +438,13 @@ function buildDispatch(inferenceRuntime: InferenceRuntime, onHotkeysChanged: () 
         if (next.values["hotkey.dictation"] !== before.values["hotkey.dictation"]) onHotkeysChanged();
         // "Save notes as files" just turned on -> mirror the current notes to disk straight away.
         if (!before.toggles["saveNotesAsFiles"] && next.toggles["saveNotesAsFiles"]) exportCurrentNotes();
+        // An LLM task switched local <-> cloud: re-resolve the local engine so it loads on demand
+        // and is released (freeing VRAM) once nothing local uses it anymore.
+        if (
+          LLM_TASKS.some((task) => next.values[`llm.${task}.mode`] !== before.values[`llm.${task}.mode`])
+        ) {
+          void inferenceRuntime.start();
+        }
         return next;
       },
     },
@@ -739,16 +750,24 @@ function createTray(onDictation: () => void): void {
 
 void app.whenReady().then(() => {
   let selectedLlmModelId = (): string | undefined => undefined;
+  // Whether any LLM task still uses the local engine (vs. routed to cloud). Lazily bound to the
+  // settings store below; until then assume "needed" so a local-only setup warms normally.
+  let localLlmEngineNeeded = (): boolean => true;
   inferenceRuntime = createInferenceRuntime({
     userDataDir: app.getPath("userData"),
     appDir: path.join(__dirname, ".."),
     isWindows: process.platform === "win32",
     env: process.env,
     selectedModelId: () => selectedLlmModelId(),
+    localEngineNeeded: () => localLlmEngineNeeded(),
   });
   hotkeyManager = createHotkeyManager();
   const built = buildDispatch(inferenceRuntime, () => registerHotkeys());
   selectedLlmModelId = () => built.settingsStore.get().values["llm.chat.model"];
+  localLlmEngineNeeded = () => {
+    const values = built.settingsStore.get().values;
+    return LLM_TASKS.some((task) => (values[`llm.${task}.mode`] ?? "local") === "local");
+  };
   activeSettings = built.settingsStore;
   logger.info(`Khonjel ${app.getVersion()} starting (${process.platform} ${process.arch})`);
   // The single allow-listed request/response bridge. The preload sends the contract version on

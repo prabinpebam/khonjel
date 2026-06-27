@@ -27,6 +27,12 @@ export interface InferenceRuntimeConfig {
   isWindows: boolean;
   env: Record<string, string | undefined>;
   selectedModelId?: () => string | undefined;
+  /**
+   * Whether any LLM task currently uses the LOCAL engine. When this returns false the local model
+   * is never loaded (and a running server is released), so a fully cloud-routed setup holds no GPU
+   * VRAM. Defaults to "always needed" when omitted (back-compat for tests/eval).
+   */
+  localEngineNeeded?: () => boolean;
 }
 
 export type InferenceMode = "endpoint" | "spawned" | "stub";
@@ -147,7 +153,11 @@ export function createInferenceRuntime(cfg: InferenceRuntimeConfig): InferenceRu
       return "endpoint";
     }
 
-    if (paths.binPath && paths.modelPath) {
+    // Only hold a local model in (V)RAM when an LLM task actually uses the local engine. With every
+    // task routed to cloud, skip the spawn (and release any running server) so nothing sits on the GPU.
+    const localNeeded = cfg.localEngineNeeded ? cfg.localEngineNeeded() : true;
+
+    if (paths.binPath && paths.modelPath && localNeeded) {
       try {
         // Per-session bearer token so only this app can use the local model server.
         const apiKey = randomUUID();
@@ -170,6 +180,12 @@ export function createInferenceRuntime(cfg: InferenceRuntimeConfig): InferenceRu
       } catch {
         // Keep the current engine (or deterministic stub if no engine has ever started).
       }
+    } else if (!localNeeded && stopServer) {
+      // The last local LLM task just switched to cloud: release the model so it stops holding VRAM.
+      stopServer();
+      stopServer = undefined;
+      backing = stubInferenceEngine;
+      activeModel = undefined;
     }
 
     return backing === stubInferenceEngine ? "stub" : "spawned";
