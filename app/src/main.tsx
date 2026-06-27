@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "@mock/electron-api-shim";
 import "./styles/globals.css";
 import { App } from "./App";
+import { startSplash, removeSplash } from "@app/splash";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -14,6 +15,9 @@ if (!rootElement) {
 // paints behind the bar pill and defeats the window's transparency.
 if (new URLSearchParams(window.location.search).get("surface") === "floating-bar") {
   document.documentElement.classList.add("surface-floating-bar");
+  removeSplash(); // the tiny transparent bar window never shows the splash
+} else {
+  startSplash(); // rotate the quirky status line; App dismisses it once the shell is interactive
 }
 
 createRoot(rootElement).render(

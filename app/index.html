@@ -5,8 +5,110 @@
     <link rel="icon" type="image/svg+xml" href="/khonjel-app-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Khonjel</title>
+    <style>
+      /* Launch splash -- static so it paints on the first frame, before the app bundle loads. */
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        background: #f2f1ee;
+        color: #2a2a28;
+        pointer-events: none; /* purely visual; never intercept clicks (incl. the eval harness) */
+        transition: opacity 0.45s ease;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      [data-theme="dark"] #splash {
+        background: #15161a;
+        color: #f2f3f5;
+      }
+      #splash.splash--hidden {
+        opacity: 0;
+      }
+      .splash-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        padding: 24px;
+        text-align: center;
+      }
+      .splash-logo {
+        width: 76px;
+        height: 76px;
+        animation: splash-float 2.6s ease-in-out infinite;
+      }
+      .splash-title {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+      .splash-status {
+        min-height: 18px;
+        max-width: 340px;
+        font-size: 13px;
+        color: #6e6b65;
+        transition: opacity 0.18s ease;
+      }
+      [data-theme="dark"] .splash-status {
+        color: #a6abb2;
+      }
+      .splash-dots {
+        display: flex;
+        gap: 6px;
+        margin-top: 2px;
+      }
+      .splash-dots span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #8b7cf6;
+        animation: splash-bounce 1.2s ease-in-out infinite;
+      }
+      .splash-dots span:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      .splash-dots span:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      @keyframes splash-float {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
+        }
+      }
+      @keyframes splash-bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.5;
+        }
+        50% {
+          transform: translateY(-5px);
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .splash-logo,
+        .splash-dots span {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash">
+      <div class="splash-card">
+        <img class="splash-logo" src="/khonjel-app-icon.svg" alt="" />
+        <div class="splash-title">Khonjel</div>
+        <div id="splash-status" class="splash-status">Waking the on-device brain...</div>
+        <div class="splash-dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
