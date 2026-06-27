@@ -36,9 +36,9 @@
     "fetch:parakeet": "node scripts/fetch-parakeet.mjs",
     "electron": "npm run build && npm run build:electron && electron .",
     "electron:dev": "npm run build:electron && electron . --dev-server",
-    "package": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --win nsis portable",
+    "package": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --win nsis",
     "package:dir": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --dir",
-    "release": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --win nsis portable --publish always"
+    "release": "npm run gen:icon && npm run build && npm run build:electron && electron-builder --win nsis --publish always"
   },
   "dependencies": {
     "@lobehub/icons-static-svg": "^1.91.0",
@@ -102,15 +102,14 @@
       "build/icon.png",
       "!node_modules/**/*"
     ],
+    "electronLanguages": [
+      "en-US"
+    ],
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ],
       "icon": "build/icon.png"
-    },
-    "portable": {
-      "artifactName": "Khonjel-${version}-portable.exe"
     },
     "nsis": {
       "oneClick": true,
