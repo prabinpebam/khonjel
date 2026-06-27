@@ -56,6 +56,37 @@ export async function resolveMicDeviceId(
   return undefined;
 }
 
+/** Race a promise against a timeout so a silent getUserMedia hang surfaces as a clear error. */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Open the microphone, resiliently. Two failure modes that otherwise leave the bar stuck on
+ * "Click to dictate" are handled here: (1) a silent getUserMedia hang (e.g. Windows microphone
+ * access is blocked) is capped by a timeout so the caller shows an actionable error; (2) a
+ * previously-selected device that is now unplugged/busy/renamed falls back to the system default
+ * rather than failing dictation outright.
+ */
+async function acquireMicStream(base: MediaTrackConstraints, deviceId?: string): Promise<MediaStream> {
+  const message =
+    "Microphone didn't start. Check that microphone access is allowed (Windows Settings > Privacy > Microphone) and that no other app is using it.";
+  const open = (constraints: MediaTrackConstraints) =>
+    withTimeout(navigator.mediaDevices.getUserMedia({ audio: constraints }), 12_000, message);
+  if (!deviceId) return open(base);
+  try {
+    return await open({ ...base, deviceId: { exact: deviceId } });
+  } catch (err) {
+    // The chosen mic is unavailable: fall back to the default so a stale selection can't break dictation.
+    console.warn("[dictation] selected microphone unavailable; falling back to the default device.", err);
+    return open(base);
+  }
+}
+
 export async function startRecording(opts: RecordingOptions = {}): Promise<Recorder> {
   // Our software AGC owns the gain; let the browser's AGC step aside so they do not fight. When our
   // AGC is disabled, fall back to the browser's built-in auto gain.
@@ -66,8 +97,8 @@ export async function startRecording(opts: RecordingOptions = {}): Promise<Recor
     noiseSuppression: true,
     autoGainControl: !softwareAgc,
   };
-  if (opts.deviceId && opts.deviceId !== "default") audio.deviceId = { exact: opts.deviceId };
-  const stream = await navigator.mediaDevices.getUserMedia({ audio });
+  const wantsSpecificDevice = Boolean(opts.deviceId && opts.deviceId !== "default");
+  const stream = await acquireMicStream(audio, wantsSpecificDevice ? opts.deviceId : undefined);
   const AudioCtor =
     window.AudioContext ??
     (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
