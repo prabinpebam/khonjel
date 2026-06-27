@@ -879,7 +879,8 @@ void app.whenReady().then(() => {
   // A frameless, transparent, always-on-top, non-focusable window so it never steals focus from the
   // app you are typing into. Created hidden; the dictation hotkey shows it (when the HUD preview is
   // on) and drives record -> transcribe -> clean -> inject. Honors floatingStartPosition / autoHide.
-  createFloatingBar();
+  // Created AFTER the main window has loaded (see warmUpAfterMainWindow) so the first window gets the
+  // renderer to itself and appears as fast as possible -- the bar is hidden until the hotkey anyway.
 
   function createFloatingBar(): void {
     floatingBarWindow = new BrowserWindow({
@@ -1067,10 +1068,16 @@ void app.whenReady().then(() => {
   // bar keep the process alive). Pass the live dictation toggle so the menu can start a capture.
   createTray(triggerDictation);
 
-  // Upgrade from the deterministic stub to the local LLM in the background (never blocks startup).
-  void inferenceRuntime.start().then((mode) => {
-    logger.info(`inference engine: ${mode}`);
-  });
+  // Defer the two non-essential startup costs until the main window has painted, so it appears as
+  // fast as possible: (1) the floating-bar window (a second renderer, hidden until the dictation
+  // hotkey), and (2) warming the local LLM (background; only powers cleanup). Both run off the
+  // critical path; until the bar exists a very-early hotkey press is a harmless no-op.
+  const warmUpAfterMainWindow = (): void => {
+    if (!floatingBarWindow) createFloatingBar();
+    void inferenceRuntime?.start().then((mode) => logger.info(`inference engine: ${mode}`));
+  };
+  if (mainWindow) mainWindow.webContents.once("did-finish-load", warmUpAfterMainWindow);
+  else warmUpAfterMainWindow();
 });
 
 app.on("before-quit", () => {
