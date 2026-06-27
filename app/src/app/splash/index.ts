@@ -1,40 +1,21 @@
 /**
  * Launch splash controller. The splash markup + styles live statically in index.html so it paints on
- * the very first frame (before this bundle is parsed). This module rotates the quirky status line and
- * fades the splash out once the app shell is interactive, honoring a minimum on-screen time so it
- * never just flashes. No-ops gracefully if the splash element is absent (e.g. the floating-bar window).
+ * the very first frame (before this bundle is parsed). This module just fades the splash out once the
+ * app shell is interactive, honoring a short minimum on-screen time so it never merely flashes.
+ * No-ops gracefully if the splash element is absent (e.g. the floating-bar window).
  */
-import { randomSplashMessage } from "./messages";
 
-let rotateTimer: number | undefined;
-let startedAt = 0;
+const shownAt = Date.now();
 let dismissed = false;
 
-/** Begin rotating the status line. Replaces the static first message with fresh mixed ones. */
-export function startSplash(): void {
-  const status = document.getElementById("splash-status");
-  if (!status) return;
-  startedAt = Date.now();
-  const tick = () => {
-    status.style.opacity = "0";
-    window.setTimeout(() => {
-      status.textContent = randomSplashMessage();
-      status.style.opacity = "1";
-    }, 180);
-  };
-  tick();
-  rotateTimer = window.setInterval(tick, 1700);
-}
-
-/** Fade out + remove the splash once the app is interactive (after a minimum visible time). */
-export function dismissSplash(minVisibleMs = 650): void {
+/** Fade out + remove the splash once the app is interactive (after a short minimum visible time). */
+export function dismissSplash(minVisibleMs = 450): void {
   if (dismissed) return;
   const splash = document.getElementById("splash");
   if (!splash) return;
   dismissed = true;
-  const wait = Math.max(0, minVisibleMs - (Date.now() - startedAt));
+  const wait = Math.max(0, minVisibleMs - (Date.now() - shownAt));
   window.setTimeout(() => {
-    if (rotateTimer) window.clearInterval(rotateTimer);
     splash.classList.add("splash--hidden");
     window.setTimeout(() => splash.remove(), 500);
   }, wait);
