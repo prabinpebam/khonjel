@@ -677,14 +677,22 @@ function createWindow(startMinimized = false): void {
     },
   });
 
-  mainWindow.once("ready-to-show", () => {
+  // Reveal the window as soon as the page starts loading rather than waiting for `ready-to-show`.
+  // For this React app `ready-to-show` only fires after the whole bundle has parsed and rendered, so
+  // the static splash in index.html would get no time on screen. The window already carries the
+  // splash's background color, so showing it this early produces no flash -- just the brand-colored
+  // splash covering the renderer-load wait. `ready-to-show` remains as a safety net.
+  const revealWindow = (): void => {
+    if (!mainWindow || mainWindow.isVisible()) return;
     if (startMinimized) {
-      mainWindow?.showInactive();
-      mainWindow?.minimize();
+      mainWindow.showInactive();
+      mainWindow.minimize();
     } else {
-      mainWindow?.show();
+      mainWindow.show();
     }
-  });
+  };
+  mainWindow.webContents.once("did-start-loading", revealWindow);
+  mainWindow.once("ready-to-show", revealWindow);
 
   // Load the built renderer by default (works for `npm run electron` and the packaged app).
   // Opt into the Vite dev server for HMR with `electron . --dev-server` (see `npm run electron:dev`)
